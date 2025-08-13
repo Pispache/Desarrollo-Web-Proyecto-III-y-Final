@@ -35,10 +35,6 @@ Para iniciar todos los servicios:
 
 docker compose --profile all up --build
 
-Si no se usan perfiles en el docker-compose.yml:
-
-docker compose up --build
-
 Acceso a los servicios
 
     Interfaz de usuario: http://localhost:4200
@@ -58,7 +54,6 @@ Descripción de servicios
     ui: Aplicación Angular compilada y servida con Nginx en el puerto 4200.
 
 Estructura del proyecto
-
 .
 ├─ api/                 # API en .NET 8
 ├─ ui/                  # Frontend Angular + Nginx
@@ -72,9 +67,7 @@ Estructura del proyecto
    └─ README.md
 
 Pruebas de la API
-
 Con el sistema en ejecución:
-
 # Verificar estado
 curl http://localhost:8080/health
 
