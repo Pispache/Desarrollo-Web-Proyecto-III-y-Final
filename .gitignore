@@ -1,0 +1,12 @@
+# Node / Angular
+node_modules/
+dist/
+
+# .NET
+bin/
+obj/
+
+# Docker
+*.log
+*.tmp
+db-data/
