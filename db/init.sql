@@ -35,3 +35,29 @@ BEGIN
     );
 END
 GO
+
+-- ======================
+-- Índices
+-- ======================
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes 
+    WHERE name = 'IX_GameEvents_GameId_EventId' 
+      AND object_id = OBJECT_ID('dbo.GameEvents')
+)
+BEGIN
+    CREATE INDEX IX_GameEvents_GameId_EventId 
+        ON dbo.GameEvents(GameId, EventId DESC);
+END
+GO
+
+IF NOT EXISTS (
+    SELECT 1 FROM sys.indexes 
+    WHERE name = 'IX_Games_Status' 
+      AND object_id = OBJECT_ID('dbo.Games')
+)
+BEGIN
+    CREATE INDEX IX_Games_Status 
+        ON dbo.Games(Status);
+END
+GO

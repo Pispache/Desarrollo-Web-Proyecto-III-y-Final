@@ -25,16 +25,13 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-// SIN HTTPS redirection para facilitar pruebas locales/docker
-// app.UseHttpsRedirection();
-
 // Healthcheck simple
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 // Helper para obtener la cadena de conexión
 string GetConnectionString()
 {
-    // 1) Prioriza variable de entorno (útil en Docker)
+    // 1) Prioriza variable de entorno 
     var fromEnv = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
     if (!string.IsNullOrWhiteSpace(fromEnv)) return fromEnv;
 
@@ -72,7 +69,7 @@ app.MapPost("/api/games", async ([FromBody] CreateGameDto body) =>
 .WithOpenApi();
 
 
-// GET: detalle de un juego + últimos eventos (p.ej. 100)
+// GET: detalle de un juego + últimos eventos
 app.MapGet("/api/games/{id:int}", async (int id) =>
 {
     using var conn = new SqlConnection(GetConnectionString());
@@ -88,8 +85,8 @@ app.MapGet("/api/games/{id:int}", async (int id) =>
 .WithName("GetGameById")
 .WithOpenApi();
 
-// POST: iniciar partido (Status: IN_PROGRESS). Quarter según tu tabla ya inicia en 1.
-app.MapPost("/api/games/{id:int}/start", async (int id, [FromBody] StartDto? _ ) =>
+// POST: iniciar partido (Status: IN_PROGRESS). Quarter.
+app.MapPost("/api/games/{id:int}/start", async (int id) =>
 {
     using var conn = new SqlConnection(GetConnectionString());
     var affected = await conn.ExecuteAsync(@"
@@ -104,7 +101,7 @@ app.MapPost("/api/games/{id:int}/start", async (int id, [FromBody] StartDto? _ )
 .WithOpenApi();
 
 // POST: avanzar de cuarto (máximo 4)
-app.MapPost("/api/games/{id:int}/advance-quarter", async (int id, [FromBody] AdvanceDto? _ ) =>
+app.MapPost("/api/games/{id:int}/advance-quarter", async (int id) =>
 {
     using var conn = new SqlConnection(GetConnectionString());
 
@@ -127,7 +124,7 @@ app.MapPost("/api/games/{id:int}/advance-quarter", async (int id, [FromBody] Adv
 .WithName("AdvanceQuarter")
 .WithOpenApi();
 
-// POST: registrar puntos
+// POST: registrar puntos (solo si IN_PROGRESS)
 app.MapPost("/api/games/{id:int}/score", async (int id, [FromBody] ScoreDto body) =>
 {
     var team = (body?.Team ?? "").ToUpperInvariant();
@@ -137,11 +134,16 @@ app.MapPost("/api/games/{id:int}/score", async (int id, [FromBody] ScoreDto body
 
     using var conn = new SqlConnection(GetConnectionString());
 
+    // validar estado
+    var st = await conn.QuerySingleOrDefaultAsync<string>(
+        "SELECT Status FROM MarcadorDB.dbo.Games WHERE GameId=@id;", new { id });
+    if (!string.Equals(st, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest(new { error = "No se puede anotar si el juego no está IN_PROGRESS." });
+
     var sqlUpdate = team == "HOME"
         ? "UPDATE MarcadorDB.dbo.Games SET HomeScore = HomeScore + @pts WHERE GameId=@id;"
         : "UPDATE MarcadorDB.dbo.Games SET AwayScore = AwayScore + @pts WHERE GameId=@id;";
 
-    // Dado tu esquema, el EventType es POINT_1|2|3 y Team NOT NULL
     var affected = await conn.ExecuteAsync(@$"
         {sqlUpdate}
         INSERT INTO MarcadorDB.dbo.GameEvents(GameId, Quarter, Team, EventType, PlayerNumber)
@@ -155,7 +157,7 @@ app.MapPost("/api/games/{id:int}/score", async (int id, [FromBody] ScoreDto body
 .WithName("Score")
 .WithOpenApi();
 
-// POST: falta
+// POST: falta (solo si IN_PROGRESS)
 app.MapPost("/api/games/{id:int}/foul", async (int id, [FromBody] FoulDto body) =>
 {
     var team = (body?.Team ?? "").ToUpperInvariant();
@@ -163,6 +165,11 @@ app.MapPost("/api/games/{id:int}/foul", async (int id, [FromBody] FoulDto body) 
         return Results.BadRequest(new { error = "Team debe ser HOME o AWAY." });
 
     using var conn = new SqlConnection(GetConnectionString());
+    var st = await conn.QuerySingleOrDefaultAsync<string>(
+        "SELECT Status FROM MarcadorDB.dbo.Games WHERE GameId=@id;", new { id });
+    if (!string.Equals(st, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
+        return Results.BadRequest(new { error = "No se puede registrar falta si el juego no está IN_PROGRESS." });
+
     var affected = await conn.ExecuteAsync(@"
         INSERT INTO MarcadorDB.dbo.GameEvents(GameId, Quarter, Team, EventType, PlayerNumber)
           SELECT @id, Quarter, @team, 'FOUL', NULL
@@ -189,7 +196,7 @@ app.MapPost("/api/games/{id:int}/finish", async (int id) =>
 .WithName("FinishGame")
 .WithOpenApi();
 
-// POST: deshacer último evento (POINT_* o FOUL)
+// POST: deshacer último evento (POINT_* o FOUL) protegiendo puntajes negativos
 app.MapPost("/api/games/{id:int}/undo", async (int id) =>
 {
     using var conn = new SqlConnection(GetConnectionString());
@@ -201,27 +208,54 @@ app.MapPost("/api/games/{id:int}/undo", async (int id) =>
 
     if (ev is null) return Results.BadRequest(new { error = "No hay evento deshacible." });
 
-    // revertir puntuación si aplicaba
-    string evType = ev.EventType;
-    string team   = ev.Team;
-    int pts       = evType.StartsWith("POINT_") ? int.Parse(((string)evType).Substring(6)) : 0;
+    using var tx = conn.BeginTransaction();
 
-    if (pts > 0)
+    try
     {
-        if (string.Equals(team, "HOME", StringComparison.OrdinalIgnoreCase))
-            await conn.ExecuteAsync("UPDATE MarcadorDB.dbo.Games SET HomeScore = HomeScore - @pts WHERE GameId=@id;", new { id, pts });
-        else
-            await conn.ExecuteAsync("UPDATE MarcadorDB.dbo.Games SET AwayScore = AwayScore - @pts WHERE GameId=@id;", new { id, pts });
+        string evType = ev.EventType;
+        string team   = ev.Team;
+        int pts       = evType.StartsWith("POINT_") ? int.Parse(((string)evType).Substring(6)) : 0;
+
+        if (pts > 0)
+        {
+            // Restar solo si no deja negativo
+            var scores = await conn.QuerySingleAsync<(int HomeScore, int AwayScore)>(
+                "SELECT HomeScore, AwayScore FROM MarcadorDB.dbo.Games WHERE GameId=@id;",
+                new { id }, tx);
+
+            if (string.Equals(team, "HOME", StringComparison.OrdinalIgnoreCase))
+            {
+                if (scores.HomeScore - pts < 0)
+                    return Results.BadRequest(new { error = "La operación dejaría el puntaje HOME en negativo." });
+
+                await conn.ExecuteAsync("UPDATE MarcadorDB.dbo.Games SET HomeScore = HomeScore - @pts WHERE GameId=@id;",
+                    new { id, pts }, tx);
+            }
+            else
+            {
+                if (scores.AwayScore - pts < 0)
+                    return Results.BadRequest(new { error = "La operación dejaría el puntaje AWAY en negativo." });
+
+                await conn.ExecuteAsync("UPDATE MarcadorDB.dbo.Games SET AwayScore = AwayScore - @pts WHERE GameId=@id;",
+                    new { id, pts }, tx);
+            }
+        }
+
+        // registrar UNDO y borrar el evento revertido
+        await conn.ExecuteAsync(@"
+            INSERT INTO MarcadorDB.dbo.GameEvents(GameId, Quarter, Team, EventType, PlayerNumber)
+              VALUES (@id, @q, @team, 'UNDO', NULL);
+            DELETE FROM MarcadorDB.dbo.GameEvents WHERE EventId=@eid;",
+            new { id, q = (byte)ev.Quarter, team, eid = (int)ev.EventId }, tx);
+
+        tx.Commit();
+        return Results.NoContent();
     }
-
-    // registrar UNDO (tu tabla exige Team NOT NULL → usamos el mismo team del evento revertido)
-    await conn.ExecuteAsync(@"
-        INSERT INTO MarcadorDB.dbo.GameEvents(GameId, Quarter, Team, EventType, PlayerNumber)
-          VALUES (@id, @q, @team, 'UNDO', NULL);
-        DELETE FROM MarcadorDB.dbo.GameEvents WHERE EventId=@eid;",
-        new { id, q = (byte)ev.Quarter, team, eid = (int)ev.EventId });
-
-    return Results.NoContent();
+    catch
+    {
+        tx.Rollback();
+        throw;
+    }
 })
 .WithName("Undo")
 .WithOpenApi();
@@ -230,7 +264,7 @@ app.MapPost("/api/games/{id:int}/undo", async (int id) =>
 app.Run();
 
 record CreateGameDto(string? Home, string? Away);
-record StartDto();                              // no requiere body hoy
-record AdvanceDto();                            // no requiere body hoy
-record ScoreDto(string Team, int Points);       // Team: HOME|AWAY, Points: 1|2|3
-record FoulDto(string Team);                    // Team: HOME|AWAY
+record StartDto();                              
+record AdvanceDto();                            
+record ScoreDto(string Team, int Points);       
+record FoulDto(string Team);                   
