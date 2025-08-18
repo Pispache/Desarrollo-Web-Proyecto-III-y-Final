@@ -165,21 +165,22 @@ public static class GameEndpoints
                 return Results.BadRequest(new { error = "Team debe ser HOME o AWAY." });
 
             using var conn = new SqlConnection(cs());
-            var st = await conn.QuerySingleOrDefaultAsync<string>(
+            var st = await conn.ExecuteScalarAsync<string>(
                 "SELECT Status FROM MarcadorDB.dbo.Games WHERE GameId=@id;", new { id });
             if (!string.Equals(st, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
                 return Results.BadRequest(new { error = "No se puede registrar falta si el juego no está IN_PROGRESS." });
 
-            var affected = await conn.ExecuteAsync(@"
-                INSERT INTO MarcadorDB.dbo.GameEvents(GameId, Quarter, Team, EventType, PlayerNumber)
-                  SELECT @id, Quarter, @team, 'FOUL', NULL
-                  FROM MarcadorDB.dbo.Games WHERE GameId=@id;", new { id, team });
+            var ok = await conn.ExecuteAsync(@"
+                INSERT INTO MarcadorDB.dbo.GameEvents(GameId, Quarter, Team, EventType, PlayerNumber, PlayerId)
+                SELECT @id, Quarter, @team, 'FOUL', @pnum, @pid
+                FROM MarcadorDB.dbo.Games WHERE GameId=@id;",
+                new { id, team, pnum = body?.PlayerNumber, pid = body?.PlayerId });
 
-            return affected > 0 ? Results.NoContent()
-                                : Results.BadRequest(new { error = "No se pudo registrar la falta." });
+            return ok > 0 ? Results.NoContent() : Results.BadRequest(new { error = "No se pudo registrar la falta." });
         })
-        .WithName("Foul")
+        .WithName("foul")
         .WithOpenApi();
+
 
         // POST: finalizar (Status -> FINISHED) + pausar reloj
         app.MapPost("/api/games/{id:int}/finish", async (int id) =>
@@ -327,24 +328,139 @@ public static class GameEndpoints
             if (string.IsNullOrEmpty(home) || string.IsNullOrEmpty(away))
             { tx.Rollback(); return Results.BadRequest(new { error = "Equipo no encontrado." }); }
 
-            // crear juego (como tu CreateGame) con nombres
+            // crear juego con IDs + nombres
             var id = await conn.ExecuteScalarAsync<int>(@"
-        INSERT INTO MarcadorDB.dbo.Games(HomeTeam, AwayTeam, Status, CreatedAt)
-        OUTPUT INSERTED.GameId
-        VALUES(@home, @away, 'SCHEDULED', SYSUTCDATETIME());
-    ", new { home, away }, tx);
+                INSERT INTO MarcadorDB.dbo.Games(HomeTeam, AwayTeam, HomeTeamId, AwayTeamId, Status, CreatedAt)
+                OUTPUT INSERTED.GameId
+                VALUES(@home, @away, @homeId, @awayId, 'SCHEDULED', SYSUTCDATETIME());
+            ", new { home, away, homeId = body.HomeTeamId, awayId = body.AwayTeamId }, tx);
 
-            // crear reloj
-            await conn.ExecuteAsync(@"
-        INSERT INTO MarcadorDB.dbo.GameClocks(GameId, Quarter, QuarterMs, RemainingMs, Running, StartedAt, UpdatedAt)
-        VALUES(@id, 1, 600000, 600000, 0, NULL, SYSUTCDATETIME());
-    ", new { id }, tx);
+
+                    // crear reloj
+                    await conn.ExecuteAsync(@"
+                INSERT INTO MarcadorDB.dbo.GameClocks(GameId, Quarter, QuarterMs, RemainingMs, Running, StartedAt, UpdatedAt)
+                VALUES(@id, 1, 600000, 600000, 0, NULL, SYSUTCDATETIME());
+            ", new { id }, tx);
 
             tx.Commit();
             return Results.Created($"/api/games/{id}", new { gameId = id, home, away });
         })
         .WithName("PairGame")
         .WithOpenApi();
+
+        // GET jugadores de un equipo
+        app.MapGet("/api/teams/{teamId:int}/players", async (int teamId) =>
+        {
+            using var conn = new SqlConnection(cs());
+            var rows = await conn.QueryAsync(@"
+            SELECT PlayerId, TeamId, Number, Name, Position, Active, CreatedAt
+            FROM MarcadorDB.dbo.Players
+            WHERE TeamId=@teamId
+            ORDER BY COALESCE(Number,255), Name;", new { teamId });
+            return Results.Ok(rows);
+        })
+        .WithOpenApi();
+
+        // POST crear jugador
+        app.MapPost("/api/teams/{teamId:int}/players", async (int teamId, [FromBody] CreatePlayerDto body) =>
+        {
+            var name = (body?.Name ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(name)) return Results.BadRequest(new { error = "Name es requerido." });
+
+            using var conn = new SqlConnection(cs());
+            try
+            {
+                var id = await conn.ExecuteScalarAsync<int>(@"
+                INSERT INTO MarcadorDB.dbo.Players(TeamId, Number, Name, Position, Active)
+                OUTPUT INSERTED.PlayerId
+                VALUES(@teamId, @num, @name, @pos, 1);",
+                    new { teamId, num = body!.Number, name, pos = body!.Position });
+                return Results.Created($"/api/players/{id}", new { playerId = id });
+            }
+            catch (SqlException ex) when (ex.Number == 2601 || ex.Number == 2627)
+            {
+                return Results.BadRequest(new { error = "Ese dorsal ya existe en el equipo." });
+            }
+        })
+        .WithOpenApi();
+
+        // PATCH actualizar jugador
+        app.MapPatch("/api/players/{playerId:int}", async (int playerId, [FromBody] UpdatePlayerDto body) =>
+        {
+            using var conn = new SqlConnection(cs());
+            var ok = await conn.ExecuteAsync(@"
+            UPDATE MarcadorDB.dbo.Players SET
+            Number   = COALESCE(@Number, Number),
+            Name     = COALESCE(@Name, Name),
+            Position = COALESCE(@Position, Position),
+            Active   = COALESCE(@Active, Active)
+            WHERE PlayerId=@playerId;",
+                new { playerId, body?.Number, body?.Name, body?.Position, body?.Active });
+
+            return ok > 0 ? Results.NoContent() : Results.NotFound();
+        })
+        .WithOpenApi();
+
+        // DELETE jugador
+        app.MapDelete("/api/players/{playerId:int}", async (int playerId) =>
+        {
+            using var conn = new SqlConnection(cs());
+            var ok = await conn.ExecuteAsync("DELETE FROM MarcadorDB.dbo.Players WHERE PlayerId=@playerId;", new { playerId });
+            return ok > 0 ? Results.NoContent() : Results.NotFound();
+        })
+        .WithOpenApi();
+    
+            app.MapGet("/api/games/{id:int}/fouls/summary", async (int id) =>
+        {
+            using var conn = new SqlConnection(cs());
+            var teamRows = await conn.QueryAsync(@"
+                SELECT Quarter, Team,
+                    SUM(CASE WHEN EventType='FOUL' THEN 1 ELSE 0 END) AS Fouls
+                FROM MarcadorDB.dbo.GameEvents
+                WHERE GameId=@id
+                GROUP BY Quarter, Team
+                ORDER BY Quarter, Team;", new { id });
+
+            var playerRows = await conn.QueryAsync(@"
+                SELECT Quarter, Team, PlayerId,
+                    SUM(CASE WHEN EventType='FOUL' THEN 1 ELSE 0 END) AS Fouls
+                FROM MarcadorDB.dbo.GameEvents
+                WHERE GameId=@id AND PlayerId IS NOT NULL
+                GROUP BY Quarter, Team, PlayerId
+                ORDER BY Quarter, Team, PlayerId;", new { id });
+
+            return Results.Ok(new { team = teamRows, players = playerRows });
+        })
+        .WithOpenApi();
+// GET: jugadores de un juego por lado (HOME/AWAY)
+// Nota: Como los Games guardan nombres de equipo, cruzamos por nombre.
+// Si más adelante usas HomeTeamId/AwayTeamId, cambia el JOIN por Id.
+app.MapGet("/api/games/{id:int}/players/{side}", async (int id, string side) =>
+{
+    var s = (side ?? "").ToUpperInvariant();
+    if (s != "HOME" && s != "AWAY")
+        return Results.BadRequest(new { error = "side debe ser HOME o AWAY" });
+
+    using var conn = new SqlConnection(cs());
+    var rows = await conn.QueryAsync(@"
+        SELECT p.PlayerId, p.TeamId, p.Number, p.Name, p.Position, p.Active, p.CreatedAt
+        FROM MarcadorDB.dbo.Players p
+        JOIN MarcadorDB.dbo.Teams   t ON t.TeamId = p.TeamId
+        JOIN MarcadorDB.dbo.Games   g ON g.GameId = @id
+        WHERE
+          (@s = 'HOME' AND t.Name = g.HomeTeam)
+          OR
+          (@s = 'AWAY' AND t.Name = g.AwayTeam)
+        ORDER BY COALESCE(p.Number, 255), p.Name;",
+        new { id, s });
+
+    return Results.Ok(rows);
+})
+.WithName("GetGamePlayersBySide")
+.WithOpenApi();
+
+
+
     }
 
 }

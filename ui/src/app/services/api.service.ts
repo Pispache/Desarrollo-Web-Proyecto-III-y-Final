@@ -24,15 +24,44 @@ export interface GameDetail {
     team: 'HOME' | 'AWAY' | string;
     eventType: 'POINT_1' | 'POINT_2' | 'POINT_3' | 'FOUL' | 'UNDO' | string;
     playerNumber?: number | null;
+    playerId?: number | null;         // <- puede venir si ya guardas PlayerId
     createdAt: string; // ISO con zona
   }>;
 }
 
-/* ===== NUEVO: tipos de equipos ===== */
+/* ===== Equipos ===== */
 export interface Team {
   teamId: number;
   name: string;
   createdAt: string; // ISO
+}
+
+/* ===== Jugadores ===== */
+export interface Player {
+  playerId: number;
+  teamId: number;
+  number?: number | null;
+  name: string;
+  position?: string | null;
+  active: boolean;
+  createdAt: string;
+}
+
+/* ===== Resumen de faltas ===== */
+export interface FoulSummaryTeamRow {
+  quarter: number;
+  team: 'HOME' | 'AWAY' | string;
+  fouls: number;
+}
+export interface FoulSummaryPlayerRow {
+  quarter: number;
+  team: 'HOME' | 'AWAY' | string;
+  playerId: number;
+  fouls: number;
+}
+export interface FoulSummary {
+  team: FoulSummaryTeamRow[];
+  players: FoulSummaryPlayerRow[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -113,17 +142,22 @@ export class ApiService {
   finish(id: number)  { return this.http.post(`${this.base}/games/${id}/finish`, {}); }
 
   // ========== Acciones ==========
-  score(id: number, team: 'HOME'|'AWAY', points: 1|2|3) {
-    return this.http.post(`${this.base}/games/${id}/score`, { team, points });
+  score(id: number, team: 'HOME'|'AWAY', points: 1|2|3, opts?: { playerId?: number; playerNumber?: number }) {
+    const body: any = { team, points, playerId: opts?.playerId ?? null, playerNumber: opts?.playerNumber ?? null };
+    return this.http.post(`${this.base}/games/${id}/score`, body);
   }
-  foul(id: number, team: 'HOME'|'AWAY') {
-    return this.http.post(`${this.base}/games/${id}/foul`, { team });
+
+  // (ACTUALIZADO) Foul acepta jugador opcional
+  foul(id: number, team: 'HOME'|'AWAY', opts?: { playerId?: number; playerNumber?: number }) {
+    const body: any = { team, playerId: opts?.playerId ?? null, playerNumber: opts?.playerNumber ?? null };
+    return this.http.post(`${this.base}/games/${id}/foul`, body);
   }
+
   undo(id: number) {
     return this.http.post(`${this.base}/games/${id}/undo`, {});
   }
 
-  /* ========== NUEVO: Equipos ========== */
+  /* ========== Equipos ========== */
   listTeams(): Observable<Team[]> {
     return this.http.get<any[]>(`${this.base}/teams`).pipe(
       map(rows => rows.map(r => ({
@@ -140,10 +174,43 @@ export class ApiService {
     );
   }
 
-  /* ========== NUEVO: Emparejar (crear juego desde IDs de equipo) ========== */
+  /* ========== Emparejar (crear juego desde IDs de equipo) ========== */
   pairGame(homeTeamId: number, awayTeamId: number): Observable<{ gameId: number }> {
     return this.http.post<any>(`${this.base}/games/pair`, { homeTeamId, awayTeamId }).pipe(
       map(r => ({ gameId: r.gameId ?? r.GameId }))
     );
+  }
+
+  /* ========== Jugadores (por equipo) ========== */
+  listPlayers(teamId: number): Observable<Player[]> {
+    return this.http.get<any[]>(`${this.base}/teams/${teamId}/players`).pipe(
+      map(rows => this.toCamel<any[]>(rows))
+    );
+  }
+
+  createPlayer(teamId: number, p: { name: string; number?: number; position?: string }) {
+    return this.http.post<{ playerId: number }>(`${this.base}/teams/${teamId}/players`, p);
+  }
+
+  updatePlayer(playerId: number, patch: Partial<{ name: string; number: number; position: string; active: boolean }>) {
+    return this.http.patch(`${this.base}/players/${playerId}`, patch);
+  }
+
+  deletePlayer(playerId: number) {
+    return this.http.delete(`${this.base}/players/${playerId}`);
+  }
+
+  /* ========== Jugadores por juego (HOME/AWAY) ========== */
+  listGamePlayers(gameId: number, side: 'HOME'|'AWAY'): Observable<Player[]> {
+    return this.http
+      .get<any[]>(`${this.base}/games/${gameId}/players/${side}`)
+      .pipe(map(rows => this.toCamel<any[]>(rows)));
+  }
+
+
+  /* ========== Resumen de faltas ========== */
+  getFoulSummary(id: number): Observable<FoulSummary> {
+    return this.http.get<any>(`${this.base}/games/${id}/fouls/summary`)
+      .pipe(map(r => this.toCamel<FoulSummary>(r)));
   }
 }

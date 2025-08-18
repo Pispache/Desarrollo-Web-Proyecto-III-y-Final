@@ -46,8 +46,13 @@ app.Run();
 
 // DTOs (puedes moverlos a Dtos.cs si prefieres)
 record CreateGameDto(string? Home, string? Away);
-record ScoreDto(string Team, int Points);
-record FoulDto(string Team);
 record ClockResetDto(int? QuarterMs);
 record TeamCreateDto(string Name);
 record PairDto(int HomeTeamId, int AwayTeamId);
+// Players
+record CreatePlayerDto(string Name, byte? Number, string? Position);
+record UpdatePlayerDto(byte? Number, string? Name, string? Position, bool? Active);
+
+// Score/Foul aceptando jugador (opcional) ← únicas válidas
+record ScoreDto(string Team, int Points, int? PlayerId, int? PlayerNumber);
+record FoulDto(string Team, int? PlayerId, int? PlayerNumber);

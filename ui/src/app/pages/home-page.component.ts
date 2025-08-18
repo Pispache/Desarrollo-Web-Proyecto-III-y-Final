@@ -6,12 +6,13 @@ import { ScoreboardComponent } from '../widgets/scoreboard.component';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
 import { ClockComponent } from '../widgets/clock.component';
 import { RouterModule } from '@angular/router'; 
- import { Observable, map, shareReplay } from 'rxjs';
+import { TeamRosterComponent } from '../widgets/team-roster.component';
+import { Observable, map, shareReplay } from 'rxjs';
 
 @Component({
   selector: 'app-home-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ScoreboardComponent, ControlPanelComponent, ClockComponent,RouterModule],
+  imports: [CommonModule, FormsModule, ScoreboardComponent, ControlPanelComponent, ClockComponent,RouterModule,TeamRosterComponent],
   template: `
     <div class="p-4 grid gap-4 max-w-3xl mx-auto">
       <h1 class="text-2xl font-semibold">Marcador de Baloncesto</h1>
@@ -33,7 +34,7 @@ import { RouterModule } from '@angular/router';
           <ng-template #noTeams>Sin equipos aún.</ng-template>
         </div>
       </div>
-
+      <app-team-roster></app-team-roster>
       <!-- Emparejar partido desde equipos -->
       <div class="grid gap-2 border rounded p-3">
         <div class="font-medium">Emparejar partido</div>
