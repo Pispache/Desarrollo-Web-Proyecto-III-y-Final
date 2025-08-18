@@ -13,6 +13,8 @@ export interface Game {
   awayScore: number;
   status: GameStatus;
   createdAt: string; // ISO con zona para que el date pipe muestre hora local
+  homeTeamId?: number | null;
+  awayTeamId?: number | null;
 }
 
 export interface GameDetail {
@@ -102,9 +104,13 @@ export class ApiService {
         homeScore: r.homeScore as number,
         awayScore: r.awayScore as number,
         createdAt: this.ensureUtcIso(r.createdAt as string),
-      } satisfies Game)))
+        // NUEVO (si vienen en la respuesta)
+        homeTeamId: (r.homeTeamId ?? r.hometeamid) ?? null,
+        awayTeamId: (r.awayTeamId ?? r.awayteamid) ?? null,
+      } as Game)))
     );
   }
+
 
   createGame(home: string, away: string): Observable<{ gameId: number }> {
     return this.http.post<any>(`${this.base}/games`, { home, away }).pipe(
@@ -126,6 +132,9 @@ export class ApiService {
           homeScore: game.homeScore,
           awayScore: game.awayScore,
           createdAt: this.ensureUtcIso(game.createdAt),
+          // NUEVO (si existen)
+          homeTeamId: game.homeTeamId ?? game.hometeamid ?? null,
+          awayTeamId: game.awayTeamId ?? game.awayteamid ?? null,
         };
         const eventsFixed = events.map(e => ({
           ...e,
@@ -135,6 +144,7 @@ export class ApiService {
       })
     );
   }
+
 
   // ========== Flow ==========
   start(id: number)   { return this.http.post(`${this.base}/games/${id}/start`, {}); }

@@ -432,9 +432,8 @@ public static class GameEndpoints
             return Results.Ok(new { team = teamRows, players = playerRows });
         })
         .WithOpenApi();
+
 // GET: jugadores de un juego por lado (HOME/AWAY)
-// Nota: Como los Games guardan nombres de equipo, cruzamos por nombre.
-// Si más adelante usas HomeTeamId/AwayTeamId, cambia el JOIN por Id.
 app.MapGet("/api/games/{id:int}/players/{side}", async (int id, string side) =>
 {
     var s = (side ?? "").ToUpperInvariant();
@@ -442,25 +441,37 @@ app.MapGet("/api/games/{id:int}/players/{side}", async (int id, string side) =>
         return Results.BadRequest(new { error = "side debe ser HOME o AWAY" });
 
     using var conn = new SqlConnection(cs());
+
+    // 1) Tomamos ids y nombres
+    var g = await conn.QuerySingleOrDefaultAsync<(int? HomeTeamId, int? AwayTeamId, string HomeTeam, string AwayTeam)>(
+        @"SELECT HomeTeamId, AwayTeamId, HomeTeam, AwayTeam
+          FROM MarcadorDB.dbo.Games WHERE GameId = @id;", new { id });
+
+    if (g.Equals(default)) return Results.NotFound();
+
+    // 2) Elegimos el TeamId del lado pedido
+    int? teamId = s == "HOME" ? g.HomeTeamId : g.AwayTeamId;
+
+    // 3) Si no hay TeamId (partidos creados “a mano”), buscamos por nombre para no romper compatibilidad
+    if (teamId is null)
+    {
+        var name = s == "HOME" ? g.HomeTeam : g.AwayTeam;
+        teamId = await conn.ExecuteScalarAsync<int?>(
+            "SELECT TeamId FROM MarcadorDB.dbo.Teams WHERE Name = @name;", new { name });
+        if (teamId is null) return Results.Ok(Array.Empty<object>()); // sin plantilla
+    }
+
+    // 4) Devolvemos plantilla ordenada
     var rows = await conn.QueryAsync(@"
-        SELECT p.PlayerId, p.TeamId, p.Number, p.Name, p.Position, p.Active, p.CreatedAt
-        FROM MarcadorDB.dbo.Players p
-        JOIN MarcadorDB.dbo.Teams   t ON t.TeamId = p.TeamId
-        JOIN MarcadorDB.dbo.Games   g ON g.GameId = @id
-        WHERE
-          (@s = 'HOME' AND t.Name = g.HomeTeam)
-          OR
-          (@s = 'AWAY' AND t.Name = g.AwayTeam)
-        ORDER BY COALESCE(p.Number, 255), p.Name;",
-        new { id, s });
+        SELECT PlayerId, TeamId, Number, Name, Position, Active, CreatedAt
+        FROM MarcadorDB.dbo.Players
+        WHERE TeamId=@teamId
+        ORDER BY COALESCE(Number,255), Name;", new { teamId });
 
     return Results.Ok(rows);
 })
 .WithName("GetGamePlayersBySide")
 .WithOpenApi();
-
-
-
     }
 
 }
