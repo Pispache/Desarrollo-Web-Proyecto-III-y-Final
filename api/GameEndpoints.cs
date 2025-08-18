@@ -273,5 +273,78 @@ public static class GameEndpoints
         })
         .WithName("Undo")
         .WithOpenApi();
+
+        // GET: equipos
+        app.MapGet("/api/teams", async () =>
+        {
+            using var conn = new SqlConnection(cs());
+            var rows = await conn.QueryAsync("SELECT TeamId, Name, CreatedAt FROM MarcadorDB.dbo.Teams ORDER BY Name ASC;");
+            return Results.Ok(rows);
+        })
+        .WithName("GetTeams")
+        .WithOpenApi();
+
+        // POST: registrar equipo
+        app.MapPost("/api/teams", async ([FromBody] TeamCreateDto body) =>
+        {
+            var name = (body?.Name ?? "").Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return Results.BadRequest(new { error = "El nombre es requerido." });
+
+            using var conn = new SqlConnection(cs());
+            try
+            {
+                var id = await conn.ExecuteScalarAsync<int>(@"
+            INSERT INTO MarcadorDB.dbo.Teams(Name) OUTPUT INSERTED.TeamId VALUES(@name);
+        ", new { name });
+                return Results.Created($"/api/teams/{id}", new { teamId = id, name });
+            }
+            catch (SqlException ex) when (ex.Number == 2627) // UNIQUE
+            {
+                return Results.Conflict(new { error = "Ya existe un equipo con ese nombre." });
+            }
+        })
+            .WithName("CreateTeam")
+            .WithOpenApi();
+
+        // POST: emparejar partido desde Teams (homeTeamId, awayTeamId)
+        app.MapPost("/api/games/pair", async ([FromBody] PairDto body) =>
+        {
+            if (body is null || body.HomeTeamId <= 0 || body.AwayTeamId <= 0 || body.HomeTeamId == body.AwayTeamId)
+                return Results.BadRequest(new { error = "Debes elegir dos equipos válidos y distintos." });
+
+            using var conn = new SqlConnection(cs());
+            await conn.OpenAsync();
+            using var tx = conn.BeginTransaction();
+
+            // obtener nombres
+            var teams = (await conn.QueryAsync<(int TeamId, string Name)>(
+                "SELECT TeamId, Name FROM MarcadorDB.dbo.Teams WHERE TeamId IN (@h,@a);",
+                new { h = body.HomeTeamId, a = body.AwayTeamId }, tx)).AsList();
+
+            var home = teams.FirstOrDefault(t => t.TeamId == body.HomeTeamId).Name;
+            var away = teams.FirstOrDefault(t => t.TeamId == body.AwayTeamId).Name;
+            if (string.IsNullOrEmpty(home) || string.IsNullOrEmpty(away))
+            { tx.Rollback(); return Results.BadRequest(new { error = "Equipo no encontrado." }); }
+
+            // crear juego (como tu CreateGame) con nombres
+            var id = await conn.ExecuteScalarAsync<int>(@"
+        INSERT INTO MarcadorDB.dbo.Games(HomeTeam, AwayTeam, Status, CreatedAt)
+        OUTPUT INSERTED.GameId
+        VALUES(@home, @away, 'SCHEDULED', SYSUTCDATETIME());
+    ", new { home, away }, tx);
+
+            // crear reloj
+            await conn.ExecuteAsync(@"
+        INSERT INTO MarcadorDB.dbo.GameClocks(GameId, Quarter, QuarterMs, RemainingMs, Running, StartedAt, UpdatedAt)
+        VALUES(@id, 1, 600000, 600000, 0, NULL, SYSUTCDATETIME());
+    ", new { id }, tx);
+
+            tx.Commit();
+            return Results.Created($"/api/games/{id}", new { gameId = id, home, away });
+        })
+        .WithName("PairGame")
+        .WithOpenApi();
     }
+
 }

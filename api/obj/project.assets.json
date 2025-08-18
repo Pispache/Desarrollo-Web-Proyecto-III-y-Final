@@ -2170,19 +2170,19 @@
     ]
   },
   "packageFolders": {
-    "/home/cesartecun/.nuget/packages/": {}
+    "C:\\Users\\cesar\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/cesartecun/Marcador/api/Api.csproj",
+      "projectUniqueName": "C:\\Users\\cesar\\OneDrive\\Documentos\\GitHub\\Marcador-de-baloncesto\\api\\Api.csproj",
       "projectName": "Api",
-      "projectPath": "/home/cesartecun/Marcador/api/Api.csproj",
-      "packagesPath": "/home/cesartecun/.nuget/packages/",
-      "outputPath": "/home/cesartecun/Marcador/api/obj/",
+      "projectPath": "C:\\Users\\cesar\\OneDrive\\Documentos\\GitHub\\Marcador-de-baloncesto\\api\\Api.csproj",
+      "packagesPath": "C:\\Users\\cesar\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\cesar\\OneDrive\\Documentos\\GitHub\\Marcador-de-baloncesto\\api\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "/home/cesartecun/.nuget/NuGet/NuGet.Config"
+        "C:\\Users\\cesar\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -2200,6 +2200,11 @@
         "warnAsError": [
           "NU1605"
         ]
+      },
+      "restoreAuditProperties": {
+        "enableAudit": "true",
+        "auditLevel": "low",
+        "auditMode": "direct"
       }
     },
     "frameworks": {
@@ -2242,7 +2247,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/8.0.118/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.412/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

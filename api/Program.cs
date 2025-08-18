@@ -49,3 +49,5 @@ record CreateGameDto(string? Home, string? Away);
 record ScoreDto(string Team, int Points);
 record FoulDto(string Team);
 record ClockResetDto(int? QuarterMs);
+record TeamCreateDto(string Name);
+record PairDto(int HomeTeamId, int AwayTeamId);
