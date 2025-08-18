@@ -1,5 +1,9 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, interval, Subscription } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import {
+  Observable, Subject, merge, filter, interval, startWith,
+  switchMap, shareReplay, map, tap, catchError, of
+} from 'rxjs';
 
 export interface ClockState {
   running: boolean;
@@ -7,88 +11,72 @@ export interface ClockState {
   quarterMs: number;
 }
 
-const LS_KEY = (id: number) => `clock:${id}`;
+// DTO del backend
+interface ClockStateDto {
+  gameId: number;
+  quarter: number;
+  quarterMs: number;
+  running: boolean;
+  remainingMs: number;
+  updatedAt: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ClockService {
-    //TIEMPO POR CUARTO 1/4
-  private defaultQuarterMs = 10 * 60 * 1000; 
-  private subs: Record<number, Subscription | undefined> = {};
-  private states: Record<number, BehaviorSubject<ClockState>> = {};
+  // OJO: si tu proxy ya mapea /api -> backend, déjalo así.
+  // Si NO usas proxy, usa la URL completa del backend (p. ej. 'http://localhost:5280/api').
+  private base = '/api';
 
-  state$(gameId: number) {
-    if (!this.states[gameId]) {
-      const saved = this.load(gameId);
-      this.states[gameId] = new BehaviorSubject<ClockState>(
-        saved ?? { running: false, remainingMs: this.defaultQuarterMs, quarterMs: this.defaultQuarterMs }
-      );
-    }
-    return this.states[gameId].asObservable();
+  /** Notifica que el clock de un gameId cambió (start/pause/reset en cualquier vista) */
+  private clockChanged$ = new Subject<number>();
+
+  constructor(private http: HttpClient) {}
+
+  /** Estado del reloj:
+   *  - polling cada 1s
+   *  - refresco inmediato cuando clockChanged$ emite
+   *  - tolerante a errores (no mata el stream)
+   */
+  state$(gameId: number): Observable<ClockState> {
+    return merge(
+      interval(1000).pipe(startWith(0)),
+      this.clockChanged$.pipe(filter(id => id === gameId))
+    ).pipe(
+      switchMap(() =>
+        this.http.get<ClockStateDto>(`${this.base}/games/${gameId}/clock`).pipe(
+          map(dto => ({
+            running: dto.running,
+            remainingMs: dto.remainingMs,
+            quarterMs: dto.quarterMs
+          })),
+          // Si falla el GET (404/red), mantenemos el stream vivo con un estado neutro
+          catchError(() => of<ClockState>({ running: false, remainingMs: 0, quarterMs: 0 }))
+        )
+      ),
+      shareReplay(1)
+    );
   }
 
+  /** Inicia/Reanuda en servidor y avisa a todas las vistas */
   start(gameId: number) {
-    const s = this.ensureState(gameId);
-    if (s.running) return;
-    s.running = true;
-    this.push(gameId, s);
-    this.tick(gameId);
+    this.http.post(`${this.base}/games/${gameId}/clock/start`, {})
+      .pipe(tap(() => this.clockChanged$.next(gameId)))
+      .subscribe({ error: () => {/* opcional: toast/log */} });
   }
 
+  /** Pausa en servidor y avisa a todas las vistas */
   pause(gameId: number) {
-    const s = this.ensureState(gameId);
-    s.running = false;
-    this.push(gameId, s);
-    this.stopTick(gameId);
+    this.http.post(`${this.base}/games/${gameId}/clock/pause`, {})
+      .pipe(tap(() => this.clockChanged$.next(gameId)))
+      .subscribe({ error: () => {/* opcional: toast/log */} });
   }
 
-  resetForNewQuarter(gameId: number, quarterMs?: number) {
-    const s = this.ensureState(gameId);
-    s.running = false;
-    s.quarterMs = quarterMs ?? this.defaultQuarterMs;
-    s.remainingMs = s.quarterMs;
-    this.push(gameId, s);
-    this.stopTick(gameId);
+  /** Resetea en servidor (por defecto 12min) y avisa a todas las vistas */
+  resetForNewQuarter(gameId: number, quarterMs = 12 * 60 * 1000) {
+    this.http.post(`${this.base}/games/${gameId}/clock/reset`, { quarterMs })
+      .pipe(tap(() => this.clockChanged$.next(gameId)))
+      .subscribe({ error: () => {/* opcional: toast/log */} });
   }
 
   stop(gameId: number) { this.pause(gameId); }
-
-  // ===== Internos =====
-  private ensureState(gameId: number): ClockState {
-    if (!this.states[gameId]) this.state$(gameId); // inicializa si no existía
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    return this.states[gameId]!.value as ClockState;
-  }
-
-  private tick(gameId: number) {
-    this.stopTick(gameId);
-    this.subs[gameId] = interval(1000).subscribe(() => {
-      const s = this.ensureState(gameId);
-      if (!s.running) return;
-      s.remainingMs = Math.max(0, s.remainingMs - 1000);
-      this.push(gameId, s);
-      if (s.remainingMs === 0) this.pause(gameId);
-    });
-  }
-
-  private stopTick(gameId: number) {
-    this.subs[gameId]?.unsubscribe();
-    this.subs[gameId] = undefined;
-  }
-
-  private push(gameId: number, s: ClockState) {
-    this.states[gameId]?.next({ ...s });
-    this.save(gameId, s);
-  }
-
-  private save(gameId: number, s: ClockState) {
-    try { localStorage.setItem(LS_KEY(gameId), JSON.stringify(s)); } catch { /* SSR/priv mode */ }
-  }
-
-  private load(gameId: number): ClockState | null {
-    try {
-      const raw = localStorage.getItem(LS_KEY(gameId));
-      if (!raw) return null;
-      return JSON.parse(raw) as ClockState;
-    } catch { return null; }
-  }
 }

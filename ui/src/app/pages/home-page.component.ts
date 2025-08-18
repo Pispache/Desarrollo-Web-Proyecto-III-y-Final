@@ -17,14 +17,22 @@ import { ClockComponent } from '../widgets/clock.component';
       <div class="grid gap-2 border rounded p-3">
         <div class="font-medium">Crear o cargar juego</div>
         <div class="flex flex-wrap gap-2 items-center">
-          <input [(ngModel)]="home" placeholder="Home" class="border rounded px-2 py-1" />
-          <input [(ngModel)]="away" placeholder="Away" class="border rounded px-2 py-1" />
+          <input [(ngModel)]="home" placeholder="Local" class="border rounded px-2 py-1" />
+          <input [(ngModel)]="away" placeholder="Visitante" class="border rounded px-2 py-1" />
           <button class="border rounded px-3 py-1" (click)="create()">Crear</button>
 
           <input [(ngModel)]="gameId" type="number" placeholder="ID" class="border rounded px-2 py-1 ml-4" />
           <button class="border rounded px-3 py-1" (click)="load()">Cargar</button>
         </div>
       </div>
+
+      <div *ngIf="detail as d" class="text-sm">
+        Vista pública: 
+        <a class="underline text-blue-600" [href]="'/display/' + d.game.gameId" target="_blank" rel="noopener">
+          /display/{{ d.game.gameId }}
+        </a>
+      </div>
+
 
       <ng-container *ngIf="detail as d; else emptyState">
         <app-scoreboard [game]="d.game"></app-scoreboard>
@@ -51,8 +59,8 @@ import { ClockComponent } from '../widgets/clock.component';
   `
 })
 export class HomePageComponent {
-  home = 'Leones';
-  away = 'Panteras';
+  home = '';
+  away = '';
   gameId?: number;
   detail?: GameDetail;
   private advancing = false; // evita doble avance por si acaso
