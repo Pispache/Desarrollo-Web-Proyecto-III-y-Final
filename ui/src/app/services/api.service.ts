@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 
 export type GameStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED';
 
@@ -30,46 +30,60 @@ export interface GameDetail {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  // Con Nginx proxy en Docker, /api apunta al backend
   private readonly base = '/api';
 
   constructor(private http: HttpClient) {}
 
-  // Juegos o Games
+  /** Convierte claves PascalCase -> camelCase */
+  private camelize(obj: any): any {
+    if (Array.isArray(obj)) return obj.map(v => this.camelize(v));
+    if (obj && typeof obj === 'object') {
+      const out: any = {};
+      for (const [k, v] of Object.entries(obj)) {
+        const ck = k.length ? k[0].toLowerCase() + k.slice(1) : k;
+        out[ck] = this.camelize(v);
+      }
+      return out;
+    }
+    return obj;
+  }
+
+  // ========== Juegos ==========
   listGames(): Observable<Game[]> {
-    return this.http.get<Game[]>(`${this.base}/games`);
+    return this.http.get<any[]>(`${this.base}/games`).pipe(
+      map(rows => this.camelize(rows) as Game[])
+    );
   }
 
   createGame(home: string, away: string): Observable<{ gameId: number }> {
-    return this.http.post<{ gameId: number }>(`${this.base}/games`, { home, away });
+    return this.http.post<any>(`${this.base}/games`, { home, away }).pipe(
+      // soporta {GameId: n} o {gameId: n}
+      map(r => ({ gameId: r.GameId ?? r.gameId }))
+    );
   }
 
   getGame(id: number): Observable<GameDetail> {
-    return this.http.get<GameDetail>(`${this.base}/games/${id}`);
+    return this.http.get<any>(`${this.base}/games/${id}`).pipe(
+      map(raw => {
+        const game   = this.camelize(raw.game)   as Game;
+        const events = this.camelize(raw.events) as GameDetail['events'];
+        return { game, events };
+      })
+    );
   }
 
-  // Flow / ofensiva
-  start(id: number) {
-    return this.http.post(`${this.base}/games/${id}/start`, {});
-  }
+  // ========== Flow ==========
+  start(id: number)   { return this.http.post(`${this.base}/games/${id}/start`, {}); }
+  advance(id: number) { return this.http.post(`${this.base}/games/${id}/advance-quarter`, {}); }
+  finish(id: number)  { return this.http.post(`${this.base}/games/${id}/finish`, {}); }
 
-  advance(id: number) {
-    return this.http.post(`${this.base}/games/${id}/advance-quarter`, {});
-  }
-
-  finish(id: number) {
-    return this.http.post(`${this.base}/games/${id}/finish`, {});
-  }
-
-  // Acciones / Actions
+  // ========== Acciones ==========
   score(id: number, team: 'HOME'|'AWAY', points: 1|2|3) {
     return this.http.post(`${this.base}/games/${id}/score`, { team, points });
   }
-
   foul(id: number, team: 'HOME'|'AWAY') {
     return this.http.post(`${this.base}/games/${id}/foul`, { team });
   }
-
   undo(id: number) {
     return this.http.post(`${this.base}/games/${id}/undo`, {});
   }
