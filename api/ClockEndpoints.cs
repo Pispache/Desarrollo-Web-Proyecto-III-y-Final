@@ -6,48 +6,54 @@ public static class ClockEndpoints
 {
     public static void MapClockEndpoints(this WebApplication app, Func<string> cs)
     {
-        // GET: estado de reloj (computado en SQL)
-        app.MapGet("/api/games/{id:int}/clock", async (int id) =>
+    // GET: estado de reloj (computado en SQL)
+    app.MapGet("/api/games/{id:int}/clock", async (int id) =>
+    {
+        using var conn = new SqlConnection(cs());
+        var dto = await conn.QuerySingleOrDefaultAsync(@"
+            SELECT
+                GameId,
+                Quarter,
+                QuarterMs,
+                Running,        -- BIT
+                StartedAt,
+                UpdatedAt,
+                RemainingMs = CASE
+                    WHEN Running = 1 AND StartedAt IS NOT NULL THEN
+                        CASE
+                            WHEN RemainingMs - DATEDIFF(millisecond, StartedAt, SYSUTCDATETIME()) > 0
+                                THEN RemainingMs - DATEDIFF(millisecond, StartedAt, SYSUTCDATETIME())
+                            ELSE 0
+                        END
+                    ELSE RemainingMs
+                END
+            FROM MarcadorDB.dbo.GameClocks
+            WHERE GameId = @id;
+        ", new { id });
+
+        if (dto is null) return Results.NotFound();
+
+        // Convertir dinámicos de forma segura
+        int remaining = Convert.ToInt32(dto.RemainingMs);
+        // Running puede ser bool o numérico (BIT). Conviértelo a int y luego a bool.
+        bool runningFlag = Convert.ToInt32(dto.Running) != 0;
+
+        // Si ya se agotó, repórtalo como detenido
+        bool running = runningFlag && remaining > 0;
+
+        return Results.Ok(new
         {
-            using var conn = new SqlConnection(cs());
-            var dto = await conn.QuerySingleOrDefaultAsync(@"
-                SELECT
-                    GameId,
-                    Quarter,
-                    QuarterMs,
-                    Running,
-                    StartedAt,
-                    UpdatedAt,
-                    RemainingMs = CASE
-                        WHEN Running = 1 AND StartedAt IS NOT NULL THEN
-                            CASE
-                                WHEN RemainingMs - DATEDIFF(millisecond, StartedAt, SYSUTCDATETIME()) > 0
-                                    THEN RemainingMs - DATEDIFF(millisecond, StartedAt, SYSUTCDATETIME())
-                                ELSE 0
-                            END
-                        ELSE RemainingMs
-                    END
-                FROM MarcadorDB.dbo.GameClocks
-                WHERE GameId = @id;
-            ", new { id });
+            gameId = Convert.ToInt32(dto.GameId),
+            quarter = Convert.ToByte(dto.Quarter),
+            quarterMs = Convert.ToInt32(dto.QuarterMs),
+            running = running,
+            remainingMs = remaining,
+            updatedAt = (DateTime)dto.UpdatedAt
+        });
+    })
+    .WithName("GetClock")
+    .WithOpenApi();
 
-            if (dto is null) return Results.NotFound();
-
-            // running efectivo (si ya llegó a 0, lo reportamos como detenido)
-            bool running = (dto.Running == true || dto.Running == 1) && ((int)dto.RemainingMs > 0);
-
-            return Results.Ok(new
-            {
-                gameId = (int)dto.GameId,
-                quarter = (byte)dto.Quarter,
-                quarterMs = (int)dto.QuarterMs,
-                running = running,
-                remainingMs = (int)dto.RemainingMs,
-                updatedAt = (DateTime)dto.UpdatedAt
-            });
-        })
-        .WithName("GetClock")
-        .WithOpenApi();
 
 
         // POST: pausa reloj

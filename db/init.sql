@@ -42,8 +42,8 @@ BEGIN
         GameId      INT         NOT NULL PRIMARY KEY
                                 REFERENCES dbo.Games(GameId) ON DELETE CASCADE,
         Quarter     TINYINT     NOT NULL DEFAULT 1,
-        QuarterMs   INT         NOT NULL DEFAULT 720000,  -- 12 min
-        RemainingMs INT         NOT NULL DEFAULT 720000,  -- 12 min
+        QuarterMs   INT         NOT NULL DEFAULT 600000,  -- 12 min
+        RemainingMs INT         NOT NULL DEFAULT 600000,  -- 12 min
         Running     BIT         NOT NULL DEFAULT 0,
         StartedAt   DATETIME2   NULL,
         UpdatedAt   DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME()

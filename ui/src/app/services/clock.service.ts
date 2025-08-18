@@ -71,8 +71,8 @@ export class ClockService {
       .subscribe({ error: () => {/* opcional: toast/log */} });
   }
 
-  /** Resetea en servidor (por defecto 12min) y avisa a todas las vistas */
-  resetForNewQuarter(gameId: number, quarterMs = 12 * 60 * 1000) {
+  /** Resetea en servidor */
+  resetForNewQuarter(gameId: number, quarterMs = 10 * 60 * 1000) {
     this.http.post(`${this.base}/games/${gameId}/clock/reset`, { quarterMs })
       .pipe(tap(() => this.clockChanged$.next(gameId)))
       .subscribe({ error: () => {/* opcional: toast/log */} });

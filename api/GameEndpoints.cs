@@ -35,7 +35,7 @@ public static class GameEndpoints
             await conn.ExecuteAsync(@"
                 IF NOT EXISTS (SELECT 1 FROM MarcadorDB.dbo.GameClocks WHERE GameId=@id)
                 INSERT INTO MarcadorDB.dbo.GameClocks(GameId, Quarter, QuarterMs, RemainingMs, Running, StartedAt, UpdatedAt)
-                VALUES(@id, 1, 720000, 720000, 0, NULL, SYSUTCDATETIME());
+                VALUES(@id, 1, 600000, 600000, 0, NULL, SYSUTCDATETIME());
             ", new { id }, tx);
 
             tx.Commit();
