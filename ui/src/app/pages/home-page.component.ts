@@ -4,11 +4,12 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, GameDetail } from '../services/api.service';
 import { ScoreboardComponent } from '../widgets/scoreboard.component';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
+import { ClockComponent } from '../widgets/clock.component';
 
 @Component({
   selector: 'app-home-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, ScoreboardComponent, ControlPanelComponent],
+  imports: [CommonModule, FormsModule, ScoreboardComponent, ControlPanelComponent, ClockComponent],
   template: `
     <div class="p-4 grid gap-4 max-w-3xl mx-auto">
       <h1 class="text-2xl font-semibold">Marcador de Baloncesto</h1>
@@ -27,6 +28,14 @@ import { ControlPanelComponent } from '../widgets/control-panel.component';
 
       <ng-container *ngIf="detail as d; else emptyState">
         <app-scoreboard [game]="d.game"></app-scoreboard>
+
+        <app-clock
+          [gameId]="d.game.gameId"
+          [status]="d.game.status"
+          [quarter]="d.game.quarter"
+          (expired)="onExpire()">
+        </app-clock>
+
         <app-control-panel [game]="d.game" (changed)="reload()"></app-control-panel>
 
         <div class="border rounded p-3">
@@ -46,6 +55,7 @@ export class HomePageComponent {
   away = 'Panteras';
   gameId?: number;
   detail?: GameDetail;
+  private advancing = false; // evita doble avance por si acaso
 
   constructor(private api: ApiService) {}
 
@@ -64,5 +74,25 @@ export class HomePageComponent {
   reload() {
     if (!this.detail) return;
     this.api.getGame(this.detail.game.gameId).subscribe(d => this.detail = d);
+  }
+
+  // Llamado cuando el reloj llega a 00:00
+  onExpire() {
+    if (!this.detail) return;
+    const g = this.detail.game;
+
+    // Si está en progreso y aún no es el 4º cuarto, avanzamos
+    if (g.status === 'IN_PROGRESS' && g.quarter < 4 && !this.advancing) {
+      this.advancing = true;
+      this.api.advance(g.gameId).subscribe({
+        next: () => this.reload(),
+        error: () => {},
+        complete: () => (this.advancing = false)
+      });
+    }
+    // Si es el 4º cuarto podrías finalizar automáticamente:
+    // else if (g.status === 'IN_PROGRESS' && g.quarter === 4) {
+    //   this.api.finish(g.gameId).subscribe(() => this.reload());
+    // }
   }
 }
