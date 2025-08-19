@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, Subject, map, tap } from 'rxjs';
 
 export type GameStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED';
+export type FoulType = 'PERSONAL' | 'TECHNICAL' | 'UNSPORTSMANLIKE' | 'DISQUALIFYING';
 
 export interface Game {
   gameId: number;
@@ -25,6 +26,8 @@ export interface GameDetail {
     quarter: number;
     team: 'HOME' | 'AWAY' | string;
     eventType: 'POINT_1' | 'POINT_2' | 'POINT_3' | 'FOUL' | 'UNDO' | string;
+    /** Tipo de falta (si el backend lo devuelve) */
+    foulType?: FoulType | string;
     playerNumber?: number | null;
     playerId?: number | null;
     createdAt: string;
@@ -43,7 +46,7 @@ export interface Player {
   createdAt: string;
 }
 
-export interface FoulSummaryTeamRow { quarter: number; team: 'HOME'|'AWAY'|string; fouls: number; }
+export interface FoulSummaryTeamRow { quarter: number; team: 'HOME'|'AWAY'|string; fouls: number;foulType?: FoulType | string; }
 export interface FoulSummaryPlayerRow { quarter: number; team: 'HOME'|'AWAY'|string; playerId: number; fouls: number; }
 export interface FoulSummary { team: FoulSummaryTeamRow[]; players: FoulSummaryPlayerRow[]; }
 
@@ -64,10 +67,10 @@ export class ApiService {
       ? Object.fromEntries(Object.entries(obj).map(([k, v]) => [k[0]?.toLowerCase() + k.slice(1), this.camel(v)])) as T
       : obj as T;
 
-  private get = <T>(url: string) => this.http.get<T>(`${this.base}${url}`);
+  private get  = <T>(url: string) => this.http.get<T>(`${this.base}${url}`);
   private post = <T>(url: string, body: any) => this.http.post<T>(`${this.base}${url}`, body);
-  private patch = <T>(url: string, body: any) => this.http.patch<T>(`${this.base}${url}`, body);
-  private del = <T>(url: string) => this.http.delete<T>(`${this.base}${url}`);
+  private patch= <T>(url: string, body: any) => this.http.patch<T>(`${this.base}${url}`, body);
+  private del  = <T>(url: string) => this.http.delete<T>(`${this.base}${url}`);
 
   /* ========= Juegos ========= */
   listGames(): Observable<Game[]> {
@@ -88,7 +91,8 @@ export class ApiService {
   }
 
   createGame(home: string, away: string) {
-    return this.post<any>(`/games`, { home, away }).pipe(map(r => ({ gameId: Number(r.GameId ?? r.gameId) })));
+    return this.post<any>(`/games`, { home, away })
+      .pipe(map(r => ({ gameId: Number(r.GameId ?? r.gameId) })));
   }
 
   getGame(id: number): Observable<GameDetail> {
@@ -100,7 +104,10 @@ export class ApiService {
           quarter: g.quarter, homeScore: g.homeScore, awayScore: g.awayScore, createdAt: this.iso(g.createdAt),
           homeTeamId: this.num(g.homeTeamId ?? g.hometeamid), awayTeamId: this.num(g.awayTeamId ?? g.awayteamid),
         };
-        const events = (this.camel<any[]>(raw.events ?? [])).map(e => ({ ...e, createdAt: this.iso(e.createdAt) }));
+        const events = (this.camel<any[]>(raw.events ?? [])).map(e => ({
+          ...e,
+          createdAt: this.iso(e.createdAt),
+        }));
         return { game, events };
       })
     );
@@ -109,12 +116,44 @@ export class ApiService {
   start(id: number)   { return this.post(`/games/${id}/start`, {}); }
   advance(id: number) { return this.post(`/games/${id}/advance-quarter`, {}); }
   finish(id: number)  { return this.post(`/games/${id}/finish`, {}); }
-  score(id: number, team: 'HOME'|'AWAY', points: 1|2|3, opts?: { playerId?: number; playerNumber?: number }) {
-    return this.post(`/games/${id}/score`, { team, points, playerId: opts?.playerId ?? null, playerNumber: opts?.playerNumber ?? null });
+
+  score(
+    id: number,
+    team: 'HOME'|'AWAY',
+    points: 1|2|3,
+    opts?: { playerId?: number; playerNumber?: number }
+  ) {
+    return this.post(`/games/${id}/score`, {
+      team,
+      points,
+      playerId: opts?.playerId ?? null,
+      playerNumber: opts?.playerNumber ?? null
+    });
   }
-  foul(id: number, team: 'HOME'|'AWAY', opts?: { playerId?: number; playerNumber?: number }) {
-    return this.post(`/games/${id}/foul`, { team, playerId: opts?.playerId ?? null, playerNumber: opts?.playerNumber ?? null });
-  }
+
+  foul(
+    id: number,
+    team: 'HOME'|'AWAY',
+    opts?: { playerId?: number; playerNumber?: number; type?: FoulType }
+  ) {
+    const t = opts?.type;
+    const body: any = {
+      team,
+      playerId: opts?.playerId ?? null,
+      playerNumber: opts?.playerNumber ?? null,
+      ...(t ? {
+        foulType:  t,
+        type:      t,
+        FoulType:  t,
+        foul_type: t,
+      } : {})
+    };
+    const qs = t ? `?type=${encodeURIComponent(t)}` : '';
+    return this.post(`/games/${id}/foul${qs}`, body);
+}
+
+
+
   undo(id: number) { return this.post(`/games/${id}/undo`, {}); }
 
   /* ========= Equipos ========= */
@@ -132,33 +171,43 @@ export class ApiService {
     const body = typeof nameOrPayload === 'string' ? { name: nameOrPayload } : nameOrPayload;
     return this.post<any>(`/teams`, body).pipe(
       map(r => ({ teamId: Number(r.teamId ?? r.TeamId), name: r.name ?? body.name })),
-      tap(() => this.teamsChanged$.next()) // <-- dispara refresco del <select>
+      tap(() => this.teamsChanged$.next()) // notifica para refrescar selects
     );
   }
 
   pairGame(homeTeamId: number, awayTeamId: number) {
-    return this.post<any>(`/games/pair`, { homeTeamId, awayTeamId }).pipe(map(r => ({ gameId: Number(r.gameId ?? r.GameId) })));
+    return this.post<any>(`/games/pair`, { homeTeamId, awayTeamId })
+      .pipe(map(r => ({ gameId: Number(r.gameId ?? r.GameId) })));
   }
 
   /* ========= Jugadores ========= */
   listPlayers(teamId: number): Observable<Player[]> {
-    return this.get<any[]>(`/teams/${teamId}/players`).pipe(map(rows => this.camel<Player[]>(rows)));
+    return this.get<any[]>(`/teams/${teamId}/players`)
+      .pipe(map(rows => this.camel<Player[]>(rows)));
   }
+
   createPlayer(teamId: number, p: { name: string; number?: number; position?: string }) {
     return this.post<{ playerId: number }>(`/teams/${teamId}/players`, p);
   }
-  updatePlayer(playerId: number, patch: Partial<{ name: string; number: number; position: string; active: boolean }>) {
+
+  updatePlayer(
+    playerId: number,
+    patch: Partial<{ name: string; number: number; position: string; active: boolean }>
+  ) {
     return this.patch(`/players/${playerId}`, patch);
   }
+
   deletePlayer(playerId: number) { return this.del(`/players/${playerId}`); }
 
   /* ========= Jugadores por juego ========= */
   listGamePlayers(gameId: number, side: 'HOME'|'AWAY') {
-    return this.get<any[]>(`/games/${gameId}/players/${side}`).pipe(map(rows => this.camel<Player[]>(rows)));
+    return this.get<any[]>(`/games/${gameId}/players/${side}`)
+      .pipe(map(rows => this.camel<Player[]>(rows)));
   }
 
   /* ========= Resumen de faltas ========= */
   getFoulSummary(id: number): Observable<FoulSummary> {
-    return this.get<any>(`/games/${id}/fouls/summary`).pipe(map(r => this.camel<FoulSummary>(r)));
+    return this.get<any>(`/games/${id}/fouls/summary`)
+      .pipe(map(r => this.camel<FoulSummary>(r)));
   }
 }

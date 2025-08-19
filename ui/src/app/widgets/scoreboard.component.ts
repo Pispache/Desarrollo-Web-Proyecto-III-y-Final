@@ -1,6 +1,6 @@
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Game } from '../services/api.service';
+import { Game, GameDetail } from '../services/api.service';
 
 @Component({
   selector: 'app-scoreboard',
@@ -10,4 +10,5 @@ import { Game } from '../services/api.service';
 })
 export class ScoreboardComponent {
   @Input({ required: true }) game!: Game;
+  @Input() events: GameDetail['events'] = [];
 }

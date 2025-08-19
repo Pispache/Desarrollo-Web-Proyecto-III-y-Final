@@ -38,6 +38,13 @@ record PairDto(int HomeTeamId, int AwayTeamId);
 record CreatePlayerDto(string Name, byte? Number, string? Position);
 record UpdatePlayerDto(byte? Number, string? Name, string? Position, bool? Active);
 record ScoreDto(string Team, int Points, int? PlayerId, int? PlayerNumber);
-record FoulDto(string Team, int? PlayerId, int? PlayerNumber, FoulType FoulType = FoulType.PERSONAL);
+record FoulDto(
+  string Team,
+  int? PlayerId,
+  int? PlayerNumber,
+  string? FoulType = null,   
+  string? Type = null,       
+  string? foul_type = null   
+);
 record ClockResetDto(int? QuarterMs);
 

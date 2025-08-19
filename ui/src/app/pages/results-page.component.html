@@ -57,6 +57,251 @@
         </div>
       </div>
 
+      <!-- =================== HOME =================== -->
+      <div class="mt-4 border rounded p-2">
+        <div class="flex items-center justify-between">
+          <div class="font-semibold">Faltas HOME por tipo</div>
+          <button class="px-3 py-1 rounded border" (click)="showHomeDetail = !showHomeDetail">
+            {{ showHomeDetail ? 'Ocultar detalle HOME' : 'Detalle por jugador (HOME)' }}
+          </button>
+        </div>
+
+        <!-- Tabla HOME por tipo y por cuarto -->
+        <table class="w-full text-sm mt-2">
+          <thead>
+            <tr class="text-left">
+              <th style="width:9rem;">Tipo</th>
+              <th *ngFor="let q of quarters" style="text-align:center;">Q{{ q }}</th>
+              <th style="text-align:center;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of foulTypes">
+              <td>
+                <span class="px-2 py-0.5 rounded text-white"
+                      [ngClass]="{
+                        'bg-gray-700': t==='PERSONAL',
+                        'bg-blue-600': t==='TECHNICAL',
+                        'bg-amber-600': t==='UNSPORTSMANLIKE',
+                        'bg-red-600': t==='DISQUALIFYING'
+                      }">{{ t }}</span>
+              </td>
+              <td *ngFor="let q of quarters" style="text-align:center;">
+                {{ teamFoulsByType('HOME', t, q) }}
+              </td>
+              <td style="text-align:center; font-weight:600;">
+                {{ teamFoulsByTypeTotal('HOME', t) }}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="font-semibold">
+              <td>Total equipo</td>
+              <td *ngFor="let q of quarters" style="text-align:center;">
+                {{ teamFoulsAllTypesByQuarter('HOME', q) }}
+              </td>
+              <td style="text-align:center;">
+                {{ teamFoulsAllTypesTotal('HOME') }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Detalle HOME por jugador -->
+        <div *ngIf="showHomeDetail" class="mt-3 border rounded p-2">
+          <div class="font-semibold mb-1">Detalle por jugador — HOME</div>
+          <div class="overflow-auto">
+            <table class="w-full text-sm min-w-[56rem]">
+              <thead>
+                <tr class="text-left">
+                  <th rowspan="2" style="width:3rem;">#</th>
+                  <th rowspan="2">Jugador</th>
+                  <ng-container *ngFor="let q of quarters">
+                    <th [attr.colspan]="5" style="text-align:center;">Q{{ q }}</th>
+                  </ng-container>
+                  <th [attr.colspan]="5" style="text-align:center;">Total</th>
+                </tr>
+                <tr>
+                  <ng-container *ngFor="let q of quarters">
+                    <th style="text-align:center;">P</th>
+                    <th style="text-align:center;">T</th>
+                    <th style="text-align:center;">U</th>
+                    <th style="text-align:center;">D</th>
+                    <th style="text-align:center;">Tot</th>
+                  </ng-container>
+                  <th style="text-align:center;">P</th>
+                  <th style="text-align:center;">T</th>
+                  <th style="text-align:center;">U</th>
+                  <th style="text-align:center;">D</th>
+                  <th style="text-align:center;">Tot</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of homeRoster">
+                  <td>{{ p.number ?? '—' }}</td>
+                  <td>{{ p.name }}</td>
+
+                  <ng-container *ngFor="let q of quarters">
+                    <td style="text-align:center;">{{ playerFoulsByTypeQ('HOME', p.playerId, 'PERSONAL',        q) }}</td>
+                    <td style="text-align:center;">{{ playerFoulsByTypeQ('HOME', p.playerId, 'TECHNICAL',       q) }}</td>
+                    <td style="text-align:center;">{{ playerFoulsByTypeQ('HOME', p.playerId, 'UNSPORTSMANLIKE', q) }}</td>
+                    <td style="text-align:center;">{{ playerFoulsByTypeQ('HOME', p.playerId, 'DISQUALIFYING',   q) }}</td>
+                    <td style="text-align:center; font-weight:600;">{{ playerFoulsQuarterTotal('HOME', p.playerId, q) }}</td>
+                  </ng-container>
+
+                  <td style="text-align:center;">{{ playerFoulsTotalByType('HOME', p.playerId, 'PERSONAL') }}</td>
+                  <td style="text-align:center;">{{ playerFoulsTotalByType('HOME', p.playerId, 'TECHNICAL') }}</td>
+                  <td style="text-align:center;">{{ playerFoulsTotalByType('HOME', p.playerId, 'UNSPORTSMANLIKE') }}</td>
+                  <td style="text-align:center;">{{ playerFoulsTotalByType('HOME', p.playerId, 'DISQUALIFYING') }}</td>
+                  <td style="text-align:center; font-weight:600;">{{ playerFoulsTotalAll('HOME', p.playerId) }}</td>
+                </tr>
+
+                <!-- Equipo (sin asignar) -->
+                <tr class="bg-gray-50">
+                  <td>—</td>
+                  <td class="font-medium italic">Equipo (sin asignar)</td>
+                  <ng-container *ngFor="let q of quarters">
+                    <td style="text-align:center;">{{ unassignedByTypeQ('HOME', 'PERSONAL',        q) }}</td>
+                    <td style="text-align:center;">{{ unassignedByTypeQ('HOME', 'TECHNICAL',       q) }}</td>
+                    <td style="text-align:center;">{{ unassignedByTypeQ('HOME', 'UNSPORTSMANLIKE', q) }}</td>
+                    <td style="text-align:center;">{{ unassignedByTypeQ('HOME', 'DISQUALIFYING',   q) }}</td>
+                    <td style="text-align:center; font-weight:600;">{{ unassignedQuarterTotal('HOME', q) }}</td>
+                  </ng-container>
+                  <td style="text-align:center;">{{ unassignedTotalByType('HOME', 'PERSONAL') }}</td>
+                  <td style="text-align:center;">{{ unassignedTotalByType('HOME', 'TECHNICAL') }}</td>
+                  <td style="text-align:center;">{{ unassignedTotalByType('HOME', 'UNSPORTSMANLIKE') }}</td>
+                  <td style="text-align:center;">{{ unassignedTotalByType('HOME', 'DISQUALIFYING') }}</td>
+                  <td style="text-align:center; font-weight:600;">{{ unassignedTotalAll('HOME') }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- =================== AWAY =================== -->
+      <div class="mt-4 border rounded p-2">
+        <div class="flex items-center justify-between">
+          <div class="font-semibold">Faltas AWAY por tipo</div>
+          <button class="px-3 py-1 rounded border" (click)="showAwayDetail = !showAwayDetail">
+            {{ showAwayDetail ? 'Ocultar detalle AWAY' : 'Detalle por jugador (AWAY)' }}
+          </button>
+        </div>
+
+        <!-- Tabla AWAY por tipo y por cuarto -->
+        <table class="w-full text-sm mt-2">
+          <thead>
+            <tr class="text-left">
+              <th style="width:9rem;">Tipo</th>
+              <th *ngFor="let q of quarters" style="text-align:center;">Q{{ q }}</th>
+              <th style="text-align:center;">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of foulTypes">
+              <td>
+                <span class="px-2 py-0.5 rounded text-white"
+                      [ngClass]="{
+                        'bg-gray-700': t==='PERSONAL',
+                        'bg-blue-600': t==='TECHNICAL',
+                        'bg-amber-600': t==='UNSPORTSMANLIKE',
+                        'bg-red-600': t==='DISQUALIFYING'
+                      }">{{ t }}</span>
+              </td>
+              <td *ngFor="let q of quarters" style="text-align:center;">
+                {{ teamFoulsByType('AWAY', t, q) }}
+              </td>
+              <td style="text-align:center; font-weight:600;">
+                {{ teamFoulsByTypeTotal('AWAY', t) }}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr class="font-semibold">
+              <td>Total equipo</td>
+              <td *ngFor="let q of quarters" style="text-align:center;">
+                {{ teamFoulsAllTypesByQuarter('AWAY', q) }}
+              </td>
+              <td style="text-align:center;">
+                {{ teamFoulsAllTypesTotal('AWAY') }}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Detalle AWAY por jugador -->
+        <div *ngIf="showAwayDetail" class="mt-3 border rounded p-2">
+          <div class="font-semibold mb-1">Detalle por jugador — AWAY</div>
+          <div class="overflow-auto">
+            <table class="w-full text-sm min-w-[56rem]">
+              <thead>
+                <tr class="text-left">
+                  <th rowspan="2" style="width:3rem;">#</th>
+                  <th rowspan="2">Jugador</th>
+                  <ng-container *ngFor="let q of quarters">
+                    <th [attr.colspan]="5" style="text-align:center;">Q{{ q }}</th>
+                  </ng-container>
+                  <th [attr.colspan]="5" style="text-align:center;">Total</th>
+                </tr>
+                <tr>
+                  <ng-container *ngFor="let q of quarters">
+                    <th style="text-align:center;">P</th>
+                    <th style="text-align:center;">T</th>
+                    <th style="text-align:center;">U</th>
+                    <th style="text-align:center;">D</th>
+                    <th style="text-align:center;">Tot</th>
+                  </ng-container>
+                  <th style="text-align:center;">P</th>
+                  <th style="text-align:center;">T</th>
+                  <th style="text-align:center;">U</th>
+                  <th style="text-align:center;">D</th>
+                  <th style="text-align:center;">Tot</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of awayRoster">
+                  <td>{{ p.number ?? '—' }}</td>
+                  <td>{{ p.name }}</td>
+
+                  <ng-container *ngFor="let q of quarters">
+                    <td style="text-align:center;">{{ playerFoulsByTypeQ('AWAY', p.playerId, 'PERSONAL',        q) }}</td>
+                    <td style="text-align:center;">{{ playerFoulsByTypeQ('AWAY', p.playerId, 'TECHNICAL',       q) }}</td>
+                    <td style="text-align:center;">{{ playerFoulsByTypeQ('AWAY', p.playerId, 'UNSPORTSMANLIKE', q) }}</td>
+                    <td style="text-align:center;">{{ playerFoulsByTypeQ('AWAY', p.playerId, 'DISQUALIFYING',   q) }}</td>
+                    <td style="text-align:center; font-weight:600;">{{ playerFoulsQuarterTotal('AWAY', p.playerId, q) }}</td>
+                  </ng-container>
+
+                  <td style="text-align:center;">{{ playerFoulsTotalByType('AWAY', p.playerId, 'PERSONAL') }}</td>
+                  <td style="text-align:center;">{{ playerFoulsTotalByType('AWAY', p.playerId, 'TECHNICAL') }}</td>
+                  <td style="text-align:center;">{{ playerFoulsTotalByType('AWAY', p.playerId, 'UNSPORTSMANLIKE') }}</td>
+                  <td style="text-align:center;">{{ playerFoulsTotalByType('AWAY', p.playerId, 'DISQUALIFYING') }}</td>
+                  <td style="text-align:center; font-weight:600;">{{ playerFoulsTotalAll('AWAY', p.playerId) }}</td>
+                </tr>
+
+                <!-- Equipo (sin asignar) -->
+                <tr class="bg-gray-50">
+                  <td>—</td>
+                  <td class="font-medium italic">Equipo (sin asignar)</td>
+                  <ng-container *ngFor="let q of quarters">
+                    <td style="text-align:center;">{{ unassignedByTypeQ('AWAY', 'PERSONAL',        q) }}</td>
+                    <td style="text-align:center;">{{ unassignedByTypeQ('AWAY', 'TECHNICAL',       q) }}</td>
+                    <td style="text-align:center;">{{ unassignedByTypeQ('AWAY', 'UNSPORTSMANLIKE', q) }}</td>
+                    <td style="text-align:center;">{{ unassignedByTypeQ('AWAY', 'DISQUALIFYING',   q) }}</td>
+                    <td style="text-align:center; font-weight:600;">{{ unassignedQuarterTotal('AWAY', q) }}</td>
+                  </ng-container>
+                  <td style="text-align:center;">{{ unassignedTotalByType('AWAY', 'PERSONAL') }}</td>
+                  <td style="text-align:center;">{{ unassignedTotalByType('AWAY', 'TECHNICAL') }}</td>
+                  <td style="text-align:center;">{{ unassignedTotalByType('AWAY', 'UNSPORTSMANLIKE') }}</td>
+                  <td style="text-align:center;">{{ unassignedTotalByType('AWAY', 'DISQUALIFYING') }}</td>
+                  <td style="text-align:center; font-weight:600;">{{ unassignedTotalAll('AWAY') }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Eventos -->
       <h4 class="mt-4 font-semibold">Eventos recientes</h4>
       <ul class="text-sm divide-y" style="max-height:16rem; overflow:auto;">
         <li *ngFor="let e of d.events" class="py-1">
@@ -64,88 +309,20 @@
           <ng-container *ngIf="e.team">({{ e.team }})</ng-container>
           <ng-container *ngIf="e.playerNumber != null"> #{{ e.playerNumber }}</ng-container>
           <ng-container *ngIf="e.playerId != null"> (id: {{ e.playerId }})</ng-container>
+
+          <ng-container *ngIf="e.eventType === 'FOUL'">
+            <span class="ml-2 px-2 py-0.5 rounded text-white"
+                  [ngClass]="{
+                    'bg-gray-700': (e.foulType || 'PERSONAL')==='PERSONAL',
+                    'bg-blue-600': e.foulType==='TECHNICAL',
+                    'bg-amber-600': e.foulType==='UNSPORTSMANLIKE',
+                    'bg-red-600': e.foulType==='DISQUALIFYING'
+                  }">
+              {{ (e.foulType || 'PERSONAL') }}
+            </span>
+          </ng-container>
         </li>
       </ul>
-
-      <!-- Plantilla HOME -->
-      <div class="grid gap-4 mt-4" style="grid-template-columns: 1fr 1fr;">
-        <div>
-          <h5 class="font-semibold">
-            Plantilla HOME
-            <span *ngIf="(foulSummary?.team | isBonus:'HOME':d.game.quarter)">(BONUS)</span>
-          </h5>
-
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="text-left">
-                <th style="width:3rem;">#</th>
-                <th>Jugador</th>
-                <th style="width:3rem; text-align:center;">Q1</th>
-                <th style="width:3rem; text-align:center;">Q2</th>
-                <th style="width:3rem; text-align:center;">Q3</th>
-                <th style="width:3rem; text-align:center;">Q4</th>
-                <th style="width:3.5rem; text-align:center;">Total</th>
-                <th style="width:3.5rem;"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let p of homeRoster">
-                <td>{{ p.number ?? '—' }}</td>
-                <td>{{ p.name }}</td>
-                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'HOME':p.playerId:1) }}</td>
-                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'HOME':p.playerId:2) }}</td>
-                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'HOME':p.playerId:3) }}</td>
-                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'HOME':p.playerId:4) }}</td>
-                <td style="text-align:center; font-weight:600;">
-                  {{ (foulSummary?.players | playerFoulsTotal:'HOME':p.playerId) }}
-                </td>
-                <td>
-                  <span *ngIf="outSet.has(p.playerId)" class="ml-2 px-2 py-0.5 bg-black text-white rounded">OUT</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Plantilla AWAY -->
-        <div>
-          <h5 class="font-semibold">
-            Plantilla AWAY
-            <span *ngIf="(foulSummary?.team | isBonus:'AWAY':d.game.quarter)">(BONUS)</span>
-          </h5>
-
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="text-left">
-                <th style="width:3rem;">#</th>
-                <th>Jugador</th>
-                <th style="width:3rem; text-align:center;">Q1</th>
-                <th style="width:3rem; text-align:center;">Q2</th>
-                <th style="width:3rem; text-align:center;">Q3</th>
-                <th style="width:3rem; text-align:center;">Q4</th>
-                <th style="width:3.5rem; text-align:center;">Total</th>
-                <th style="width:3.5rem;"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let p of awayRoster">
-                <td>{{ p.number ?? '—' }}</td>
-                <td>{{ p.name }}</td>
-                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'AWAY':p.playerId:1) }}</td>
-                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'AWAY':p.playerId:2) }}</td>
-                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'AWAY':p.playerId:3) }}</td>
-                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'AWAY':p.playerId:4) }}</td>
-                <td style="text-align:center; font-weight:600;">
-                  {{ (foulSummary?.players | playerFoulsTotal:'AWAY':p.playerId) }}
-                </td>
-                <td>
-                  <span *ngIf="outSet.has(p.playerId)" class="ml-2 px-2 py-0.5 bg-black text-white rounded">OUT</span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div> <!-- /grid plantillas -->
     </div>
   </div>
 </div>

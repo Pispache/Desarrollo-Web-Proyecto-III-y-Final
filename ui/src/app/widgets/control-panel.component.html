@@ -11,6 +11,7 @@
   <!-- HOME -->
   <div class="flex flex-wrap gap-2 items-center">
     <span class="font-medium">HOME:</span>
+
     <button class="border rounded px-3 py-1" (click)="score('HOME',1)" [disabled]="game.status!=='IN_PROGRESS'">+1</button>
     <button class="border rounded px-3 py-1" (click)="score('HOME',2)" [disabled]="game.status!=='IN_PROGRESS'">+2</button>
     <button class="border rounded px-3 py-1" (click)="score('HOME',3)" [disabled]="game.status!=='IN_PROGRESS'">+3</button>
@@ -22,16 +23,34 @@
       </option>
     </select>
 
+    <!-- Tipo de falta HOME -->
+    <select [(ngModel)]="selHomeFoulType" class="border rounded px-2 py-1" [ngModelOptions]="{standalone:true}" [disabled]="game.status!=='IN_PROGRESS'">
+      <option [ngValue]="'PERSONAL'">Personal</option>
+      <option [ngValue]="'TECHNICAL'">Técnica</option>
+      <option [ngValue]="'UNSPORTSMANLIKE'">Antideportiva</option>
+      <option [ngValue]="'DISQUALIFYING'">Descalificante</option>
+    </select>
+
     <button class="border rounded px-3 py-1" (click)="foul('HOME')" [disabled]="game.status!=='IN_PROGRESS'">Foul</button>
 
+    <!-- Totales por equipo (para scoreboard) -->
     <span class="ml-2 text-sm" [class.text-red-600]="teamFouls.home >= 5">
       Faltas HOME (Q{{game.quarter}}): {{ teamFouls.home }} {{ teamFouls.home >= 5 ? '(Penalización)' : '' }}
+    </span>
+
+    <!-- Desglose por tipo (panel de control) -->
+    <span class="ml-2 text-xs text-gray-600">
+      [P: {{ breakdown.home.PERSONAL || 0 }}
+       · T: {{ breakdown.home.TECHNICAL || 0 }}
+       · A: {{ breakdown.home.UNSPORTSMANLIKE || 0 }}
+       · D: {{ breakdown.home.DISQUALIFYING || 0 }}]
     </span>
   </div>
 
   <!-- AWAY -->
   <div class="flex flex-wrap gap-2 items-center">
     <span class="font-medium">AWAY:</span>
+
     <button class="border rounded px-3 py-1" (click)="score('AWAY',1)" [disabled]="game.status!=='IN_PROGRESS'">+1</button>
     <button class="border rounded px-3 py-1" (click)="score('AWAY',2)" [disabled]="game.status!=='IN_PROGRESS'">+2</button>
     <button class="border rounded px-3 py-1" (click)="score('AWAY',3)" [disabled]="game.status!=='IN_PROGRESS'">+3</button>
@@ -43,10 +62,27 @@
       </option>
     </select>
 
+    <!-- Tipo de falta AWAY -->
+    <select [(ngModel)]="selAwayFoulType" class="border rounded px-2 py-1" [ngModelOptions]="{standalone:true}" [disabled]="game.status!=='IN_PROGRESS'">
+      <option [ngValue]="'PERSONAL'">Personal</option>
+      <option [ngValue]="'TECHNICAL'">Técnica</option>
+      <option [ngValue]="'UNSPORTSMANLIKE'">Antideportiva</option>
+      <option [ngValue]="'DISQUALIFYING'">Descalificante</option>
+    </select>
+
     <button class="border rounded px-3 py-1" (click)="foul('AWAY')" [disabled]="game.status!=='IN_PROGRESS'">Foul</button>
 
+    <!-- Totales por equipo (para scoreboard) -->
     <span class="ml-2 text-sm" [class.text-red-600]="teamFouls.away >= 5">
       Faltas AWAY (Q{{game.quarter}}): {{ teamFouls.away }} {{ teamFouls.away >= 5 ? '(Penalización)' : '' }}
+    </span>
+
+    <!-- Desglose por tipo (panel de control) -->
+    <span class="ml-2 text-xs text-gray-600">
+      [P: {{ breakdown.away.PERSONAL || 0 }}
+       · T: {{ breakdown.away.TECHNICAL || 0 }}
+       · A: {{ breakdown.away.UNSPORTSMANLIKE || 0 }}
+       · D: {{ breakdown.away.DISQUALIFYING || 0 }}]
     </span>
   </div>
 </div>

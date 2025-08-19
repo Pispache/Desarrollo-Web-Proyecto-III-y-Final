@@ -18,10 +18,17 @@ public static class GameEndpoints
             => c.ExecuteAsync(sql, p, tx);
         static bool IsNullOrWhite(string? s) => string.IsNullOrWhiteSpace(s);
 
+        static string NormalizeFoulType(string? raw)
+        {
+            var allowed = new HashSet<string> { "PERSONAL", "TECHNICAL", "UNSPORTSMANLIKE", "DISQUALIFYING" };
+            var candidate = raw?.Trim()?.ToUpperInvariant();
+            return (!string.IsNullOrEmpty(candidate) && allowed.Contains(candidate)) ? candidate : "PERSONAL";
+        }
+
         // ===== Games =====
         g.MapGet("/games", async () =>
         {
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
             var rows = await c.QueryAsync($"SELECT TOP 50 * FROM {T}Games ORDER BY GameId DESC;");
             return Results.Ok(rows);
         }).WithOpenApi();
@@ -51,7 +58,7 @@ public static class GameEndpoints
 
         g.MapGet("/games/{id:int}", async (int id) =>
         {
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
             var game = await One<dynamic>(c, $"SELECT * FROM {T}Games WHERE GameId=@id;", new { id });
             if (game is null) return Results.NotFound();
             var events = await c.QueryAsync($"SELECT TOP 100 * FROM {T}GameEvents WHERE GameId=@id ORDER BY EventId DESC;", new { id });
@@ -107,7 +114,7 @@ public static class GameEndpoints
             if ((team != "HOME" && team != "AWAY") || (b?.Points is not (1 or 2 or 3)))
                 return Results.BadRequest(new { error = "Team HOME/AWAY y Points 1|2|3." });
 
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
             var st = await One<string>(c, $"SELECT Status FROM {T}Games WHERE GameId=@id;", new { id });
             if (!string.Equals(st, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
                 return Results.BadRequest(new { error = "Juego no IN_PROGRESS." });
@@ -133,20 +140,32 @@ public static class GameEndpoints
             return ok > 0 ? Results.NoContent() : Results.BadRequest(new { error = "No se pudo registrar." });
         }).WithOpenApi();
 
-        g.MapPost("/games/{id:int}/foul", async (int id, [FromBody] FoulDto b) =>
+        // ✅ Acepta el tipo por body (enum o strings que vengan mapeadas en DTO si lo cambias)
+        //    y por query (?type=, ?foulType=, ?foul_type=)
+        g.MapPost("/games/{id:int}/foul", async (
+            int id,
+            [FromBody] FoulDto b,
+            [FromQuery(Name = "type")] string? qType,
+            [FromQuery(Name = "foulType")] string? qFoulType,
+            [FromQuery(Name = "foul_type")] string? qFoulTypeSnake
+        ) =>
         {
             var team = (b?.Team ?? "").ToUpperInvariant();
             if (team is not ("HOME" or "AWAY"))
                 return Results.BadRequest(new { error = "Team HOME/AWAY." });
 
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
 
             // Validar estado del juego
             var st = await One<string>(c, $"SELECT Status FROM {T}Games WHERE GameId=@id;", new { id });
             if (!string.Equals(st, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
                 return Results.BadRequest(new { error = "Juego no IN_PROGRESS." });
 
-            // Insertar la falta con su tipo (PERSONAL/TECHNICAL/UNSPORTSMANLIKE/DISQUALIFYING)
+            string? rawFromQuery = qFoulTypeSnake ?? qFoulType ?? qType;
+            string? rawFromBody  = b?.FoulType ?? b?.Type ?? b?.foul_type;
+            var foulType = NormalizeFoulType(rawFromQuery ?? rawFromBody);
+
+            // Insertar la falta con su tipo
             var inserted = await c.ExecuteAsync($@"
                 INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerNumber, PlayerId, FoulType, CreatedAt)
                 SELECT @id, Quarter, @team, 'FOUL', @pnum, @pid, @ftype, SYSUTCDATETIME()
@@ -157,7 +176,7 @@ public static class GameEndpoints
                     team,
                     pnum = b?.PlayerNumber,
                     pid  = b?.PlayerId,
-                    ftype = (b?.FoulType ?? FoulType.PERSONAL).ToString()
+                    ftype = foulType
                 });
 
             if (inserted == 0)
@@ -210,9 +229,10 @@ public static class GameEndpoints
             if (isDQ)
             {
                 await c.ExecuteAsync($@"
-                    INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, CreatedAt, Note)
-                    VALUES(@id, @q, @team, 'DISQUALIFIED', @pid, SYSUTCDATETIME(), @why);",
+                    INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, FoulType, CreatedAt)
+                    VALUES(@id, @q, @team, 'DISQUALIFIED', @pid, @why, SYSUTCDATETIME());",
                     new { id, q = quarter, team, pid, why = reason });
+
             }
             else if (isFoulOut)
             {
@@ -224,7 +244,6 @@ public static class GameEndpoints
 
             return Results.NoContent();
         }).WithOpenApi();
-
 
         g.MapPost("/games/{id:int}/undo", async (int id) =>
         {
@@ -258,7 +277,7 @@ public static class GameEndpoints
         // ===== Teams & Players =====
         g.MapGet("/teams", async () =>
         {
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
             var rows = await c.QueryAsync($"SELECT TeamId, Name, CreatedAt FROM {T}Teams ORDER BY Name;");
             return Results.Ok(rows);
         }).WithOpenApi();
@@ -270,7 +289,7 @@ public static class GameEndpoints
 
             try
             {
-                using var c = new SqlConnection(cs());
+                using var c = Open(cs());
                 var id = await c.ExecuteScalarAsync<int>($"INSERT INTO {T}Teams(Name) OUTPUT INSERTED.TeamId VALUES(@name);", new { name });
                 return Results.Created($"/api/teams/{id}", new { teamId = id, name });
             }
@@ -311,7 +330,7 @@ public static class GameEndpoints
 
         g.MapGet("/teams/{teamId:int}/players", async (int teamId) =>
         {
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
             var rows = await c.QueryAsync($@"
                 SELECT PlayerId, TeamId, Number, Name, Position, Active, CreatedAt
                 FROM {T}Players WHERE TeamId=@teamId
@@ -326,7 +345,7 @@ public static class GameEndpoints
 
             try
             {
-                using var c = new SqlConnection(cs());
+                using var c = Open(cs());
                 var id = await c.ExecuteScalarAsync<int>($@"
                     INSERT INTO {T}Players(TeamId, Number, Name, Position, Active)
                     OUTPUT INSERTED.PlayerId VALUES(@teamId,@num,@name,@pos,1);",
@@ -338,7 +357,7 @@ public static class GameEndpoints
 
         g.MapPatch("/players/{playerId:int}", async (int playerId, [FromBody] UpdatePlayerDto b) =>
         {
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
             var ok = await c.ExecuteAsync($@"
                 UPDATE {T}Players SET
                   Number=COALESCE(@Number,Number),
@@ -351,7 +370,7 @@ public static class GameEndpoints
 
         g.MapDelete("/players/{playerId:int}", async (int playerId) =>
         {
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
             var ok = await c.ExecuteAsync($"DELETE FROM {T}Players WHERE PlayerId=@playerId;", new { playerId });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
         }).WithOpenApi();
@@ -362,7 +381,7 @@ public static class GameEndpoints
             var s = (side ?? "").ToUpperInvariant();
             if (s is not ("HOME" or "AWAY")) return Results.BadRequest(new { error = "side HOME/AWAY" });
 
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
             var gRow = await One<(int? HomeTeamId, int? AwayTeamId, string HomeTeam, string AwayTeam)>(
                 c, $"SELECT HomeTeamId, AwayTeamId, HomeTeam, AwayTeam FROM {T}Games WHERE GameId=@id;", new { id });
 
@@ -385,7 +404,7 @@ public static class GameEndpoints
 
         g.MapGet("/games/{id:int}/fouls/summary", async (int id) =>
         {
-            using var c = new SqlConnection(cs());
+            using var c = Open(cs());
             var team = await c.QueryAsync($@"
                 SELECT Quarter, Team, COALESCE(FoulType,'PERSONAL') AS FoulType,
                     COUNT(*) AS Fouls
@@ -404,8 +423,5 @@ public static class GameEndpoints
 
             return Results.Ok(new { team, players });
         }).WithOpenApi();
-
     }
-
-    
 }
