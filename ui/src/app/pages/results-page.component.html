@@ -44,15 +44,15 @@
         <!-- BONUS por equipo en el cuarto actual -->
         <div class="text-sm">
           <span class="mr-3">
-            HOME Q{{ d.game.quarter }}: {{ foulSummary?.team | teamFouls:'HOME':d.game.quarter }}
+            HOME Q{{ d.game.quarter }}: {{ (foulSummary?.team | teamFouls:'HOME':d.game.quarter) }}
           </span>
-          <span *ngIf="foulSummary?.team | isBonus:'HOME':d.game.quarter"
+          <span *ngIf="(foulSummary?.team | isBonus:'HOME':d.game.quarter)"
                 class="px-2 py-0.5 bg-red-600 text-white rounded">BONUS</span>
 
           <span class="ml-4 mr-3">
-            AWAY Q{{ d.game.quarter }}: {{ foulSummary?.team | teamFouls:'AWAY':d.game.quarter }}
+            AWAY Q{{ d.game.quarter }}: {{ (foulSummary?.team | teamFouls:'AWAY':d.game.quarter) }}
           </span>
-          <span *ngIf="foulSummary?.team | isBonus:'AWAY':d.game.quarter"
+          <span *ngIf="(foulSummary?.team | isBonus:'AWAY':d.game.quarter)"
                 class="px-2 py-0.5 bg-red-600 text-white rounded">BONUS</span>
         </div>
       </div>
@@ -60,38 +60,92 @@
       <h4 class="mt-4 font-semibold">Eventos recientes</h4>
       <ul class="text-sm divide-y" style="max-height:16rem; overflow:auto;">
         <li *ngFor="let e of d.events" class="py-1">
-          {{ e.createdAt | date:'short' }} — {{ e.eventType }} {{ e.team ? '(' + e.team + ')' : '' }}
+          {{ e.createdAt | date:'short' }} — {{ e.eventType }}
+          <ng-container *ngIf="e.team">({{ e.team }})</ng-container>
+          <ng-container *ngIf="e.playerNumber != null"> #{{ e.playerNumber }}</ng-container>
+          <ng-container *ngIf="e.playerId != null"> (id: {{ e.playerId }})</ng-container>
         </li>
       </ul>
 
-      <!-- Plantillas HOME/AWAY con faltas por jugador -->
+      <!-- Plantilla HOME -->
       <div class="grid gap-4 mt-4" style="grid-template-columns: 1fr 1fr;">
         <div>
           <h5 class="font-semibold">
             Plantilla HOME
-            <span *ngIf="foulSummary?.team | isBonus:'HOME':d.game.quarter">(BONUS)</span>
+            <span *ngIf="(foulSummary?.team | isBonus:'HOME':d.game.quarter)">(BONUS)</span>
           </h5>
-          <ul class="text-sm">
-            <li *ngFor="let p of homeRoster" class="py-1">
-              #{{ p.number ?? '-' }} {{ p.name }} — faltas:
-              {{ foulSummary?.players | playerFoulsTotal:'HOME':p.playerId }}
-            </li>
-          </ul>
+
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left">
+                <th style="width:3rem;">#</th>
+                <th>Jugador</th>
+                <th style="width:3rem; text-align:center;">Q1</th>
+                <th style="width:3rem; text-align:center;">Q2</th>
+                <th style="width:3rem; text-align:center;">Q3</th>
+                <th style="width:3rem; text-align:center;">Q4</th>
+                <th style="width:3.5rem; text-align:center;">Total</th>
+                <th style="width:3.5rem;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of homeRoster">
+                <td>{{ p.number ?? '—' }}</td>
+                <td>{{ p.name }}</td>
+                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'HOME':p.playerId:1) }}</td>
+                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'HOME':p.playerId:2) }}</td>
+                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'HOME':p.playerId:3) }}</td>
+                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'HOME':p.playerId:4) }}</td>
+                <td style="text-align:center; font-weight:600;">
+                  {{ (foulSummary?.players | playerFoulsTotal:'HOME':p.playerId) }}
+                </td>
+                <td>
+                  <span *ngIf="outSet.has(p.playerId)" class="ml-2 px-2 py-0.5 bg-black text-white rounded">OUT</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
+        <!-- Plantilla AWAY -->
         <div>
           <h5 class="font-semibold">
             Plantilla AWAY
-            <span *ngIf="foulSummary?.team | isBonus:'AWAY':d.game.quarter">(BONUS)</span>
+            <span *ngIf="(foulSummary?.team | isBonus:'AWAY':d.game.quarter)">(BONUS)</span>
           </h5>
-          <ul class="text-sm">
-            <li *ngFor="let p of awayRoster" class="py-1">
-              #{{ p.number ?? '-' }} {{ p.name }} — faltas:
-              {{ foulSummary?.players | playerFoulsTotal:'AWAY':p.playerId }}
-            </li>
-          </ul>
+
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left">
+                <th style="width:3rem;">#</th>
+                <th>Jugador</th>
+                <th style="width:3rem; text-align:center;">Q1</th>
+                <th style="width:3rem; text-align:center;">Q2</th>
+                <th style="width:3rem; text-align:center;">Q3</th>
+                <th style="width:3rem; text-align:center;">Q4</th>
+                <th style="width:3.5rem; text-align:center;">Total</th>
+                <th style="width:3.5rem;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of awayRoster">
+                <td>{{ p.number ?? '—' }}</td>
+                <td>{{ p.name }}</td>
+                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'AWAY':p.playerId:1) }}</td>
+                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'AWAY':p.playerId:2) }}</td>
+                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'AWAY':p.playerId:3) }}</td>
+                <td style="text-align:center;">{{ (foulSummary?.players | playerFoulsQ:'AWAY':p.playerId:4) }}</td>
+                <td style="text-align:center; font-weight:600;">
+                  {{ (foulSummary?.players | playerFoulsTotal:'AWAY':p.playerId) }}
+                </td>
+                <td>
+                  <span *ngIf="outSet.has(p.playerId)" class="ml-2 px-2 py-0.5 bg-black text-white rounded">OUT</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
+      </div> <!-- /grid plantillas -->
     </div>
   </div>
 </div>

@@ -2,7 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-
+import { AdminTeamRosterComponent } from '../widgets/admin-team-roster.component';
 import { ApiService, Game, GameDetail, Team } from '../services/api.service';
 import { ScoreboardComponent } from '../widgets/scoreboard.component';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
@@ -20,6 +20,7 @@ import { TeamRosterComponent } from '../widgets/team-roster.component';
     ControlPanelComponent,
     ClockComponent,
     TeamRosterComponent,
+    AdminTeamRosterComponent,
   ],
   templateUrl: './home-page.component.html',
 })
@@ -58,14 +59,17 @@ export class HomePageComponent {
   createGame(homeTeamId: number, awayTeamId: number) {
     if (!homeTeamId || !awayTeamId || homeTeamId === awayTeamId) return;
     this.creating = true;
-    this.api
-      .pairGame(homeTeamId, awayTeamId)
-      .subscribe({
-        next: () => this.reloadGames(),
-        error: () => {},
-        complete: () => (this.creating = false),
-      });
+    this.api.pairGame(homeTeamId, awayTeamId).subscribe({
+      next: ({ gameId }) => {
+        this.reloadGames();
+        //Abre el panel de control del partido recién creado
+        this.view(gameId);
+      },
+      error: () => {},
+      complete: () => (this.creating = false),
+    });
   }
+
 
     createTeam() {
       const name = this.newTeamName.trim();

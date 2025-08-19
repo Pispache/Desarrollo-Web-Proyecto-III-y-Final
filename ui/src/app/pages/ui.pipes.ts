@@ -42,4 +42,24 @@ export class PlayerFoulsTotalPipe implements PipeTransform {
       .filter(r => toTeamKey(r.team) === team && r.playerId === playerId)
       .reduce((a, r) => a + (r.fouls ?? 0), 0);
   }
+  
 }
+
+@Pipe({ name: 'playerFoulsQ', standalone: true })
+export class PlayerFoulsQPipe implements PipeTransform {
+  /**
+   * Devuelve la cantidad de faltas de un jugador en un cuarto específico.
+   */
+  transform(
+    playerAgg: PlayerAggLike[] | null | undefined,
+    team: TeamKey,
+    playerId: number,
+    quarter: number
+  ): number {
+    if (!playerAgg?.length) return 0;
+    return playerAgg
+      .filter(r => toTeamKey(r.team) === team && r.playerId === playerId && r.quarter === quarter)
+      .reduce((a, r) => a + (r.fouls ?? 0), 0);
+  }
+}
+

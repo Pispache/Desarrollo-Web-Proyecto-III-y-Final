@@ -1,0 +1,61 @@
+<div class="border rounded p-3 grid gap-3">
+  <div class="font-semibold">Gestión de jugadores por equipo</div>
+
+  <!-- Selección de equipo -->
+  <div class="flex flex-wrap items-center gap-2">
+    <label>Equipo:</label>
+    <select #teamSel class="border rounded px-2 py-1" (change)="onSelectTeam(teamSel.value)">
+      <option [value]="0">Seleccione equipo…</option>
+      <option *ngFor="let t of teams; trackBy: trackTeam" [value]="t.teamId">
+        {{ t.name }} (#{{t.teamId}})
+      </option>
+    </select>
+  </div>
+
+  <!-- Lista de jugadores -->
+  <div *ngIf="selectedTeamId !== null; else noTeam">
+    <div class="text-sm text-gray-600">Equipo #{{ selectedTeamId }}</div>
+
+    <div *ngIf="loading">Cargando jugadores…</div>
+    <div *ngIf="!loading">
+      <table class="w-full text-sm" *ngIf="players.length; else empty">
+        <thead>
+          <tr class="text-left">
+            <th style="width:3rem;">#</th>
+            <th>Nombre</th>
+            <th style="width:8rem;">Posición</th>
+            <th style="width:6rem;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of players; trackBy: trackPlayer">
+            <td>{{ p.number ?? '—' }}</td>
+            <td>{{ p.name }}</td>
+            <td>{{ p.position || '' }}</td>
+            <td><button class="border rounded px-2 py-0.5" (click)="deletePlayer(p)">Eliminar</button></td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #empty><div class="text-sm text-gray-600">Sin jugadores.</div></ng-template>
+    </div>
+
+    <!-- Alta de jugador -->
+    <div class="mt-3 border-t pt-3">
+      <div class="font-medium mb-2">Agregar jugador</div>
+      <div class="flex flex-wrap items-center gap-2">
+        <input [(ngModel)]="pName" placeholder="Nombre" class="border rounded px-2 py-1" />
+        <input [(ngModel)]="pNumber" type="number" placeholder="N° (0–99 opcional)" class="border rounded px-2 py-1" />
+        <input [(ngModel)]="pPosition" placeholder="Posición (opcional)" class="border rounded px-2 py-1" />
+        <button class="px-3 py-1 rounded bg-green-600 text-white" [disabled]="saving" (click)="createPlayer()">
+          {{ saving ? 'Guardando…' : 'Agregar' }}
+        </button>
+      </div>
+      <div *ngIf="errorMsg" class="text-sm text-red-600 mt-1">{{ errorMsg }}</div>
+      <div class="text-xs text-gray-500 mt-1">* UNIQUE (Team, Number) cuando el número no es nulo.</div>
+    </div>
+  </div>
+
+  <ng-template #noTeam>
+    <div class="text-sm text-gray-600">Selecciona un equipo para gestionar su plantilla.</div>
+  </ng-template>
+</div>
