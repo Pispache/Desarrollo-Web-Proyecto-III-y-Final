@@ -5,6 +5,20 @@
     {{ (vm$ | async)?.remainingMs | msToClock }}
   </div>
 
+
+<div *ngIf="showTeamFouls" class="text-sm flex items-center justify-center gap-4">
+  <div>
+    HOME: <strong>{{ teamFoulsHome }}</strong>
+    <span *ngIf="bonusHome" class="ml-2 px-2 py-0.5 bg-red-600 text-white rounded text-xs"> BONUS</span>
+  </div>
+  <div class="opacity-40">|</div>
+  <div>
+    AWAY: <strong>{{ teamFoulsAway }}</strong>
+    <span *ngIf="bonusAway" class="ml-2 px-2 py-0.5 bg-red-600 text-white rounded text-xs"> BONUS</span>
+  </div>
+</div>
+
+
   <div class="flex gap-2 justify-center" *ngIf="controls">
     <button class="border rounded px-3 py-1" (click)="toggle()" [disabled]="busy || !gameId || status === 'FINISHED'">
       {{ vmSnap?.running ? 'Pausar' : 'Iniciar' }}
