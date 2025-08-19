@@ -4,120 +4,85 @@ using Microsoft.Data.SqlClient;
 
 public static class ClockEndpoints
 {
+    const string T = "MarcadorDB.dbo.";
+
     public static void MapClockEndpoints(this WebApplication app, Func<string> cs)
     {
-    // GET: estado de reloj (computado en SQL)
-    app.MapGet("/api/games/{id:int}/clock", async (int id) =>
-    {
-        using var conn = new SqlConnection(cs());
-        var dto = await conn.QuerySingleOrDefaultAsync(@"
-            SELECT
-                GameId,
-                Quarter,
-                QuarterMs,
-                Running,        -- BIT
-                StartedAt,
-                UpdatedAt,
-                RemainingMs = CASE
-                    WHEN Running = 1 AND StartedAt IS NOT NULL THEN
-                        CASE
-                            WHEN RemainingMs - DATEDIFF(millisecond, StartedAt, SYSUTCDATETIME()) > 0
-                                THEN RemainingMs - DATEDIFF(millisecond, StartedAt, SYSUTCDATETIME())
-                            ELSE 0
-                        END
-                    ELSE RemainingMs
-                END
-            FROM MarcadorDB.dbo.GameClocks
-            WHERE GameId = @id;
-        ", new { id });
+        // helpers mínimos
+        static Task<int> Exec(SqlConnection c, string sql, object p) => c.ExecuteAsync(sql, p);
 
-        if (dto is null) return Results.NotFound();
-
-        // Convertir dinámicos de forma segura
-        int remaining = Convert.ToInt32(dto.RemainingMs);
-        // Running puede ser bool o numérico (BIT). Conviértelo a int y luego a bool.
-        bool runningFlag = Convert.ToInt32(dto.Running) != 0;
-
-        // Si ya se agotó, repórtalo como detenido
-        bool running = runningFlag && remaining > 0;
-
-        return Results.Ok(new
+        // GET estado (remaining computed en SQL)
+        app.MapGet("/api/games/{id:int}/clock", async (int id) =>
         {
-            gameId = Convert.ToInt32(dto.GameId),
-            quarter = Convert.ToByte(dto.Quarter),
-            quarterMs = Convert.ToInt32(dto.QuarterMs),
-            running = running,
-            remainingMs = remaining,
-            updatedAt = (DateTime)dto.UpdatedAt
-        });
-    })
-    .WithName("GetClock")
-    .WithOpenApi();
+            using var c = new SqlConnection(cs());
+            var dto = await c.QuerySingleOrDefaultAsync($@"
+                SELECT GameId, Quarter, QuarterMs, Running, StartedAt, UpdatedAt,
+                       RemainingMs = CASE
+                         WHEN Running=1 AND StartedAt IS NOT NULL THEN
+                           CASE WHEN RemainingMs - DATEDIFF(ms, StartedAt, SYSUTCDATETIME()) > 0
+                                THEN RemainingMs - DATEDIFF(ms, StartedAt, SYSUTCDATETIME())
+                                ELSE 0 END
+                         ELSE RemainingMs
+                       END
+                FROM {T}GameClocks WHERE GameId=@id;", new { id });
 
+            if (dto is null) return Results.NotFound();
 
+            int rem = Convert.ToInt32(dto.RemainingMs);
+            bool running = Convert.ToInt32(dto.Running) != 0 && rem > 0;
 
-        // POST: pausa reloj
+            return Results.Ok(new
+            {
+                gameId = Convert.ToInt32(dto.GameId),
+                quarter = Convert.ToByte(dto.Quarter),
+                quarterMs = Convert.ToInt32(dto.QuarterMs),
+                running,
+                remainingMs = rem,
+                updatedAt = (DateTime)dto.UpdatedAt
+            });
+        }).WithOpenApi();
+
+        // POST start (idempotente)
+        app.MapPost("/api/games/{id:int}/clock/start", async (int id) =>
+        {
+            using var c = new SqlConnection(cs());
+            var ok = await Exec(c, $@"
+                UPDATE {T}GameClocks SET
+                  Running = 1,
+                  StartedAt = CASE WHEN Running=1 AND StartedAt IS NOT NULL THEN StartedAt ELSE SYSUTCDATETIME() END,
+                  UpdatedAt = SYSUTCDATETIME()
+                WHERE GameId=@id AND RemainingMs > 0;", new { id });
+            return ok > 0 ? Results.NoContent() : Results.BadRequest(new { error = "No se pudo iniciar." });
+        }).WithOpenApi();
+
+        // POST pause
         app.MapPost("/api/games/{id:int}/clock/pause", async (int id) =>
         {
-            using var conn = new SqlConnection(cs());
-            var ok = await conn.ExecuteAsync(@"
-                UPDATE MarcadorDB.dbo.GameClocks
-                SET RemainingMs = CASE
-                      WHEN Running=1 AND StartedAt IS NOT NULL
-                           THEN CASE WHEN RemainingMs - DATEDIFF(millisecond, StartedAt, SYSUTCDATETIME()) > 0
-                                     THEN RemainingMs - DATEDIFF(millisecond, StartedAt, SYSUTCDATETIME())
-                                     ELSE 0 END
-                      ELSE RemainingMs
-                    END,
-                    Running=0,
-                    StartedAt=NULL,
-                    UpdatedAt=SYSUTCDATETIME()
-                WHERE GameId=@id;
-            ", new { id });
-
+            using var c = new SqlConnection(cs());
+            var ok = await Exec(c, $@"
+                UPDATE {T}GameClocks SET
+                  RemainingMs = CASE
+                    WHEN Running=1 AND StartedAt IS NOT NULL THEN
+                      CASE WHEN RemainingMs - DATEDIFF(ms, StartedAt, SYSUTCDATETIME()) > 0
+                           THEN RemainingMs - DATEDIFF(ms, StartedAt, SYSUTCDATETIME())
+                           ELSE 0 END
+                    ELSE RemainingMs END,
+                  Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME()
+                WHERE GameId=@id;", new { id });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
-        })
-        .WithName("PauseClock")
-        .WithOpenApi();
+        }).WithOpenApi();
 
-            // POST: iniciar/reanudar reloj (no falla si ya estaba corriendo)
-            app.MapPost("/api/games/{id:int}/clock/start", async (int id) =>
-            {
-                using var conn = new SqlConnection(cs());
-                var ok = await conn.ExecuteAsync(@"
-                    UPDATE MarcadorDB.dbo.GameClocks
-                    SET Running = 1,
-                        StartedAt = CASE WHEN Running = 1 AND StartedAt IS NOT NULL
-                                        THEN StartedAt  -- ya estaba corriendo; preserva el arranque original
-                                        ELSE SYSUTCDATETIME() END,
-                        UpdatedAt = SYSUTCDATETIME()
-                    WHERE GameId = @id AND RemainingMs > 0;
-                ", new { id });
-
-                return ok > 0 ? Results.NoContent()
-                            : Results.BadRequest(new { error = "No se pudo iniciar (¿RemainingMs=0 o no existe?)." });
-            })
-            .WithName("StartClock")
-            .WithOpenApi();
-
-        // POST: reset reloj (opcional quarterMs en body)
-        app.MapPost("/api/games/{id:int}/clock/reset", async (int id, [FromBody] ClockResetDto? body) =>
+        // POST reset (quarterMs opcional)
+        app.MapPost("/api/games/{id:int}/clock/reset", async (int id, [FromBody] ClockResetDto? b) =>
         {
-            int? qms = body?.QuarterMs;
-            using var conn = new SqlConnection(cs());
-            var ok = await conn.ExecuteAsync(@"
-                UPDATE MarcadorDB.dbo.GameClocks
-                SET QuarterMs = COALESCE(@qms, QuarterMs),
-                    RemainingMs = COALESCE(@qms, QuarterMs),
-                    Running=0,
-                    StartedAt=NULL,
-                    UpdatedAt=SYSUTCDATETIME()
-                WHERE GameId=@id;
-            ", new { id, qms });
-
+            using var c = new SqlConnection(cs());
+            var ok = await Exec(c, $@"
+                UPDATE {T}GameClocks SET
+                  QuarterMs = COALESCE(@qms, QuarterMs),
+                  RemainingMs = COALESCE(@qms, QuarterMs),
+                  Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME()
+                WHERE GameId=@id;", new { id, qms = b?.QuarterMs });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
-        })
-        .WithName("ResetClock")
-        .WithOpenApi();
+        }).WithOpenApi();
     }
 }

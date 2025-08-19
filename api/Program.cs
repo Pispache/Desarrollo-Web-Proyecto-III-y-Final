@@ -1,58 +1,35 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Data.SqlClient;
 using Dapper;
+using Microsoft.Data.SqlClient;
 
-var builder = WebApplication.CreateBuilder(args);
+var b = WebApplication.CreateBuilder(args);
+b.Services.AddEndpointsApiExplorer();
+b.Services.AddSwaggerGen();
+b.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
-// Swagger
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-
-// CORS (abierto en dev; en prod restringe orígenes)
-builder.Services.AddCors(opt =>
-{
-    opt.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
-});
-
-var app = builder.Build();
-
+var app = b.Build();
 app.UseCors();
 
-// Swagger solo en Development
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 
-// Healthcheck
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
-// Helper: cadena de conexión
-string GetConnectionString()
-{
-    var fromEnv = Environment.GetEnvironmentVariable("DB_CONNECTION_STRING");
-    if (!string.IsNullOrWhiteSpace(fromEnv)) return fromEnv;
+// Connection string local a Program y pasada como delegado (soluciona CS8801)
+string GetCs() =>
+    Environment.GetEnvironmentVariable("DB_CONNECTION_STRING")
+    ?? app.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("No hay cadena de conexión.");
 
-    return app.Configuration.GetConnectionString("DefaultConnection")
-        ?? throw new InvalidOperationException("No hay cadena de conexión configurada.");
-}
-
-// 👉 Montamos endpoints desde extensiones (archivo separado)
-app.MapGameEndpoints(GetConnectionString);
-app.MapClockEndpoints(GetConnectionString);
+app.MapGameEndpoints(GetCs);
+app.MapClockEndpoints(GetCs);
 
 app.Run();
 
-// DTOs (puedes moverlos a Dtos.cs si prefieres)
+// DTOs (manténlo aquí o muévelo a Dtos.cs)
 record CreateGameDto(string? Home, string? Away);
-record ClockResetDto(int? QuarterMs);
 record TeamCreateDto(string Name);
 record PairDto(int HomeTeamId, int AwayTeamId);
-// Players
 record CreatePlayerDto(string Name, byte? Number, string? Position);
 record UpdatePlayerDto(byte? Number, string? Name, string? Position, bool? Active);
-
-// Score/Foul aceptando jugador (opcional) ← únicas válidas
 record ScoreDto(string Team, int Points, int? PlayerId, int? PlayerNumber);
 record FoulDto(string Team, int? PlayerId, int? PlayerNumber);
+record ClockResetDto(int? QuarterMs);
