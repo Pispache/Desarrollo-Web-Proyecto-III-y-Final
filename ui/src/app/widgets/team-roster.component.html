@@ -1,0 +1,9 @@
+<div class="grid gap-2 border rounded p-3">
+  <div class="font-medium">Plantilla {{ side }}</div>
+  <ul class="text-sm" *ngIf="players.length; else empty">
+    <li *ngFor="let p of players" class="py-1">
+      #{{ p.number ?? '—' }} {{ p.name }} <span class="text-xs text-gray-500">{{ p.position || '' }}</span>
+    </li>
+  </ul>
+  <ng-template #empty><div class="text-sm text-gray-600">Sin jugadores.</div></ng-template>
+</div>

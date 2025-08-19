@@ -1,0 +1,86 @@
+<div class="grid gap-4 p-4 max-w-6xl mx-auto">
+  <!-- Barra superior: búsqueda / acciones -->
+  <section class="flex flex-wrap items-center gap-2">
+    <input [(ngModel)]="q" placeholder="Buscar equipos…" class="border rounded px-2 py-1" />
+    <button class="px-3 py-1 rounded bg-blue-600 text-white" (click)="reloadGames()">Actualizar</button>
+  </section>
+
+  <section class="grid gap-4" style="grid-template-columns: 1fr 2fr;">
+    <!-- Panel de partidos -->
+    <div class="border rounded p-3">
+      <h3 class="font-semibold mb-2">Partidos</h3>
+      <ul class="divide-y">
+        <li *ngFor="let g of games | slice:0:50" class="py-2 flex items-center justify-between">
+          <div>
+            <a [routerLink]="['/display', g.gameId]" class="font-medium">{{ g.homeTeam }} vs {{ g.awayTeam }}</a>
+            <div class="text-xs text-gray-500">Q{{ g.quarter }} — {{ g.status }}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button class="text-blue-600" (click)="view(g.gameId)">Ver</button>
+          </div>
+        </li>
+      </ul>
+
+      <!-- Crear partido emparejando por IDs -->
+      <div class="mt-4 border-t pt-3">
+        <div class="font-semibold mb-2">Crear/Emparejar partido</div>
+        <div class="flex flex-wrap items-center gap-2">
+          <select #homeSel class="border rounded px-2 py-1">
+            <option [value]="0">HomeTeamId…</option>
+            <option *ngFor="let t of teams" [value]="t.teamId">{{ t.name }}</option>
+          </select>
+          <select #awaySel class="border rounded px-2 py-1">
+            <option [value]="0">AwayTeamId…</option>
+            <option *ngFor="let t of teams" [value]="t.teamId">{{ t.name }}</option>
+          </select>
+          <button
+            class="px-3 py-1 rounded bg-green-600 text-white"
+            [disabled]="creating"
+            (click)="createGame(+homeSel.value, +awaySel.value)">
+            {{ creating ? 'Creando…' : 'Crear' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lista de equipos -->
+    <div class="mt-4 border rounded p-3">
+      <div class="font-semibold mb-2">Equipos existentes</div>
+      <ul class="list-disc pl-5 text-sm">
+        <li *ngFor="let t of teams">
+          {{ t.name }} <span class="text-gray-500 text-xs">#{{t.teamId}}</span>
+        </li>
+      </ul>
+    </div>
+
+        <!-- Crear equipo -->
+    <div class="mt-4 border rounded p-3">
+      <div class="font-semibold mb-2">Crear equipo</div>
+      <div class="flex flex-wrap items-center gap-2">
+        <input [(ngModel)]="newTeamName" placeholder="Nombre del equipo…" class="border rounded px-2 py-1" />
+        <button class="px-3 py-1 rounded bg-green-600 text-white"
+                [disabled]="creating || !newTeamName.trim()"
+                (click)="createTeam()">
+          {{ creating ? 'Creando…' : 'Crear equipo' }}
+        </button>
+      </div>
+      <div class="text-xs text-gray-500 mt-1">* El nombre debe ser único.</div>
+    </div>
+
+
+    <!-- Detalle seleccionado -->
+    <div class="border rounded p-3" *ngIf="detail as d">
+      <app-scoreboard [game]="d.game"></app-scoreboard>
+
+      <div class="mt-3" style="display:flex; align-items:center; justify-content:space-between;">
+        <app-control-panel [game]="d.game" (changed)="view(d.game.gameId)"></app-control-panel>
+        <app-clock [gameId]="d.game.gameId" (expired)="onExpire()"></app-clock>
+      </div>
+
+      <div class="mt-4" style="display:grid; gap:1rem; grid-template-columns: 1fr 1fr;">
+        <app-team-roster [gameId]="d.game.gameId" side="HOME"></app-team-roster>
+        <app-team-roster [gameId]="d.game.gameId" side="AWAY"></app-team-roster>
+      </div>
+    </div>
+  </section>
+</div>

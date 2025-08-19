@@ -178,11 +178,16 @@ export class ApiService {
     );
   }
 
-  createTeam(name: string): Observable<{ teamId: number; name: string }> {
-    return this.http.post<any>(`${this.base}/teams`, { name }).pipe(
-      map(r => ({ teamId: r.teamId ?? r.TeamId, name: r.name ?? name }))
+  /* ========== Equipos ========== */
+  createTeam(name: string): Observable<{ teamId: number; name: string }>;
+  createTeam(payload: { name: string }): Observable<{ teamId: number; name: string }>;
+  createTeam(arg: string | { name: string }): Observable<{ teamId: number; name: string }> {
+    const body = typeof arg === 'string' ? { name: arg } : arg;
+    return this.http.post<any>(`${this.base}/teams`, body).pipe(
+      map(r => ({ teamId: r.teamId ?? r.TeamId, name: r.name ?? body.name }))
     );
   }
+
 
   /* ========== Emparejar (crear juego desde IDs de equipo) ========== */
   pairGame(homeTeamId: number, awayTeamId: number): Observable<{ gameId: number }> {

@@ -1,0 +1,16 @@
+<div class="p-3 border rounded grid gap-2">
+  <div class="text-sm text-gray-600">Cronómetro (por cuarto)</div>
+
+  <div class="text-4xl font-bold text-center" [class.text-red-600]="(vm$ | async)?.remainingMs === 0">
+    {{ (vm$ | async)?.remainingMs | msToClock }}
+  </div>
+
+  <div class="flex gap-2 justify-center" *ngIf="controls">
+    <button class="border rounded px-3 py-1" (click)="toggle()" [disabled]="busy || !gameId || status === 'FINISHED'">
+      {{ vmSnap?.running ? 'Pausar' : 'Iniciar' }}
+    </button>
+    <button class="border rounded px-3 py-1" (click)="resetQuarter()" [disabled]="busy || !gameId">
+      Reiniciar cuarto
+    </button>
+  </div>
+</div>

@@ -1,0 +1,97 @@
+<div class="p-4 max-w-5xl mx-auto grid gap-4">
+  <!-- Filtros -->
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <h1 class="text-2xl font-semibold">Resultados</h1>
+    <div class="flex flex-wrap gap-2 items-center">
+      <label class="text-sm">Estado:</label>
+      <select [(ngModel)]="statusFilter" (change)="applyFilters()" class="border rounded px-2 py-1">
+        <option value="FINISHED">Finalizados</option>
+        <option value="ALL">Todos</option>
+        <option value="IN_PROGRESS">En progreso</option>
+        <option value="SCHEDULED">Programados</option>
+      </select>
+
+      <label class="text-sm ml-3">Buscar equipo:</label>
+      <input [(ngModel)]="q" (input)="applyFilters()" placeholder="nombre contiene…" class="border rounded px-2 py-1" />
+    </div>
+  </div>
+
+  <div class="grid gap-4" style="grid-template-columns: 1fr 2fr;">
+    <!-- Lista de partidos -->
+    <div class="border rounded p-3">
+      <h3 class="font-medium mb-2">Partidos</h3>
+      <ul class="divide-y">
+        <li *ngFor="let g of filtered" class="py-2 flex items-center justify-between">
+          <div>
+            <div class="font-semibold">{{ g.homeTeam }} vs {{ g.awayTeam }}</div>
+            <div class="text-xs text-gray-500">Q{{ g.quarter }} — {{ g.status }}</div>
+          </div>
+          <button class="text-blue-600" (click)="view(g)">Ver</button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Detalle -->
+    <div *ngIf="selected as d" class="border rounded p-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-lg font-semibold">
+            {{ d.game.homeTeam }} {{ d.game.homeScore }} - {{ d.game.awayScore }} {{ d.game.awayTeam }}
+          </div>
+          <div class="text-xs text-gray-500">Q{{ d.game.quarter }} — {{ d.game.status }}</div>
+        </div>
+
+        <!-- BONUS por equipo en el cuarto actual -->
+        <div class="text-sm">
+          <span class="mr-3">
+            HOME Q{{ d.game.quarter }}: {{ foulSummary?.team | teamFouls:'HOME':d.game.quarter }}
+          </span>
+          <span *ngIf="foulSummary?.team | isBonus:'HOME':d.game.quarter"
+                class="px-2 py-0.5 bg-red-600 text-white rounded">BONUS</span>
+
+          <span class="ml-4 mr-3">
+            AWAY Q{{ d.game.quarter }}: {{ foulSummary?.team | teamFouls:'AWAY':d.game.quarter }}
+          </span>
+          <span *ngIf="foulSummary?.team | isBonus:'AWAY':d.game.quarter"
+                class="px-2 py-0.5 bg-red-600 text-white rounded">BONUS</span>
+        </div>
+      </div>
+
+      <h4 class="mt-4 font-semibold">Eventos recientes</h4>
+      <ul class="text-sm divide-y" style="max-height:16rem; overflow:auto;">
+        <li *ngFor="let e of d.events" class="py-1">
+          {{ e.createdAt | date:'short' }} — {{ e.eventType }} {{ e.team ? '(' + e.team + ')' : '' }}
+        </li>
+      </ul>
+
+      <!-- Plantillas HOME/AWAY con faltas por jugador -->
+      <div class="grid gap-4 mt-4" style="grid-template-columns: 1fr 1fr;">
+        <div>
+          <h5 class="font-semibold">
+            Plantilla HOME
+            <span *ngIf="foulSummary?.team | isBonus:'HOME':d.game.quarter">(BONUS)</span>
+          </h5>
+          <ul class="text-sm">
+            <li *ngFor="let p of homeRoster" class="py-1">
+              #{{ p.number ?? '-' }} {{ p.name }} — faltas:
+              {{ foulSummary?.players | playerFoulsTotal:'HOME':p.playerId }}
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <h5 class="font-semibold">
+            Plantilla AWAY
+            <span *ngIf="foulSummary?.team | isBonus:'AWAY':d.game.quarter">(BONUS)</span>
+          </h5>
+          <ul class="text-sm">
+            <li *ngFor="let p of awayRoster" class="py-1">
+              #{{ p.number ?? '-' }} {{ p.name }} — faltas:
+              {{ foulSummary?.players | playerFoulsTotal:'AWAY':p.playerId }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

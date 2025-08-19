@@ -1,0 +1,19 @@
+<div class="min-h-screen grid place-items-center bg-black text-white">
+  <div class="w-full max-w-4xl p-4" *ngIf="detail as d">
+    <!-- Marcador principal -->
+    <app-scoreboard [game]="d.game"></app-scoreboard>
+
+    <!-- Cronómetro (solo lectura) -->
+    <div class="mt-4">
+      <app-clock
+        [gameId]="d.game.gameId"
+        [status]="d.game.status"
+        [quarter]="d.game.quarter"
+        [controls]="false">
+      </app-clock>
+    </div>
+
+    <!-- (Opcional) eventos -->
+    <!-- ... -->
+  </div>
+</div>
