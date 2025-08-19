@@ -60,6 +60,12 @@ BEGIN
 END
 GO
 
+ALTER TABLE dbo.GameEvents
+ADD FoulType NVARCHAR(20) NULL;   -- 'PERSONAL' | 'TECHNICAL' | 'UNSPORTSMANLIKE' | 'DISQUALIFYING'
+
+CREATE INDEX IX_GameEvents_Player_Type
+  ON dbo.GameEvents (PlayerId, FoulType, Quarter);
+
 /* Si no existe, agregar PlayerId para relacionar eventos con jugadores */
 IF COL_LENGTH('dbo.GameEvents', 'PlayerId') IS NULL
 BEGIN

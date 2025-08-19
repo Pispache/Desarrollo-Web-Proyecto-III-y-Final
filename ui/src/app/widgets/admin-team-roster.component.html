@@ -1,16 +1,17 @@
 <div class="border rounded p-3 grid gap-3">
   <div class="font-semibold">Gestión de jugadores por equipo</div>
 
-  <!-- Selección de equipo -->
-  <div class="flex flex-wrap items-center gap-2">
-    <label>Equipo:</label>
-    <select #teamSel class="border rounded px-2 py-1" (change)="onSelectTeam(teamSel.value)">
-      <option [value]="0">Seleccione equipo…</option>
-      <option *ngFor="let t of teams; trackBy: trackTeam" [value]="t.teamId">
-        {{ t.name }} (#{{t.teamId}})
-      </option>
-    </select>
-  </div>
+  <select
+    class="border rounded px-2 py-1"
+    [(ngModel)]="selectedTeamId"
+    (ngModelChange)="onSelectTeam($event)"
+    [ngModelOptions]="{ standalone: true }"
+  >
+    <option [ngValue]="null">Seleccione equipo…</option>
+    <option *ngFor="let t of teams; trackBy: trackTeam" [ngValue]="t.teamId">
+      {{ t.name }} (#{{ t.teamId }})
+    </option>
+  </select>
 
   <!-- Lista de jugadores -->
   <div *ngIf="selectedTeamId !== null; else noTeam">

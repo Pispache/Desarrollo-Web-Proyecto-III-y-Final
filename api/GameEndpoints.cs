@@ -136,20 +136,95 @@ public static class GameEndpoints
         g.MapPost("/games/{id:int}/foul", async (int id, [FromBody] FoulDto b) =>
         {
             var team = (b?.Team ?? "").ToUpperInvariant();
-            if (team is not ("HOME" or "AWAY")) return Results.BadRequest(new { error = "Team HOME/AWAY." });
+            if (team is not ("HOME" or "AWAY"))
+                return Results.BadRequest(new { error = "Team HOME/AWAY." });
 
             using var c = new SqlConnection(cs());
+
+            // Validar estado del juego
             var st = await One<string>(c, $"SELECT Status FROM {T}Games WHERE GameId=@id;", new { id });
             if (!string.Equals(st, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
                 return Results.BadRequest(new { error = "Juego no IN_PROGRESS." });
 
-            var ok = await c.ExecuteAsync($@"
-                INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerNumber, PlayerId)
-                SELECT @id, Quarter, @team, 'FOUL', @pnum, @pid FROM {T}Games WHERE GameId=@id;",
-                new { id, team, pnum = b?.PlayerNumber, pid = b?.PlayerId });
+            // Insertar la falta con su tipo (PERSONAL/TECHNICAL/UNSPORTSMANLIKE/DISQUALIFYING)
+            var inserted = await c.ExecuteAsync($@"
+                INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerNumber, PlayerId, FoulType, CreatedAt)
+                SELECT @id, Quarter, @team, 'FOUL', @pnum, @pid, @ftype, SYSUTCDATETIME()
+                FROM {T}Games WHERE GameId=@id;",
+                new
+                {
+                    id,
+                    team,
+                    pnum = b?.PlayerNumber,
+                    pid  = b?.PlayerId,
+                    ftype = (b?.FoulType ?? FoulType.PERSONAL).ToString()
+                });
 
-            return ok > 0 ? Results.NoContent() : Results.BadRequest(new { error = "No se pudo registrar." });
+            if (inserted == 0)
+                return Results.BadRequest(new { error = "No se pudo registrar." });
+
+            // Si no hay jugador asociado, terminamos (la falta suma a equipo igualmente)
+            if (b?.PlayerId is null)
+                return Results.NoContent();
+
+            var pid = b.PlayerId.Value;
+
+            // Recuento por tipo para el jugador (PERSONAL/T/U/D)
+            var byType = await c.QueryAsync<(string FoulType, int Cnt)>($@"
+                SELECT COALESCE(FoulType,'PERSONAL') AS FoulType, COUNT(*) AS Cnt
+                FROM {T}GameEvents
+                WHERE GameId=@id AND EventType='FOUL' AND PlayerId=@pid
+                GROUP BY COALESCE(FoulType,'PERSONAL');",
+                new { id, pid });
+
+            int personals = 0, tech = 0, uns = 0, disq = 0;
+            foreach (var (ft, cnt) in byType)
+            {
+                switch ((ft ?? "PERSONAL").ToUpperInvariant())
+                {
+                    case "TECHNICAL":        tech = cnt; break;
+                    case "UNSPORTSMANLIKE":  uns  = cnt; break;
+                    case "DISQUALIFYING":    disq = cnt; break;
+                    default:                 personals = cnt; break; // PERSONAL o null
+                }
+            }
+
+            // Lógica FIBA de descalificación
+            bool isDQ = false;
+            string? reason = null;
+
+            // D directo
+            if (disq >= 1) { isDQ = true; reason = "DISQUALIFYING (D)"; }
+            // 2T, 2U, T+U
+            else if (tech >= 2)           { isDQ = true; reason = "2 TECHNICAL (T+T)"; }
+            else if (uns  >= 2)           { isDQ = true; reason = "2 UNSPORTSMANLIKE (U+U)"; }
+            else if (tech >= 1 && uns>=1) { isDQ = true; reason = "T + U"; }
+
+            // Foul out por acumulación (cuentan P + T + U + D)
+            int totalPersonalsLike = personals + tech + uns + disq;
+            bool isFoulOut = totalPersonalsLike >= 5;
+
+            // Obtener quarter actual para el evento complementario
+            var quarter = await One<int>(c, $"SELECT Quarter FROM {T}Games WHERE GameId=@id;", new { id });
+
+            if (isDQ)
+            {
+                await c.ExecuteAsync($@"
+                    INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, CreatedAt, Note)
+                    VALUES(@id, @q, @team, 'DISQUALIFIED', @pid, SYSUTCDATETIME(), @why);",
+                    new { id, q = quarter, team, pid, why = reason });
+            }
+            else if (isFoulOut)
+            {
+                await c.ExecuteAsync($@"
+                    INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, CreatedAt)
+                    VALUES(@id, @q, @team, 'FOUL_OUT', @pid, SYSUTCDATETIME());",
+                    new { id, q = quarter, team, pid });
+            }
+
+            return Results.NoContent();
         }).WithOpenApi();
+
 
         g.MapPost("/games/{id:int}/undo", async (int id) =>
         {
@@ -312,15 +387,25 @@ public static class GameEndpoints
         {
             using var c = new SqlConnection(cs());
             var team = await c.QueryAsync($@"
-                SELECT Quarter, Team, SUM(CASE WHEN EventType='FOUL' THEN 1 ELSE 0 END) AS Fouls
-                FROM {T}GameEvents WHERE GameId=@id GROUP BY Quarter, Team ORDER BY Quarter, Team;", new { id });
+                SELECT Quarter, Team, COALESCE(FoulType,'PERSONAL') AS FoulType,
+                    COUNT(*) AS Fouls
+                FROM {T}GameEvents
+                WHERE GameId=@id AND EventType='FOUL'
+                GROUP BY Quarter, Team, COALESCE(FoulType,'PERSONAL')
+                ORDER BY Quarter, Team, FoulType;", new { id });
 
             var players = await c.QueryAsync($@"
-                SELECT Quarter, Team, PlayerId, SUM(CASE WHEN EventType='FOUL' THEN 1 ELSE 0 END) AS Fouls
-                FROM {T}GameEvents WHERE GameId=@id AND PlayerId IS NOT NULL
-                GROUP BY Quarter, Team, PlayerId ORDER BY Quarter, Team, PlayerId;", new { id });
+                SELECT Quarter, Team, PlayerId, COALESCE(FoulType,'PERSONAL') AS FoulType,
+                    COUNT(*) AS Fouls
+                FROM {T}GameEvents
+                WHERE GameId=@id AND EventType='FOUL' AND PlayerId IS NOT NULL
+                GROUP BY Quarter, Team, PlayerId, COALESCE(FoulType,'PERSONAL')
+                ORDER BY Quarter, Team, PlayerId, FoulType;", new { id });
 
             return Results.Ok(new { team, players });
         }).WithOpenApi();
+
     }
+
+    
 }

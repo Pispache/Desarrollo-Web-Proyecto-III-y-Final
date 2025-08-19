@@ -24,6 +24,13 @@ app.MapClockEndpoints(GetCs);
 
 app.Run();
 
+public enum FoulType
+{
+    PERSONAL,
+    TECHNICAL,
+    UNSPORTSMANLIKE,
+    DISQUALIFYING
+}
 // DTOs (manténlo aquí o muévelo a Dtos.cs)
 record CreateGameDto(string? Home, string? Away);
 record TeamCreateDto(string Name);
@@ -31,5 +38,6 @@ record PairDto(int HomeTeamId, int AwayTeamId);
 record CreatePlayerDto(string Name, byte? Number, string? Position);
 record UpdatePlayerDto(byte? Number, string? Name, string? Position, bool? Active);
 record ScoreDto(string Team, int Points, int? PlayerId, int? PlayerNumber);
-record FoulDto(string Team, int? PlayerId, int? PlayerNumber);
+record FoulDto(string Team, int? PlayerId, int? PlayerNumber, FoulType FoulType = FoulType.PERSONAL);
 record ClockResetDto(int? QuarterMs);
+
