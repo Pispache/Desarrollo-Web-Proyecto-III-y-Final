@@ -2,6 +2,12 @@ using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
+public class AdjustScoreDto
+{
+    public int HomeDelta { get; set; }
+    public int AwayDelta { get; set; }
+}
+
 public static class GameEndpoints
 {
     const string T = "MarcadorDB.dbo."; // prefijo schema
@@ -140,8 +146,7 @@ public static class GameEndpoints
             return ok > 0 ? Results.NoContent() : Results.BadRequest(new { error = "No se pudo registrar." });
         }).WithOpenApi();
 
-        // ✅ Acepta el tipo por body (enum o strings que vengan mapeadas en DTO si lo cambias)
-        //    y por query (?type=, ?foulType=, ?foul_type=)
+//GAMES FOUL
         g.MapPost("/games/{id:int}/foul", async (
             int id,
             [FromBody] FoulDto b,
@@ -161,6 +166,15 @@ public static class GameEndpoints
             if (!string.Equals(st, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
                 return Results.BadRequest(new { error = "Juego no IN_PROGRESS." });
 
+            // (Opcional) rechazar faltas para jugador ya descalificado
+            if (b?.PlayerId is int pidCheck)
+            {
+                var dqExists = await One<int>(c,
+                    $"SELECT COUNT(1) FROM {T}GameEvents WHERE GameId=@id AND PlayerId=@pidCheck AND EventType='DISQUALIFIED';",
+                    new { id, pidCheck });
+                if (dqExists > 0)
+                    return Results.BadRequest(new { error = "Jugador ya descalificado." });
+            }
             string? rawFromQuery = qFoulTypeSnake ?? qFoulType ?? qType;
             string? rawFromBody  = b?.FoulType ?? b?.Type ?? b?.foul_type;
             var foulType = NormalizeFoulType(rawFromQuery ?? rawFromBody);
@@ -228,19 +242,33 @@ public static class GameEndpoints
 
             if (isDQ)
             {
-                await c.ExecuteAsync($@"
-                    INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, FoulType, CreatedAt)
-                    VALUES(@id, @q, @team, 'DISQUALIFIED', @pid, @why, SYSUTCDATETIME());",
-                    new { id, q = quarter, team, pid, why = reason });
+                var alreadyDQ = await One<int>(c,
+                    $"SELECT COUNT(1) FROM {T}GameEvents WHERE GameId=@id AND PlayerId=@pid AND EventType='DISQUALIFIED';",
+                    new { id, pid });
 
+                if (alreadyDQ == 0)
+                {
+                    await c.ExecuteAsync($@"
+                        INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, CreatedAt)
+                        VALUES(@id, @q, @team, 'DISQUALIFIED', @pid, SYSUTCDATETIME());",
+                        new { id, q = quarter, team, pid });
+                }
             }
             else if (isFoulOut)
             {
-                await c.ExecuteAsync($@"
-                    INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, CreatedAt)
-                    VALUES(@id, @q, @team, 'FOUL_OUT', @pid, SYSUTCDATETIME());",
-                    new { id, q = quarter, team, pid });
+                var alreadyOut = await One<int>(c,
+                    $"SELECT COUNT(1) FROM {T}GameEvents WHERE GameId=@id AND PlayerId=@pid AND EventType='FOUL_OUT';",
+                    new { id, pid });
+
+                if (alreadyOut == 0)
+                {
+                    await c.ExecuteAsync($@"
+                        INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, CreatedAt)
+                        VALUES(@id, @q, @team, 'FOUL_OUT', @pid, SYSUTCDATETIME());",
+                        new { id, q = quarter, team, pid });
+                }
             }
+
 
             return Results.NoContent();
         }).WithOpenApi();
@@ -373,6 +401,48 @@ public static class GameEndpoints
             using var c = Open(cs());
             var ok = await c.ExecuteAsync($"DELETE FROM {T}Players WHERE PlayerId=@playerId;", new { playerId });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
+        }).WithOpenApi();
+
+        // ===== Ajuste directo de puntuación =====
+        g.MapPatch("/games/{id:int}/score/adjust", async (int id, [FromBody] AdjustScoreDto dto) =>
+        {
+            using var c = Open(cs());
+            using var tx = c.BeginTransaction();
+
+            // Validar que el juego existe y está en progreso
+            var game = await c.QueryFirstOrDefaultAsync<dynamic>(
+                $"SELECT Status FROM {T}Games WHERE GameId=@id;", 
+                new { id }, transaction: tx);
+                
+            if (game is null) 
+                return Results.NotFound(new { error = "Juego no encontrado." });
+                
+            if (game.Status != "IN_PROGRESS") 
+                return Results.BadRequest(new { error = "El juego no está en progreso." });
+
+            // Actualizar puntuación
+            var updateSql = @$"
+                UPDATE {T}Games SET 
+                    HomeScore = CASE WHEN (HomeScore + @homeDelta) >= 0 THEN HomeScore + @homeDelta ELSE 0 END,
+                    AwayScore = CASE WHEN (AwayScore + @awayDelta) >= 0 THEN AwayScore + @awayDelta ELSE 0 END
+                WHERE GameId = @id;";
+
+            await c.ExecuteAsync(updateSql, new { id, homeDelta = dto.HomeDelta, awayDelta = dto.AwayDelta }, transaction: tx);
+
+            // Registrar evento de ajuste
+            var quarter = await c.QueryFirstOrDefaultAsync<byte>(
+                $"SELECT Quarter FROM {T}Games WHERE GameId=@id;", 
+                new { id }, transaction: tx);
+            
+            await c.ExecuteAsync(
+                $"""
+                INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, CreatedAt, FoulType)
+                VALUES (@id, @quarter, 'SYSTEM', 'ADJUST', SYSUTCDATETIME(), 'SCORE_ADJUST');
+                """, 
+                new { id, quarter }, transaction: tx);
+
+            tx.Commit();
+            return Results.NoContent();
         }).WithOpenApi();
 
         // ===== Rosters por juego y resumen de faltas =====

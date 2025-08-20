@@ -8,6 +8,7 @@ import { ScoreboardComponent } from '../widgets/scoreboard.component';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
 import { ClockComponent } from '../widgets/clock.component';
 import { TeamRosterComponent } from '../widgets/team-roster.component';
+import { finalize } from 'rxjs';
 
 @Component({
   selector: 'app-home-page',
@@ -70,25 +71,23 @@ export class HomePageComponent {
     });
   }
 
+  createTeam() {
+    const name = this.newTeamName.trim();
+    if (!name) return;
 
-    createTeam() {
-      const name = this.newTeamName.trim();
-      if (!name) return;
-
-      this.creating = true;
-      this.api.createTeam(name).subscribe({
-        next: () => {
-          this.newTeamName = '';
-          this.creating = false;
-          this.reloadAll();
-        },
-        error: (err) => {
-          console.error('Error creando equipo', err);
-          this.creating = false;
-        }
-      });
-    }
-
+    this.creating = true;
+    this.api.createTeam(name).subscribe({
+      next: () => {
+        this.newTeamName = '';
+        this.creating = false;
+        this.reloadAll();
+      },
+      error: (err) => {
+        console.error('Error creando equipo', err);
+        this.creating = false;
+      }
+    });
+  }
 
   // Hook desde <app-clock> cuando se agota el tiempo del cuarto
   onExpire() {
@@ -101,5 +100,23 @@ export class HomePageComponent {
         complete: () => (this.advancing = false),
       });
     }
+  }
+
+  // Maneja el ajuste de puntuación desde el scoreboard
+  onAdjustScore(adjustment: { homeDelta: number, awayDelta: number }) {
+    const gameId = this.detail?.game.gameId;
+    if (!gameId) return;
+    
+    this.api.adjustScore(gameId, adjustment.homeDelta, adjustment.awayDelta).subscribe({
+      next: () => {
+        // Actualizar la vista con los nuevos puntajes
+        this.view(gameId);
+      },
+      error: (err: any) => {
+        console.error('Error ajustando puntuación', err);
+        // Opcional: Mostrar mensaje de error al usuario
+        alert('No se pudo ajustar la puntuación. Intente nuevamente.');
+      }
+    });
   }
 }

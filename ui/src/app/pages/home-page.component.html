@@ -74,7 +74,12 @@
 
     <!-- Detalle seleccionado -->
     <div class="border rounded p-3" *ngIf="detail as d">
-      <app-scoreboard [game]="d.game" [events]="d.events"></app-scoreboard>
+      <app-scoreboard 
+        [game]="d.game" 
+        [events]="d.events"
+        [isAdmin]="true"
+        (adjustScore)="onAdjustScore($event)"
+      ></app-scoreboard>
 
       <div class="mt-3" style="display:flex; align-items:center; justify-content:space-between;">
         <app-control-panel [game]="d.game" (changed)="view(d.game.gameId)"></app-control-panel>

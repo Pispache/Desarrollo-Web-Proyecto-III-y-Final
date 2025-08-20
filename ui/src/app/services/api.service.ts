@@ -150,11 +150,16 @@ export class ApiService {
     };
     const qs = t ? `?type=${encodeURIComponent(t)}` : '';
     return this.post(`/games/${id}/foul${qs}`, body);
-}
-
-
+  }
 
   undo(id: number) { return this.post(`/games/${id}/undo`, {}); }
+
+  adjustScore(gameId: number, homeDelta: number, awayDelta: number): Observable<void> {
+    return this.patch<void>(`/games/${gameId}/score/adjust`, {
+      homeDelta,
+      awayDelta
+    });
+  }
 
   /* ========= Equipos ========= */
   listTeams(): Observable<Team[]> {
