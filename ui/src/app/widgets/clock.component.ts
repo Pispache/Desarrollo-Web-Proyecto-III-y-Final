@@ -24,11 +24,12 @@ export class MsToClockPipe implements PipeTransform {
 })
 export class ClockComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) gameId!: number;
-  @Input() status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | 'SUSPENDED';
+  @Input() status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | 'SUSPENDED' | 'PAUSED';
   @Input() quarter?: number;
   @Input() showTeamFouls = true; 
   /** Mostrar/ocultar botones (en público: [controls]="false") */
   @Input() controls = true;
+  showAdvanced = false;
 
   @Output() expired = new EventEmitter<void>();
 
@@ -99,6 +100,85 @@ export class ClockComponent implements OnChanges, OnDestroy {
 
   ngOnDestroy(): void {
     this.foulsSub?.unsubscribe();
+  }
+
+  // Muestra el texto del estado actual
+  getStatusText(): string {
+    if (!this.status) return 'Desconocido';
+    
+    const statusMap: Record<string, string> = {
+      'IN_PROGRESS': 'En juego',
+      'PAUSED': 'Pausado',
+      'FINISHED': 'Finalizado',
+      'CANCELLED': 'Cancelado',
+      'SUSPENDED': 'Suspendido',
+      'SCHEDULED': 'Programado'
+    };
+    
+    return statusMap[this.status] || 'Desconocido';
+  }
+
+  // Verifica si quedan menos de 30 segundos
+  isLast30Seconds(): boolean {
+    const remainingMs = this.vmSnap?.remainingMs || 0;
+    return remainingMs > 0 && remainingMs <= 30000; // 30 segundos
+  }
+
+  // Establece la duración del cuarto en minutos
+  setDuration(event: Event): void {
+    if (!this.gameId || !event) return;
+    const target = event.target as HTMLSelectElement;
+    if (!target) return;
+    
+    const minutes = target.value;
+    const minutesNum = parseInt(minutes, 10);
+    if (isNaN(minutesNum) || minutesNum <= 0) return;
+    
+    this.busy = true;
+    
+    // Obtener el estado actual
+    const currentState = this.vmSnap;
+    if (currentState) {
+      // Actualizar el estado local inmediatamente
+      const newState = {
+        ...currentState,
+        quarterMs: minutesNum * 60 * 1000,
+        remainingMs: minutesNum * 60 * 1000
+      };
+      this.vmSnap = newState;
+    }
+    
+    // Enviar la actualización al servidor
+    this.clock.setDuration(this.gameId, minutesNum);
+    
+    // Restablecer el estado de ocupado después de un tiempo
+    setTimeout(() => {
+      this.busy = false;
+    }, 500);
+  }
+
+  // Activa/desactiva el avance automático
+  toggleAutoAdvance(event: Event): void {
+    if (!this.gameId || !event) return;
+    const target = event.target as HTMLInputElement;
+    if (!target) return;
+    
+    const enabled = target.checked;
+    this.busy = true;
+    this.clock.toggleAutoAdvance(this.gameId, enabled);
+    // Asumimos que el servicio maneja la actualización del estado
+    // y que el polling actualizará la UI
+    setTimeout(() => this.busy = false, 500);
+  }
+
+  // Avanza al siguiente cuarto
+  advanceQuarter(): void {
+    if (this.busy || !this.gameId || this.status === 'FINISHED') return;
+    this.busy = true;
+    this.clock.advanceQuarter(this.gameId);
+    // Asumimos que el servicio maneja la actualización del estado
+    // y que el polling actualizará la UI
+    setTimeout(() => this.busy = false, 500);
   }
 
   toggle() {

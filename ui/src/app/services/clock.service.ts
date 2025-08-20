@@ -151,8 +151,33 @@ export class ClockService implements OnDestroy {
   }
 
   setDuration(gameId: number, minutes: number): void {
-    this.http.post(`${this.base}/games/${gameId}/clock/duration`, { minutes })
-      .pipe(tap(() => this.clockChanged$.next(gameId)))
+    const quarterMs = minutes * 60 * 1000; // Convertir minutos a milisegundos
+    
+    // Actualizar el estado local inmediatamente
+    const currentState = this.clockStates.get(gameId)?.value;
+    if (currentState) {
+      // No actualizamos el estado local aquí, solo en la respuesta del servidor
+      // para evitar parpadeos y mantener la consistencia
+    }
+    
+    // Actualizar en el backend
+    this.http.post<ClockStateDto>(`${this.base}/games/${gameId}/clock/duration`, { minutes })
+      .pipe(
+        map(dto => ({
+          running: dto.running,
+          remainingMs: dto.remainingMs,
+          quarterMs: dto.quarterMs,
+          quarter: dto.quarter,
+          gameStatus: dto.gameStatus,
+          lastUpdated: new Date(dto.updatedAt),
+          autoAdvance: dto.autoAdvance ?? false
+        })),
+        tap(updatedState => {
+          // Actualizar el estado local con la respuesta del servidor
+          this.updateState(gameId, updatedState);
+          this.clockChanged$.next(gameId);
+        })
+      )
       .subscribe({
         error: (error) => this.handleError('Error al establecer la duración:', error)
       });

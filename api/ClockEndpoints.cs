@@ -2,6 +2,11 @@ using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
+public class ClockDurationDto
+{
+    public int Minutes { get; set; }
+}
+
 public static class ClockEndpoints
 {
     const string T = "MarcadorDB.dbo.";
@@ -40,6 +45,23 @@ public static class ClockEndpoints
                 remainingMs = rem,
                 updatedAt = (DateTime)dto.UpdatedAt
             });
+        }).WithOpenApi();
+
+        // POST set duration
+        app.MapPost("/api/games/{id:int}/clock/duration", async (int id, [FromBody] ClockDurationDto dto) =>
+        {
+            if (dto == null || dto.Minutes <= 0)
+                return Results.BadRequest("Se requiere una duración válida en minutos");
+
+            using var c = new SqlConnection(cs());
+            var ok = await Exec(c, @$"
+                UPDATE {T}GameClocks SET
+                    QuarterMs = @quarterMs,
+                    RemainingMs = @quarterMs,
+                    UpdatedAt = SYSUTCDATETIME()
+                WHERE GameId = @id;", new { id, quarterMs = dto.Minutes * 60 * 1000 });
+
+            return ok > 0 ? Results.Ok() : Results.NotFound();
         }).WithOpenApi();
 
         // POST start (idempotente)

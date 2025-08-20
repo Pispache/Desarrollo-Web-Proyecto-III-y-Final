@@ -1,19 +1,95 @@
-<div class="min-h-screen grid place-items-center bg-black text-white">
-  <div class="w-full max-w-4xl p-4" *ngIf="detail as d">
-    <!-- Marcador principal -->
-    <app-scoreboard [game]="d.game"></app-scoreboard>
-
-    <!-- Cronómetro (solo lectura) -->
-    <div class="mt-4">
-      <app-clock
-        [gameId]="d.game.gameId"
-        [status]="d.game.status"
-        [quarter]="d.game.quarter"
-        [controls]="false">
-      </app-clock>
+<div class="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white p-4">
+  <div class="max-w-5xl mx-auto">
+    <!-- Encabezado con logo y título -->
+    <div class="text-center mb-6">
+      <h1 class="text-3xl font-bold text-yellow-400 mb-2">MARCADOR EN VIVO</h1>
+      <div class="text-sm text-gray-400">Sigue el partido en tiempo real</div>
     </div>
 
-    <!-- (Opcional) eventos -->
-    <!-- ... -->
+    <!-- Indicador de carga -->
+    <div *ngIf="!detail" class="text-center py-12">
+      <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-400 mb-4"></div>
+      <p class="text-gray-400">Cargando datos del partido...</p>
+    </div>
+
+    <!-- Contenido principal -->
+    <div *ngIf="detail as d" class="space-y-6">
+      <!-- Marcador principal -->
+      <div class="bg-gray-800 rounded-lg shadow-xl overflow-hidden">
+        <!-- Tiempo y cuarto -->
+        <div class="bg-gray-900 p-3 text-center">
+          <div class="text-4xl font-mono font-bold text-yellow-400">
+            {{ formatGameTime() }}
+          </div>
+          <div class="text-sm text-gray-400">
+            CUARTO {{ d.game.quarter }} - {{ getGameStatus(d.game.status) }}
+          </div>
+        </div>
+
+        <!-- Equipos y puntuación -->
+        <div class="p-6">
+          <div class="grid grid-cols-3 items-center gap-4">
+            <!-- Equipo local -->
+            <div class="text-right">
+              <div class="text-xl font-bold">{{ d.game.homeTeam }}</div>
+              <div class="text-sm text-gray-400">LOCAL</div>
+            </div>
+            
+            <!-- Marcador -->
+            <div class="text-center">
+              <div class="text-6xl font-bold">{{ d.game.homeScore }} - {{ d.game.awayScore }}</div>
+            </div>
+            
+            <!-- Equipo visitante -->
+            <div class="text-left">
+              <div class="text-xl font-bold">{{ d.game.awayTeam }}</div>
+              <div class="text-sm text-gray-400">VISITANTE</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Faltas de equipo (si están disponibles) -->
+        <div *ngIf="getTeamFouls('home') !== null || getTeamFouls('away') !== null" 
+             class="bg-gray-900 p-3 grid grid-cols-2 gap-4 text-center">
+          <div>
+            <div class="text-yellow-400 font-medium">FALTAS</div>
+            <div class="text-2xl font-bold">
+              <span [class.text-red-500]="getTeamFouls('home') >= 5">
+                {{ getTeamFouls('home') || 0 }}
+              </span>
+              <span *ngIf="getTeamFouls('home') >= 5" class="text-red-500 ml-1">BONUS</span>
+            </div>
+          </div>
+          <div>
+            <div class="text-yellow-400 font-medium">FALTAS</div>
+            <div class="text-2xl font-bold">
+              <span [class.text-red-500]="getTeamFouls('away') >= 5">
+                {{ getTeamFouls('away') || 0 }}
+              </span>
+              <span *ngIf="getTeamFouls('away') >= 5" class="text-red-500 ml-1">BONUS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Últimos eventos -->
+      <div *ngIf="d.events?.length" class="bg-gray-800 rounded-lg p-4">
+        <h3 class="text-lg font-semibold mb-3 text-yellow-400 border-b border-gray-700 pb-2">ÚLTIMOS EVENTOS</h3>
+        <div class="space-y-2 max-h-60 overflow-y-auto">
+          <div *ngFor="let e of d.events | slice:0:10" class="text-sm border-b border-gray-700 pb-2 last:border-0">
+            <span class="text-yellow-400">Q{{ e.quarter }}</span> 
+            - {{ getEventDescription(e) }}
+            <span *ngIf="e.createdAt" class="text-gray-500 text-xs ml-2">
+              {{ e.createdAt | date:'HH:mm' }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pie de página -->
+  <div class="text-center text-xs text-gray-500 mt-8">
+    Actualizado: {{ lastUpdated | date:'HH:mm:ss' }}
   </div>
 </div>

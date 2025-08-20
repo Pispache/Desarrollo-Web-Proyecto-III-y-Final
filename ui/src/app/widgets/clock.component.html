@@ -1,30 +1,116 @@
-<div class="p-3 border rounded grid gap-2">
-  <div class="text-sm text-gray-600">Cronómetro (por cuarto)</div>
-
-  <div class="text-4xl font-bold text-center" [class.text-red-600]="(vm$ | async)?.remainingMs === 0">
-    {{ (vm$ | async)?.remainingMs | msToClock }}
+<div class="p-4 border rounded-lg shadow-sm bg-white">
+  <!-- Encabezado con indicador de estado -->
+  <div class="flex justify-between items-center mb-2">
+    <div class="text-sm font-medium text-gray-600">
+      <span [ngClass]="{
+        'text-green-600': status === 'IN_PROGRESS',
+        'text-yellow-600': status === 'PAUSED',
+        'text-red-600': status === 'FINISHED' || status === 'CANCELLED' || status === 'SUSPENDED',
+        'text-blue-600': status === 'SCHEDULED'
+      }">
+        {{ getStatusText() }}
+      </span>
+    </div>
+    <div class="text-sm font-medium bg-gray-100 px-2 py-0.5 rounded">
+      {{ quarter || 1 }}° Cuarto
+    </div>
   </div>
 
-
-<div *ngIf="showTeamFouls" class="text-sm flex items-center justify-center gap-4">
-  <div>
-    HOME: <strong>{{ teamFoulsHome }}</strong>
-    <span *ngIf="bonusHome" class="ml-2 px-2 py-0.5 bg-red-600 text-white rounded text-xs"> BONUS</span>
+  <!-- Tiempo principal -->
+  <div class="text-5xl font-mono font-bold text-center py-3 mb-2 transition-colors duration-500" 
+       [ngClass]="{
+         'text-red-600': isLast30Seconds(),
+         'text-gray-800': !isLast30Seconds()
+       }">
+    {{ (vmSnap?.remainingMs ?? 0) | msToClock }}
   </div>
-  <div class="opacity-40">|</div>
-  <div>
-    AWAY: <strong>{{ teamFoulsAway }}</strong>
-    <span *ngIf="bonusAway" class="ml-2 px-2 py-0.5 bg-red-600 text-white rounded text-xs"> BONUS</span>
-  </div>
-</div>
 
-
-  <div class="flex gap-2 justify-center" *ngIf="controls">
-    <button class="border rounded px-3 py-1" (click)="toggle()" [disabled]="busy || !gameId || status === 'FINISHED'">
-      {{ vmSnap?.running ? 'Pausar' : 'Iniciar' }}
+  <!-- Controles principales -->
+  <div class="flex justify-center gap-3 mb-3">
+    <button class="px-4 py-2 rounded-md font-medium transition-colors"
+            [class.bg-green-600]="!vmSnap?.running"
+            [class.hover:bg-green-700]="!vmSnap?.running"
+            [class.bg-yellow-500]="vmSnap?.running"
+            [class.hover:bg-yellow-600]="vmSnap?.running"
+            [class.text-white]="true"
+            [class.opacity-50]="busy || !gameId || status === 'FINISHED'"
+            (click)="toggle()" 
+            [disabled]="busy || !gameId || status === 'FINISHED'">
+      {{ vmSnap?.running ? '⏸ Pausar' : '▶ Iniciar' }}
     </button>
-    <button class="border rounded px-3 py-1" (click)="resetQuarter()" [disabled]="busy || !gameId">
-      Reiniciar cuarto
+    
+    <button class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium transition-colors"
+            [class.opacity-50]="busy || !gameId"
+            (click)="resetQuarter()" 
+            [disabled]="busy || !gameId">
+      🔄 Reiniciar
     </button>
+  </div>
+
+  <!-- Controles avanzados (colapsables) -->
+  <div class="mt-3 border-t pt-3">
+    <div class="flex items-center justify-between mb-2 cursor-pointer" (click)="showAdvanced = !showAdvanced">
+      <span class="text-sm font-medium text-gray-600">Controles avanzados</span>
+      <span class="text-gray-500">{{ showAdvanced ? '▲' : '▼' }}</span>
+    </div>
+    
+    <div *ngIf="showAdvanced" class="space-y-3 mt-2">
+      <!-- Selector de duración -->
+      <div class="grid grid-cols-2 gap-2 items-center">
+        <label class="text-sm text-gray-600">Duración (min):</label>
+        <ng-container *ngIf="(vm$ | async) as vm; else loadingDuration">
+          <select class="border rounded p-1 text-sm"
+                  [value]="vm.quarterMs / 60000"
+                  (change)="setDuration($event)">
+            <option value="5">5 minutos</option>
+            <option value="8">8 minutos</option>
+            <option value="10" selected>10 minutos</option>
+            <option value="12">12 minutos</option>
+          </select>
+        </ng-container>
+        <ng-template #loadingDuration>
+          <select class="border rounded p-1 text-sm opacity-50" disabled>
+            <option>Cargando...</option>
+          </select>
+        </ng-template>
+      </div>
+      
+      <!-- Toggle avance automático -->
+      <div class="flex items-center justify-between">
+        <span class="text-sm text-gray-600">Avance automático</span>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" 
+                 class="sr-only peer" 
+                 [checked]="(vm$ | async)?.autoAdvance"
+                 (change)="toggleAutoAdvance($event)">
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+        </label>
+      </div>
+      
+      <!-- Botón para avanzar cuarto -->
+      <button class="w-full py-1.5 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+              (click)="advanceQuarter()"
+              [disabled]="busy || !gameId || status === 'FINISHED'">
+        Siguiente cuarto
+      </button>
+    </div>
+  </div>
+
+  <!-- Faltas de equipo (solo si está habilitado) -->
+  <div *ngIf="showTeamFouls" class="mt-4 pt-3 border-t">
+    <div class="text-xs text-gray-500 mb-1">Faltas de equipo:</div>
+    <div class="flex justify-around">
+      <div class="text-center">
+        <div class="text-sm font-medium">LOCAL</div>
+        <div class="text-xl font-bold">{{ teamFoulsHome }}</div>
+        <div *ngIf="bonusHome" class="text-xs bg-red-100 text-red-800 rounded px-1.5 py-0.5 mt-1">BONUS</div>
+      </div>
+      <div class="border-l border-gray-200"></div>
+      <div class="text-center">
+        <div class="text-sm font-medium">VISITANTE</div>
+        <div class="text-xl font-bold">{{ teamFoulsAway }}</div>
+        <div *ngIf="bonusAway" class="text-xs bg-red-100 text-red-800 rounded px-1.5 py-0.5 mt-1">BONUS</div>
+      </div>
+    </div>
   </div>
 </div>
