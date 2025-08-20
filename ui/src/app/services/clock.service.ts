@@ -1,14 +1,18 @@
-import { Injectable } from '@angular/core';
+import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {
   Observable, Subject, merge, filter, interval, startWith,
-  switchMap, shareReplay, map, tap, catchError, of
+  switchMap, shareReplay, map, tap, catchError, of, BehaviorSubject, Subscription
 } from 'rxjs';
 
 export interface ClockState {
   running: boolean;
   remainingMs: number;
   quarterMs: number;
+  quarter: number;
+  gameStatus: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | 'SUSPENDED';
+  lastUpdated: Date;
+  autoAdvance: boolean;
 }
 
 // DTO del backend
@@ -19,64 +23,177 @@ interface ClockStateDto {
   running: boolean;
   remainingMs: number;
   updatedAt: string;
+  gameStatus: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | 'SUSPENDED';
+  autoAdvance: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
-export class ClockService {
-  // OJO: si tu proxy ya mapea /api -> backend, déjalo así.
-  // Si NO usas proxy, usa la URL completa del backend (p. ej. 'http://localhost:5280/api').
+export class ClockService implements OnDestroy {
   private base = '/api';
-
-  /** Notifica que el clock de un gameId cambió (start/pause/reset en cualquier vista) */
+  private clockStates = new Map<number, BehaviorSubject<ClockState>>();
   private clockChanged$ = new Subject<number>();
+  private subscriptions = new Subscription();
+  private readonly POLLING_INTERVAL = 1000; // 1 segundo
+  private readonly AUTO_ADVANCE_DELAY = 2000; // 2 segundos de espera antes de avanzar automáticamente
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    // Limpiar subscripciones al destruir el servicio
+    this.subscriptions.add(() => {
+      this.clockStates.forEach(state => state.complete());
+      this.clockStates.clear();
+    });
+  }
 
-  /** Estado del reloj:
-   *  - polling cada 1s
-   *  - refresco inmediato cuando clockChanged$ emite
-   *  - tolerante a errores (no mata el stream)
-   */
-  state$(gameId: number): Observable<ClockState> {
-    return merge(
-      interval(1000).pipe(startWith(0)),
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+  }
+
+  /** Obtiene el estado actual del reloj para un juego */
+  getState(gameId: number): Observable<ClockState> {
+    if (!this.clockStates.has(gameId)) {
+      const initialState: ClockState = {
+        running: false,
+        remainingMs: 0,
+        quarterMs: 10 * 60 * 1000, // 10 minutos por defecto
+        quarter: 1,
+        gameStatus: 'SCHEDULED',
+        lastUpdated: new Date(),
+        autoAdvance: false
+      };
+      this.clockStates.set(gameId, new BehaviorSubject<ClockState>(initialState));
+      this.setupPolling(gameId);
+    }
+    return this.clockStates.get(gameId)!.asObservable();
+  }
+
+  /** Configura el polling para un juego específico */
+  private setupPolling(gameId: number): void {
+    const polling$ = merge(
+      interval(this.POLLING_INTERVAL).pipe(startWith(0)),
       this.clockChanged$.pipe(filter(id => id === gameId))
     ).pipe(
-      switchMap(() =>
-        this.http.get<ClockStateDto>(`${this.base}/games/${gameId}/clock`).pipe(
-          map(dto => ({
-            running: dto.running,
-            remainingMs: dto.remainingMs,
-            quarterMs: dto.quarterMs
-          })),
-          // Si falla el GET (404/red), mantenemos el stream vivo con un estado neutro
-          catchError(() => of<ClockState>({ running: false, remainingMs: 0, quarterMs: 0 }))
-        )
-      ),
-      shareReplay(1)
+      switchMap(() => this.fetchClockState(gameId)),
+      catchError(error => {
+        console.error('Error en el reloj:', error);
+        return of(null);
+      }),
+      filter((state): state is Partial<ClockState> => state !== null)
+    );
+
+    this.subscriptions.add(
+      polling$.subscribe(state => {
+        const currentState = this.clockStates.get(gameId)?.value;
+        if (!currentState) return;
+        
+        const newState: ClockState = {
+          running: state.running ?? currentState.running,
+          remainingMs: state.remainingMs ?? currentState.remainingMs,
+          quarterMs: state.quarterMs ?? currentState.quarterMs,
+          quarter: state.quarter ?? currentState.quarter,
+          gameStatus: state.gameStatus ?? currentState.gameStatus,
+          lastUpdated: state.lastUpdated ?? currentState.lastUpdated,
+          autoAdvance: state.autoAdvance ?? currentState.autoAdvance
+        };
+        
+        this.clockStates.get(gameId)?.next(newState);
+
+        // Manejar finalización del cuarto con avance automático
+        if (state.remainingMs !== undefined && state.remainingMs <= 0 && 
+            state.running && state.autoAdvance && state.quarter !== undefined) {
+          this.handleQuarterEnd(gameId, state.quarter, state.gameStatus ?? 'IN_PROGRESS');
+        }
+      })
     );
   }
 
-  /** Inicia/Reanuda en servidor y avisa a todas las vistas */
-  start(gameId: number) {
-    this.http.post(`${this.base}/games/${gameId}/clock/start`, {})
-      .pipe(tap(() => this.clockChanged$.next(gameId)))
-      .subscribe({ error: () => {/* opcional: toast/log */} });
+  /** Obtiene el estado actual del reloj desde el servidor */
+  private fetchClockState(gameId: number): Observable<Partial<ClockState>> {
+    return this.http.get<ClockStateDto>(`${this.base}/games/${gameId}/clock`).pipe(
+      map(dto => ({
+        running: dto.running,
+        remainingMs: dto.remainingMs,
+        quarterMs: dto.quarterMs,
+        quarter: dto.quarter,
+        gameStatus: dto.gameStatus,
+        lastUpdated: new Date(dto.updatedAt),
+        autoAdvance: dto.autoAdvance ?? false
+      })),
+      catchError(() => of({}))
+    );
   }
 
-  /** Pausa en servidor y avisa a todas las vistas */
-  pause(gameId: number) {
-    this.http.post(`${this.base}/games/${gameId}/clock/pause`, {})
-      .pipe(tap(() => this.clockChanged$.next(gameId)))
-      .subscribe({ error: () => {/* opcional: toast/log */} });
+  /** Maneja el final de un cuarto con avance automático */
+  private handleQuarterEnd(gameId: number, quarter: number, gameStatus: string): void {
+    if (quarter < 4 && gameStatus === 'IN_PROGRESS') {
+      setTimeout(() => {
+        this.advanceQuarter(gameId);
+      }, this.AUTO_ADVANCE_DELAY);
+    }
   }
 
-  /** Resetea en servidor */
-  resetForNewQuarter(gameId: number, quarterMs = 10 * 60 * 1000) {
-    this.http.post(`${this.base}/games/${gameId}/clock/reset`, { quarterMs })
-      .pipe(tap(() => this.clockChanged$.next(gameId)))
-      .subscribe({ error: () => {/* opcional: toast/log */} });
+  // === Métodos de control del reloj ===
+
+  start(gameId: number): void {
+    this.executeClockAction(gameId, 'start');
   }
 
-  stop(gameId: number) { this.pause(gameId); }
+  pause(gameId: number): void {
+    this.executeClockAction(gameId, 'pause');
+  }
+
+  reset(gameId: number, quarterMs?: number): void {
+    const body = quarterMs ? { quarterMs } : {};
+    this.http.post(`${this.base}/games/${gameId}/clock/reset`, body)
+      .pipe(tap(() => this.clockChanged$.next(gameId)))
+      .subscribe({
+        error: (error) => this.handleError('Error al reiniciar el reloj:', error)
+      });
+  }
+
+  setDuration(gameId: number, minutes: number): void {
+    this.http.post(`${this.base}/games/${gameId}/clock/duration`, { minutes })
+      .pipe(tap(() => this.clockChanged$.next(gameId)))
+      .subscribe({
+        error: (error) => this.handleError('Error al establecer la duración:', error)
+      });
+  }
+
+  toggleAutoAdvance(gameId: number, enabled: boolean): void {
+    this.http.post(`${this.base}/games/${gameId}/clock/auto-advance`, { enabled })
+      .pipe(tap(() => this.clockChanged$.next(gameId)))
+      .subscribe({
+        next: () => this.updateState(gameId, { autoAdvance: enabled }),
+        error: (error) => this.handleError('Error al cambiar el avance automático:', error)
+      });
+  }
+
+  advanceQuarter(gameId: number): void {
+    this.http.post(`${this.base}/games/${gameId}/advance-quarter`, {})
+      .pipe(tap(() => this.clockChanged$.next(gameId)))
+      .subscribe({
+        error: (error) => this.handleError('Error al avanzar el cuarto:', error)
+      });
+  }
+
+  // === Métodos de utilidad ===
+
+  private executeClockAction(gameId: number, action: 'start' | 'pause' | 'stop'): void {
+    this.http.post(`${this.base}/games/${gameId}/clock/${action}`, {})
+      .pipe(tap(() => this.clockChanged$.next(gameId)))
+      .subscribe({
+        error: (error) => this.handleError(`Error al ${action} el reloj:`, error)
+      });
+  }
+
+  private updateState(gameId: number, changes: Partial<ClockState>): void {
+    const currentState = this.clockStates.get(gameId)?.value;
+    if (currentState) {
+      this.clockStates.get(gameId)?.next({ ...currentState, ...changes });
+    }
+  }
+
+  private handleError(message: string, error: any): void {
+    console.error(message, error);
+    // Aquí podrías implementar notificaciones al usuario
+  }
 }

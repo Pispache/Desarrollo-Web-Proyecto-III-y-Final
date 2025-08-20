@@ -24,7 +24,7 @@ export class MsToClockPipe implements PipeTransform {
 })
 export class ClockComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) gameId!: number;
-  @Input() status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED';
+  @Input() status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | 'SUSPENDED';
   @Input() quarter?: number;
   @Input() showTeamFouls = true; 
   /** Mostrar/ocultar botones (en público: [controls]="false") */
@@ -53,31 +53,48 @@ export class ClockComponent implements OnChanges, OnDestroy {
     if (!this.vm$ || (ch['gameId'] && !ch['gameId'].firstChange && ch['gameId'].previousValue !== ch['gameId'].currentValue)) {
       this.prevRemaining = -1;
       this.prevRunning = false;
-      this.vm$ = this.clock.state$(this.gameId).pipe(
-        map(s => {
-          if (this.prevRunning && this.prevRemaining > 0 && s.remainingMs === 0) this.expired.emit();
-          this.vmSnap = s;
-          this.prevRunning = !!s.running;
-          this.prevRemaining = s.remainingMs;
-          return s;
+      this.vm$ = this.clock.getState(this.gameId).pipe(
+        map((state: ClockState) => {
+          if (this.prevRunning && this.prevRemaining > 0 && state.remainingMs === 0) {
+            this.expired.emit();
+          }
+          this.vmSnap = state;
+          this.prevRunning = state.running;
+          this.prevRemaining = state.remainingMs;
+          
+          // Actualizar el estado local si viene del servidor
+          if (this.status !== state.gameStatus) {
+            this.status = state.gameStatus;
+          }
+          if (this.quarter !== state.quarter) {
+            this.quarter = state.quarter;
+          }
+          
+          return state;
         })
       );
     }
 
     // 2) Si cambia el status, asegura start/pause del servicio
     if (ch['status'] && !ch['status'].firstChange && ch['status'].previousValue !== ch['status'].currentValue) {
-      if (this.status === 'IN_PROGRESS') this.clock.start(this.gameId);
-      else this.clock.pause(this.gameId);
+      if (this.status === 'IN_PROGRESS') {
+        this.clock.start(this.gameId);
+      } else {
+        this.clock.pause(this.gameId);
+      }
     }
 
-    // 3) Si cambia el quarter realmente, reinicia duración desde backend
+    // 3) Si cambia el quarter, reinicia la duración
     if (ch['quarter'] && !ch['quarter'].firstChange && ch['quarter'].previousValue !== ch['quarter'].currentValue) {
-      this.clock.resetForNewQuarter(this.gameId);
-      if (this.status === 'IN_PROGRESS') this.clock.start(this.gameId);
-    }
-      if (ch['gameId'] || ch['status'] || ch['quarter']) {
-      this.startFoulsPolling();
+      this.clock.reset(this.gameId);
+      if (this.status === 'IN_PROGRESS') {
+        this.clock.start(this.gameId);
       }
+    }
+    
+    if (ch['gameId'] || ch['status'] || ch['quarter']) {
+      this.startFoulsPolling();
+    }
   }
 
   ngOnDestroy(): void {
@@ -94,7 +111,7 @@ export class ClockComponent implements OnChanges, OnDestroy {
   resetQuarter() {
     if (this.busy || !this.gameId) return;
     this.busy = true;
-    this.clock.resetForNewQuarter(this.gameId);
+    this.clock.reset(this.gameId);
     setTimeout(() => (this.busy = false), 150);
   }
   // +++ AÑADIR: inicia/renueva el polling de faltas
