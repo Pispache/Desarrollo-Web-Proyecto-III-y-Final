@@ -118,9 +118,20 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
 
   // Formatea el tiempo de juego mostrado en la pantalla
   formatGameTime(): string {
-    return this.currentTime;
+    return this.currentTime || '10:00';
   }
   
+  // Determina el mensaje del ganador o empate
+  getWinner(game: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number }): string {
+    if (game.homeScore > game.awayScore) {
+      return `¡${game.homeTeam} GANA EL PARTIDO!`;
+    } else if (game.awayScore > game.homeScore) {
+      return `¡${game.awayTeam} GANA EL PARTIDO!`;
+    } else {
+      return '¡EMPATE!';
+    }
+  }
+
   // Formatea milisegundos a MM:SS
   private formatTimeFromMs(ms: number): string {
     const totalSeconds = Math.ceil(ms / 1000);

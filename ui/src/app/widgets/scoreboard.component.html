@@ -18,9 +18,23 @@
     <div class="text-left text-lg font-medium">{{ game.awayTeam }}</div>
   </div>
 
-  <div class="text-center text-sm">
-    Cuarto: <strong>{{ game.quarter }}</strong> |
-    Estado: <strong>{{ game.status }}</strong>
+  <div class="text-center text-sm mb-2">
+    <span *ngIf="game.status === 'FINISHED'; else showQuarter">
+      <strong>FINAL</strong>
+    </span>
+    <ng-template #showQuarter>
+      Cuarto: <strong>{{ game.quarter }}</strong> |
+      Estado: <strong>{{ game.status === 'IN_PROGRESS' ? 'EN CURSO' : 'PROGRAMADO' }}</strong>
+    </ng-template>
+  </div>
+  
+  <!-- Mostrar ganador si el partido ha terminado -->
+  <div *ngIf="game.status === 'FINISHED'" class="text-center py-2 mb-2 font-bold text-lg"
+       [ngClass]="{
+         'bg-green-100 text-green-800': true,
+         'rounded': true
+       }">
+    {{ getWinner() }}
   </div>
 
   <!-- ===================== -->

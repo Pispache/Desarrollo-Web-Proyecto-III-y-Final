@@ -37,7 +37,9 @@ export class HomePageComponent {
   // datos
   teams: Team[] = [];
   games: Game[] = [];
+  activeGames: Game[] = [];
   detail: GameDetail | null = null;
+  selectedGameId: number | null = null;
 
   constructor(private api: ApiService) {
     this.reloadAll();
@@ -50,7 +52,10 @@ export class HomePageComponent {
   }
 
   reloadGames() {
-    this.api.listGames().subscribe((g) => (this.games = g));
+    this.api.listGames().subscribe((g) => {
+      this.games = g;
+      this.activeGames = g.filter((game) => game.status === 'IN_PROGRESS');
+    });
   }
 
   view(id: number) {
@@ -63,7 +68,7 @@ export class HomePageComponent {
     this.api.pairGame(homeTeamId, awayTeamId).subscribe({
       next: ({ gameId }) => {
         this.reloadGames();
-        //Abre el panel de control del partido recién creado
+        // Abre el panel de control del partido recién creado
         this.view(gameId);
       },
       error: () => {},
@@ -91,20 +96,20 @@ export class HomePageComponent {
 
   // Hook desde <app-clock> cuando se agota el tiempo del cuarto
   onExpire() {
-    const g = this.detail?.game;
-    if (!g) return;
-    if (g.status === 'IN_PROGRESS' && g.quarter < 4 && !this.advancing) {
+    const game = this.detail?.game;
+    if (!game) return;
+    if (game.status === 'IN_PROGRESS' && game.quarter < 4 && !this.advancing) {
       this.advancing = true;
-      this.api.advance(g.gameId).subscribe({
-        next: () => this.view(g.gameId),
+      this.api.advance(game.gameId).subscribe({
+        next: () => this.view(game.gameId),
         complete: () => (this.advancing = false),
       });
     }
   }
 
   // Maneja el ajuste de puntuación desde el scoreboard
-  onAdjustScore(adjustment: { homeDelta: number, awayDelta: number }) {
-    const gameId = this.detail?.game.gameId;
+  onAdjustScore(adjustment: { homeDelta: number; awayDelta: number }) {
+    const gameId = this.detail?.game?.gameId;
     if (!gameId) return;
     
     this.api.adjustScore(gameId, adjustment.homeDelta, adjustment.awayDelta).subscribe({
@@ -117,6 +122,22 @@ export class HomePageComponent {
         // Opcional: Mostrar mensaje de error al usuario
         alert('No se pudo ajustar la puntuación. Intente nuevamente.');
       }
+    });
+  }
+
+  // Seleccionar un juego para administrar
+  selectGame(game: Game) {
+    this.selectedGameId = game.gameId;
+    this.detail = null; // Limpiar detalle anterior
+    this.api.getGame(game.gameId).subscribe(detail => {
+      this.detail = detail;
+      // Desplazar la vista al panel de control del partido
+      setTimeout(() => {
+        const element = document.getElementById('game-controls');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
     });
   }
 }

@@ -19,11 +19,21 @@
         <!-- Tiempo y cuarto -->
         <div class="bg-gray-900 p-3 text-center">
           <div class="text-4xl font-mono font-bold text-yellow-400">
-            {{ formatGameTime() }}
+            {{ d.game.status === 'FINISHED' ? 'FINAL' : formatGameTime() }}
           </div>
           <div class="text-sm text-gray-400">
-            CUARTO {{ d.game.quarter }} - {{ getGameStatus(d.game.status) }}
+            <span *ngIf="d.game.status !== 'FINISHED'">
+              CUARTO {{ d.game.quarter }} - {{ getGameStatus(d.game.status) }}
+            </span>
+            <span *ngIf="d.game.status === 'FINISHED'">
+              {{ getGameStatus(d.game.status) }}
+            </span>
           </div>
+        </div>
+
+        <!-- Anuncio del ganador (solo si el partido ha terminado) -->
+        <div *ngIf="d.game.status === 'FINISHED'" class="bg-green-900 text-white py-3 px-4 text-center">
+          <div class="text-2xl font-bold">{{ getWinner(d.game) }}</div>
         </div>
 
         <!-- Equipos y puntuación -->

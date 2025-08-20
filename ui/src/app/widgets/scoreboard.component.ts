@@ -39,4 +39,15 @@ export class ScoreboardComponent {
     });
     this.showAdjustModal = false;
   }
+
+  // Determina el mensaje del ganador o empate
+  getWinner(): string {
+    if (this.game.homeScore > this.game.awayScore) {
+      return `¡${this.game.homeTeam} GANA!`;
+    } else if (this.game.awayScore > this.game.homeScore) {
+      return `¡${this.game.awayTeam} GANA!`;
+    } else {
+      return '¡EMPATE!';
+    }
+  }
 }

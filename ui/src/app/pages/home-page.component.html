@@ -2,7 +2,32 @@
   <!-- Barra superior: búsqueda / acciones -->
   <section class="flex flex-wrap items-center gap-2">
     <input [(ngModel)]="q" placeholder="Buscar equipos…" class="border rounded px-2 py-1" />
-    <button class="px-3 py-1 rounded bg-blue-600 text-white" (click)="reloadGames()">Actualizar</button>
+    <button class="px-3 py-1 rounded bg-blue-600 text-white" (click)="reloadAll()">Actualizar</button>
+  </section>
+
+  <!-- Sección de Juegos Activos -->
+  <section *ngIf="activeGames.length > 0" class="bg-blue-50 p-4 rounded-lg mb-4">
+    <h2 class="text-lg font-semibold mb-3 text-blue-800">Juegos en Progreso</h2>
+    <div class="grid gap-3">
+      <div *ngFor="let game of activeGames" 
+           class="border rounded p-3 hover:bg-blue-100 cursor-pointer transition-colors"
+           (click)="selectGame(game)">
+        <div class="flex justify-between items-center">
+          <div>
+            <div class="font-medium">{{ game.homeTeam }} vs {{ game.awayTeam }}</div>
+            <div class="text-sm text-gray-600">
+              Q{{ game.quarter }} - {{ game.status }}
+              <span *ngIf="game.homeScore !== undefined && game.awayScore !== undefined">
+                | {{ game.homeScore }} - {{ game.awayScore }}
+              </span>
+            </div>
+          </div>
+          <button class="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">
+            Administrar
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="grid gap-4" style="grid-template-columns: 1fr 2fr;">
