@@ -94,6 +94,25 @@ export class HomePageComponent {
     });
   }
 
+  // Maneja el evento de reinicio del juego
+  onResetGame() {
+    const game = this.detail?.game;
+    if (!game) return;
+
+    if (confirm('¿Está seguro que desea reiniciar el juego? Se restablecerán los puntajes, faltas y el reloj.')) {
+      this.api.resetGame(game.gameId).subscribe({
+        next: () => {
+          // Recargar los datos del juego después del reinicio
+          this.reloadGames();
+          if (this.detail) {
+            this.view(this.detail.game.gameId);
+          }
+        },
+        error: (err) => console.error('Error al reiniciar el juego:', err)
+      });
+    }
+  }
+
   // Hook desde <app-clock> cuando se agota el tiempo del cuarto
   onExpire() {
     const game = this.detail?.game;

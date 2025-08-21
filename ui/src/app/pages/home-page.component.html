@@ -113,7 +113,8 @@
           [status]="d.game.status"
           [quarter]="d.game.quarter"
           [showTeamFouls]="false"
-          (expired)="onExpire()">
+          (expired)="onExpire()"
+          (resetGame)="onResetGame()">
         </app-clock>
 
       </div>

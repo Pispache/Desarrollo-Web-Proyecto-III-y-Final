@@ -155,10 +155,15 @@ export class ApiService {
   undo(id: number) { return this.post(`/games/${id}/undo`, {}); }
 
   adjustScore(gameId: number, homeDelta: number, awayDelta: number): Observable<void> {
-    return this.patch<void>(`/games/${gameId}/score/adjust`, {
-      homeDelta,
-      awayDelta
-    });
+    return this.post(`/games/${gameId}/adjust-score`, { homeDelta, awayDelta });
+  }
+
+  /**
+   * Resets the game state (scores, fouls, timer)
+   * @param gameId The ID of the game to reset
+   */
+  resetGame(gameId: number): Observable<void> {
+    return this.post(`/games/${gameId}/reset`, {});
   }
 
   /* ========= Equipos ========= */

@@ -32,6 +32,7 @@ export class ClockComponent implements OnChanges, OnDestroy {
   showAdvanced = false;
 
   @Output() expired = new EventEmitter<void>();
+  @Output() resetGame = new EventEmitter<void>();
 
   vm$?: Observable<ClockState>;
   vmSnap?: ClockState;
@@ -102,12 +103,18 @@ export class ClockComponent implements OnChanges, OnDestroy {
     this.foulsSub?.unsubscribe();
   }
 
-  // Muestra el texto del estado actual
+  /**
+   * Handles the global reset of the game (scores + timer)
+   */
+  onResetGame() {
+    if (confirm('¿Estás seguro de que deseas reiniciar el marcador y el temporizador? Esta acción no se puede deshacer.')) {
+      this.resetGame.emit();
+    }
+  }
+
   getStatusText(): string {
-    if (!this.status) return 'Desconocido';
-    
-    const statusMap: Record<string, string> = {
-      'IN_PROGRESS': 'En juego',
+    const statusMap: {[key: string]: string} = {
+      'IN_PROGRESS': 'En progreso',
       'PAUSED': 'Pausado',
       'FINISHED': 'Finalizado',
       'CANCELLED': 'Cancelado',
@@ -115,7 +122,7 @@ export class ClockComponent implements OnChanges, OnDestroy {
       'SCHEDULED': 'Programado'
     };
     
-    return statusMap[this.status] || 'Desconocido';
+    return this.status ? statusMap[this.status] || 'Desconocido' : 'Desconocido';
   }
 
   // Verifica si quedan menos de 30 segundos

@@ -124,11 +124,41 @@ export class ClockService implements OnDestroy {
 
   /** Maneja el final de un cuarto con avance automático */
   private handleQuarterEnd(gameId: number, quarter: number, gameStatus: string): void {
-    if (quarter < 4 && gameStatus === 'IN_PROGRESS') {
-      setTimeout(() => {
-        this.advanceQuarter(gameId);
-      }, this.AUTO_ADVANCE_DELAY);
+    const currentState = this.clockStates.get(gameId)?.value;
+    if (!currentState) return;
+    
+    // Pausar el reloj si está corriendo
+    this.pause(gameId);
+    
+    // Verificar si el avance automático está habilitado
+    if (currentState.autoAdvance && gameStatus === 'IN_PROGRESS') {
+      if (quarter < 4) {
+        // Avanzar al siguiente cuarto después de un breve retraso
+        setTimeout(() => {
+          this.advanceQuarter(gameId);
+        }, this.AUTO_ADVANCE_DELAY);
+      } else if (quarter >= 4) {
+        // Si es el último cuarto, finalizar el partido
+        this.finishGame(gameId);
+      }
     }
+  }
+
+  private finishGame(gameId: number): void {
+    this.http.post(`${this.base}/games/${gameId}/finish`, {}).subscribe({
+      next: () => {
+        // Actualizar el estado local
+        const currentState = this.clockStates.get(gameId)?.value;
+        if (currentState) {
+          this.clockStates.get(gameId)?.next({
+            ...currentState,
+            gameStatus: 'FINISHED',
+            running: false
+          });
+        }
+      },
+      error: (err) => console.error('Error finalizando partido:', err)
+    });
   }
 
   // === Métodos de control del reloj ===
