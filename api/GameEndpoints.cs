@@ -140,9 +140,27 @@ public static class GameEndpoints
         {
             using var c = Open(cs());
             using var tx = c.BeginTransaction();
-            var ok = await Exec(c, $"UPDATE {T}Games SET Status='IN_PROGRESS' WHERE GameId=@id AND Status='SUSPENDED';", new { id }, tx);
-            if (ok == 0) { tx.Rollback(); return Results.BadRequest(new { error = "No se pudo reanudar. El partido debe estar suspendido." }); }
-            await Exec(c, $"UPDATE {T}GameClocks SET Running=1, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
+            
+            // Update game status to IN_PROGRESS if it's SUSPENDED
+            var ok = await Exec(c, 
+                $"UPDATE {T}Games SET Status='IN_PROGRESS' WHERE GameId=@id AND Status='SUSPENDED';", 
+                new { id }, tx);
+                
+            if (ok == 0) 
+            { 
+                tx.Rollback(); 
+                return Results.BadRequest(new { error = "No se pudo reanudar. El partido debe estar suspendido." }); 
+            }
+            
+            // Update clock - set Running=1 and ensure StartedAt is set if NULL
+            await Exec(c, 
+                $"UPDATE {T}GameClocks SET " +
+                "Running=1, " +
+                "StartedAt = CASE WHEN StartedAt IS NULL THEN SYSUTCDATETIME() ELSE StartedAt END, " +
+                "UpdatedAt = SYSUTCDATETIME() " +
+                "WHERE GameId=@id;", 
+                new { id }, tx);
+                
             tx.Commit(); 
             return Results.NoContent();
         }).WithOpenApi();
@@ -312,26 +330,74 @@ public static class GameEndpoints
             using var c = Open(cs());
             using var tx = c.BeginTransaction();
 
-            var ev = await c.QuerySingleOrDefaultAsync<dynamic>(
-                $@"SELECT TOP 1 * FROM {T}GameEvents
-                   WHERE GameId=@id AND EventType IN ('POINT_1','POINT_2','POINT_3','FOUL')
-                   ORDER BY EventId DESC;", new { id }, tx);
+            // Obtener el evento más reciente que se puede deshacer
+            var query = $"""
+                SELECT TOP 1 * FROM {T}GameEvents
+                WHERE GameId=@id AND EventType IN ('POINT_1','POINT_2','POINT_3','FOUL','ADJUST')
+                ORDER BY EventId DESC;
+            """;
+            var ev = await c.QuerySingleOrDefaultAsync<dynamic>(query, new { id }, tx);
 
-            if (ev is null) { tx.Rollback(); return Results.BadRequest(new { error = "No hay evento." }); }
+            if (ev is null) { tx.Rollback(); return Results.BadRequest(new { error = "No hay evento para deshacer." }); }
 
-            if (((string)ev.EventType).StartsWith("POINT_"))
+            // Handle different event types
+            switch (((string)ev.EventType).ToUpperInvariant())
             {
-                var pts = int.Parse(((string)ev.EventType).Substring(6));
-                var col = string.Equals((string)ev.Team, "HOME", StringComparison.OrdinalIgnoreCase) ? "HomeScore" : "AwayScore";
-                var ok = await Exec(c, $"UPDATE {T}Games SET {col} = CASE WHEN {col}>=@pts THEN {col}-@pts ELSE {col} END WHERE GameId=@id;",
-                    new { id, pts }, tx);
-                if (ok == 0) { tx.Rollback(); return Results.BadRequest(new { error = "No se pudo ajustar marcador." }); }
+                case string et when et.StartsWith("POINT_"):
+                    var pts = int.Parse(et.Substring(6));
+                    var col = string.Equals((string)ev.Team, "HOME", StringComparison.OrdinalIgnoreCase) ? "HomeScore" : "AwayScore";
+                    var pointQuery = @$"
+                        UPDATE {T}Games 
+                        SET {col} = CASE WHEN {col} >= @pts THEN {col} - @pts ELSE 0 END 
+                        WHERE GameId = @id;";
+                    
+                    var ok = await Exec(c, pointQuery, new { id, pts }, tx);
+                    if (ok == 0) 
+                    { 
+                        tx.Rollback(); 
+                        return Results.BadRequest(new { error = "No se pudo ajustar marcador." }); 
+                    }
+                    break;
+
+                case "ADJUST":
+                    // Para eventos ADJUST, aplicamos los deltas negativos
+                    var adjustQuery = @$"
+                        UPDATE {T}Games 
+                        SET HomeScore = CASE WHEN HomeScore + @homeDelta >= 0 THEN HomeScore + @homeDelta ELSE 0 END,
+                            AwayScore = CASE WHEN AwayScore + @awayDelta >= 0 THEN AwayScore + @awayDelta ELSE 0 END
+                        WHERE GameId = @id;";
+                    
+                    var adjustOk = await Exec(c, adjustQuery, 
+                        new { 
+                            id, 
+                            homeDelta = -1 * (ev.HomeDelta ?? 0), 
+                            awayDelta = -1 * (ev.AwayDelta ?? 0) 
+                        }, tx);
+                    
+                    if (adjustOk == 0) 
+                    { 
+                        tx.Rollback(); 
+                        return Results.BadRequest(new { error = "No se pudo deshacer el ajuste de marcador." }); 
+                    }
+                    break;
+
+                // FOUL events don't need score adjustment, just remove the event
+                case "FOUL":
+                    break;
             }
 
-            await Exec(c,
-                $@"INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType) VALUES(@id, @q, @team, 'UNDO');
-                   DELETE FROM {T}GameEvents WHERE EventId=@eid;",
-                new { id, q = (byte)ev.Quarter, team = (string?)ev.Team, eid = (int)ev.EventId }, tx);
+            // Registrar la acción UNDO y eliminar el evento original
+            var undoQuery = @$"
+                INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType) 
+                VALUES(@id, @q, @team, 'UNDO');
+                DELETE FROM {T}GameEvents WHERE EventId=@eid;";
+                
+            await Exec(c, undoQuery, new { 
+                id, 
+                q = (byte)ev.Quarter, 
+                team = (string?)ev.Team, 
+                eid = (int)ev.EventId 
+            }, tx);
 
             tx.Commit(); return Results.NoContent();
         }).WithOpenApi();
