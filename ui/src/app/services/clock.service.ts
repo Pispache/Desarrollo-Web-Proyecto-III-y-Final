@@ -32,9 +32,13 @@ export class ClockService implements OnDestroy {
   private base = '/api';
   private clockStates = new Map<number, BehaviorSubject<ClockState>>();
   private clockChanged$ = new Subject<number>();
+  private expiredSubject = new Subject<number>();
   private subscriptions = new Subscription();
   private readonly POLLING_INTERVAL = 1000; // 1 segundo
   private readonly AUTO_ADVANCE_DELAY = 2000; // 2 segundos de espera antes de avanzar automáticamente
+
+  // Evento que se emite cuando el tiempo del cuarto actual termina
+  readonly expired = this.expiredSubject.asObservable();
 
   constructor(private http: HttpClient) {
     // Limpiar subscripciones al destruir el servicio
@@ -230,6 +234,27 @@ export class ClockService implements OnDestroy {
       });
   }
 
+  // Iniciar o reanudar el reloj
+  startClock(gameId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/clocks/${gameId}/start`, {}).pipe(
+      tap(() => this.refreshClock(gameId))
+    );
+  }
+
+  // Avanzar al siguiente cuarto
+  advanceClock(gameId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/games/${gameId}/advance`, {}).pipe(
+      tap(() => this.refreshClock(gameId))
+    );
+  }
+
+  // Finalizar el partido
+  finishClock(gameId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/games/${gameId}/finish`, {}).pipe(
+      tap(() => this.refreshClock(gameId))
+    );
+  }
+
   // === Métodos de utilidad ===
 
   private executeClockAction(gameId: number, action: 'start' | 'pause' | 'stop'): void {
@@ -250,5 +275,14 @@ export class ClockService implements OnDestroy {
   private handleError(message: string, error: any): void {
     console.error(message, error);
     // Aquí podrías implementar notificaciones al usuario
+  }
+
+  // Refrescar el estado del reloj desde el servidor
+  public refreshClock(gameId: number): void {
+    this.fetchClockState(gameId).subscribe(state => {
+      if (state) {
+        this.updateState(gameId, state);
+      }
+    });
   }
 }

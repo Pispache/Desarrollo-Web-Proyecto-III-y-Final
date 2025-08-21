@@ -193,6 +193,14 @@ export class ApiService {
     return this.post(`/games/${gameId}/reset`, {});
   }
 
+  /**
+   * Resets the entire game (scores, clock, quarter) to initial state
+   * @param gameId The ID of the game to reset
+   */
+  resetAll(gameId: number): Observable<void> {
+    return this.post(`/games/${gameId}/reset-all`, {});
+  }
+
   /* ========= Equipos ========= */
   listTeams(): Observable<Team[]> {
     return this.get<any[]>(`/teams`).pipe(

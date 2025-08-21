@@ -14,6 +14,7 @@ export class ControlPanelComponent implements OnChanges {
   @Input({ required: true }) game!: Game;
   @Input() isSuspended: boolean = false;
   @Output() changed = new EventEmitter<void>();
+  @Output() resetRequested = new EventEmitter<void>();
 
   homePlayers: Player[] = [];
   awayPlayers: Player[] = [];
@@ -104,7 +105,24 @@ export class ControlPanelComponent implements OnChanges {
   start()   { this.api.start(this.game.gameId).subscribe(() => this.refresh()); }
   advance() { this.api.advance(this.game.gameId).subscribe(() => { this.refresh(); this.refreshAll(); }); }
   finish()  { this.api.finish(this.game.gameId).subscribe(() => { this.refresh(); this.refreshAll(); }); }
-  undo()    { this.api.undo(this.game.gameId).subscribe(() => { this.refresh(); this.refreshAll(); }); }
+  undo() {
+    this.api.undo(this.game.gameId).subscribe({
+      next: () => this.changed.emit(),
+      error: (err) => console.error('Error deshaciendo:', err)
+    });
+  }
+
+  resetAll() {
+    if (confirm('¿Estás seguro de que deseas reiniciar TODO el partido? Se reiniciará el marcador, el tiempo y el cuarto actual.')) {
+      this.api.resetAll(this.game.gameId).subscribe({
+        next: () => {
+          this.changed.emit();
+          this.resetRequested.emit();
+        },
+        error: (err) => console.error('Error reiniciando el partido:', err)
+      });
+    }
+  }
 
   score(team:'HOME'|'AWAY', points:1|2|3) {
     if (!this.isInProgress) return;

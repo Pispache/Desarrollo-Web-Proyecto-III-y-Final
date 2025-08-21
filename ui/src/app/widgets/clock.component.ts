@@ -57,9 +57,11 @@ export class ClockComponent implements OnChanges, OnDestroy {
       this.prevRunning = false;
       this.vm$ = this.clock.getState(this.gameId).pipe(
         map((state: ClockState) => {
+          // Emitir evento cuando el tiempo llega a 0
           if (this.prevRunning && this.prevRemaining > 0 && state.remainingMs === 0) {
             this.expired.emit();
           }
+          
           this.vmSnap = state;
           this.prevRunning = state.running;
           this.prevRemaining = state.remainingMs;

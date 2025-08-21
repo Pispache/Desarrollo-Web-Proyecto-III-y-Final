@@ -27,6 +27,12 @@
             [class.opacity-50]="!game || game.status==='SCHEDULED'">
       Deshacer
     </button>
+    <button class="border rounded px-3 py-1 bg-yellow-500 text-white hover:bg-yellow-600"
+            (click)="resetAll()"
+            [disabled]="!game || game.status==='SCHEDULED'"
+            [class.opacity-50]="!game || game.status==='SCHEDULED'">
+      Reiniciar Todo
+    </button>
   </div>
 
   <!-- HOME -->

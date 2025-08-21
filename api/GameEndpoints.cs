@@ -527,5 +527,57 @@ public static class GameEndpoints
 
             return Results.Ok(new { team, players });
         }).WithOpenApi();
+
+        // ===== Reset Global =====
+        g.MapPost("/games/{id:int}/reset-all", async (int id) =>
+        {
+            using var c = Open(cs());
+            
+            try 
+            {
+                // Verificar si el juego existe
+                var gameExists = await c.ExecuteScalarAsync<int>(
+                    $"SELECT 1 FROM {T}Games WHERE GameId = @id", 
+                    new { id });
+                    
+                if (gameExists != 1)
+                    return Results.Problem("El partido no existe", statusCode: 404);
+                
+                using var tx = c.BeginTransaction();
+                
+                try 
+                {
+                    // 1. Registrar evento de reinicio
+                    await c.ExecuteAsync(
+                        $"INSERT INTO {T}GameEvents (GameId, Quarter, Team, EventType, CreatedAt) " +
+                        "VALUES (@id, 1, 'SYSTEM', 'RESET', SYSUTCDATETIME())", 
+                        new { id }, tx);
+
+                    // 2. Resetear marcador
+                    await c.ExecuteAsync(
+                        $"UPDATE {T}Games SET HomeScore=0, AwayScore=0, Quarter=1, Status='IN_PROGRESS' " +
+                        "WHERE GameId=@id", 
+                        new { id }, tx);
+
+                    // 3. Resetear reloj
+                    await c.ExecuteAsync(
+                        $"UPDATE {T}GameClocks SET Quarter=1, RemainingMs=QuarterMs, " +
+                        "Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id", 
+                        new { id }, tx);
+
+                    tx.Commit();
+                    return Results.NoContent();
+                }
+                catch (Exception ex)
+                {
+                    tx.Rollback();
+                    return Results.Problem($"Error en transacción: {ex.Message}", statusCode: 500);
+                }
+            }
+            catch (Exception ex)
+            {
+                return Results.Problem($"Error general: {ex.Message}", statusCode: 500);
+            }
+        }).WithOpenApi();
     }
 }

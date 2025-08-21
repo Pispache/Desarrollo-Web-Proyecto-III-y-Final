@@ -4,15 +4,16 @@ import { ActivatedRoute } from '@angular/router';
 import { interval, Subscription, switchMap, merge, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
-import { ApiService, GameDetail } from '../services/api.service';
+import { ApiService, GameDetail, GameStatus } from '../services/api.service';
 import { ClockService } from '../services/clock.service';
+import { ControlPanelComponent } from '../widgets/control-panel.component';
 
 type GameEvent = GameDetail['events'][number];
 
 @Component({
   selector: 'app-display-page',
   standalone: true,
-  imports: [CommonModule, DatePipe],
+  imports: [CommonModule, DatePipe, ControlPanelComponent],
   templateUrl: './display-page.component.html',
   styles: [`
     /* Estilos personalizados para la barra de desplazamiento */
@@ -35,6 +36,11 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   private clockSub?: Subscription;
   private currentTime: string = '10:00';
+  
+  // Propiedad para verificar si el juego está suspendido
+  get isGameSuspended(): boolean {
+    return this.detail?.game.status === 'SUSPENDED';
+  }
 
   constructor(
     private route: ActivatedRoute, 
@@ -51,9 +57,19 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
         next: (state) => {
           if (state) {
             this.currentTime = this.formatTimeFromMs(state.remainingMs);
+            
+            // Verificar si el tiempo ha llegado a 0 y el reloj está corriendo
+            if (state.remainingMs <= 0 && state.running) {
+              this.handleTimerExpiration();
+            }
           }
         },
         error: (err) => console.error('Error en el reloj:', err)
+      });
+
+      // Manejar evento de expiración del tiempo
+      this.clock.expired.subscribe(() => {
+        this.handleTimerExpiration();
       });
     }
     
@@ -72,6 +88,100 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.sub?.unsubscribe();
     this.clockSub?.unsubscribe();
+  }
+  
+  // Método para refrescar los datos del juego
+  refreshGame(): void {
+    if (!this.gameId) return;
+    
+    this.api.getGame(this.gameId).subscribe({
+      next: (game) => {
+        this.detail = game;
+        this.lastUpdated = new Date();
+      },
+      error: (err) => console.error('Error al actualizar el juego:', err)
+    });
+  }
+  
+  // Método llamado cuando se solicita un reinicio
+  onResetRequested(): void {
+    if (!this.gameId) return;
+    
+    // Mostrar mensaje de confirmación
+    if (!confirm('¿Estás seguro de que deseas reiniciar TODO el partido? Se reiniciará el marcador, faltas y el tiempo.')) {
+      return;
+    }
+    
+    // Llamar al endpoint de reinicio
+    this.api.resetAll(this.gameId).subscribe({
+      next: () => {
+        // Éxito: recargar datos después de un breve retraso
+        setTimeout(() => {
+          this.refreshGame();
+          if (this.clock) {
+            this.clock.refreshClock(this.gameId);
+          }
+        }, 500);
+      },
+      error: (err) => {
+        console.error('Error al reiniciar el partido:', err);
+        alert(`Error al reiniciar el partido: ${err?.error?.detail || err.message || 'Error desconocido'}`);
+      }
+    });
+  }
+
+  // Manejar la expiración del temporizador
+  private handleTimerExpiration(): void {
+    if (this.detail?.game.status === 'IN_PROGRESS') {
+      // Reproducir sonido de fin de cuarto
+      this.playSound('quarter-end');
+      
+      // Avanzar automáticamente al siguiente cuarto después de un breve retraso
+      setTimeout(() => {
+        if (this.detail && this.detail.game.quarter < 4) {
+          this.clock.advanceClock(this.gameId).subscribe({
+            next: () => {
+              console.log('Cuarto avanzado automáticamente');
+              // Reproducir sonido de inicio de cuarto
+              this.playSound('quarter-start');
+            },
+            error: (error: Error) => console.error('Error al avanzar el cuarto:', error)
+          });
+        } else if (this.detail && this.detail.game.quarter >= 4) {
+          // Si es el cuarto 4, finalizar el partido
+          this.clock.finishClock(this.gameId).subscribe({
+            next: () => {
+              console.log('Partido finalizado automáticamente');
+              this.playSound('game-end');
+            },
+            error: (error: Error) => console.error('Error al finalizar el partido:', error)
+          });
+        }
+      }, 2000); // Esperar 2 segundos antes de avanzar
+    }
+  }
+
+  // Reproducir sonidos
+  private playSound(type: 'quarter-end' | 'quarter-start' | 'game-end'): void {
+    try {
+      let soundFile = '';
+      switch (type) {
+        case 'quarter-end':
+          soundFile = 'quarter-end.mp3';
+          break;
+        case 'quarter-start':
+          soundFile = 'quarter-start.mp3';
+          break;
+        case 'game-end':
+          soundFile = 'game-end.mp3';
+          break;
+      }
+      
+      const audio = new Audio(`/assets/sounds/${soundFile}`);
+      audio.play().catch(e => console.warn(`No se pudo reproducir el sonido ${type}:`, e));
+    } catch (error) {
+      console.warn('Error al reproducir sonido:', error);
+    }
   }
 
   getGameStatus(status: string): string {
