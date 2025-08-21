@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, Subject, map, tap } from 'rxjs';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { Observable, Subject, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 
-export type GameStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED';
+export type GameStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | 'SUSPENDED';
 export type FoulType = 'PERSONAL' | 'TECHNICAL' | 'UNSPORTSMANLIKE' | 'DISQUALIFYING';
 
 export interface Game {
@@ -115,7 +116,33 @@ export class ApiService {
 
   start(id: number)   { return this.post(`/games/${id}/start`, {}); }
   advance(id: number) { return this.post(`/games/${id}/advance-quarter`, {}); }
-  finish(id: number)  { return this.post(`/games/${id}/finish`, {}); }
+  finish(id: number) {
+    return this.post(`/games/${id}/finish`, {});
+  }
+
+  cancelGame(id: number) {
+    return this.http.post(`${this.base}/games/${id}/cancel`, {}, { observe: 'response' })
+      .pipe(
+        map(response => {
+          if (response.status === 204) { // No Content
+            return { success: true };
+          }
+          return response.body || { success: false };
+        }),
+        catchError(error => {
+          console.error('Error en cancelGame:', error);
+          return throwError(() => error);
+        })
+      );
+  }
+
+  suspendGame(id: number) {
+    return this.post(`/games/${id}/suspend`, {});
+  }
+
+  resumeGame(id: number) {
+    return this.post(`/games/${id}/resume`, {});
+  }
 
   score(
     id: number,

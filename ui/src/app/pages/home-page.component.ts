@@ -45,7 +45,90 @@ export class HomePageComponent {
     this.reloadAll();
   }
 
+  // Handle game status changes
+  private handleStatusChange(operation: Promise<any>, successMessage: string) {
+    operation.then((response) => {
+      this.reloadGames();
+      if (this.detail) {
+        this.view(this.detail.game.gameId);
+      }
+      alert(successMessage);
+    }).catch(error => {
+      console.error('Error en handleStatusChange:', error);
+      const errorMessage = error?.error?.error || 'Ocurrió un error al actualizar el estado del partido.';
+      alert(`Error: ${errorMessage}`);
+    });
+  }
+
+  // Game status control methods
+  finishGame(gameId: number) {
+    if (confirm('¿Está seguro que desea marcar este partido como finalizado?')) {
+      this.handleStatusChange(
+        this.api.finish(gameId).toPromise(),
+        'Partido finalizado correctamente.'
+      );
+    }
+  }
+
+  suspendGame(gameId: number) {
+    if (confirm('¿Está seguro que desea suspender este partido? Podrá reanudarlo más tarde.')) {
+      this.handleStatusChange(
+        this.api.suspendGame(gameId).toPromise(),
+        'Partido suspendido correctamente.'
+      );
+    }
+  }
+
+  resumeGame(gameId: number) {
+    this.handleStatusChange(
+      this.api.resumeGame(gameId).toPromise(),
+      'Partido reanudado correctamente.'
+    );
+  }
+
+  cancelGame(gameId: number) {
+    if (confirm('¿Está seguro que desea cancelar este partido? Esta acción no se puede deshacer.')) {
+      this.api.cancelGame(gameId).subscribe({
+        next: () => {
+          this.reloadGames();
+          if (this.detail?.game.gameId === gameId) {
+            this.view(gameId);
+          }
+          alert('Partido cancelado correctamente.');
+        },
+        error: (error) => {
+          console.error('Error al cancelar el partido:', error);
+          const errorMessage = error?.error?.error || 'No se pudo cancelar el partido. Intente nuevamente.';
+          alert(`Error: ${errorMessage}`);
+        }
+      });
+    }
+  }
+
+  // Iniciar un partido programado
+  startGame(gameId: number) {
+    if (confirm('¿Está seguro que desea iniciar este partido?')) {
+      this.api.start(gameId).subscribe({
+        next: () => {
+          this.reloadGames();
+          this.view(gameId);
+        },
+        error: (err: any) => {
+          console.error('Error al iniciar el partido:', err);
+          alert('No se pudo iniciar el partido. Intente nuevamente.');
+        }
+      });
+    }
+  }
+
   // ===== API wrappers (lógica mínima) =====
+  // Check if there are any active (in progress or suspended) games
+  hasActiveGames(): boolean {
+    return this.activeGames.some(game => 
+      game.status === 'IN_PROGRESS' || game.status === 'SUSPENDED'
+    );
+  }
+
   reloadAll() {
     this.api.listTeams().subscribe((t) => (this.teams = t));
     this.reloadGames();
@@ -54,12 +137,28 @@ export class HomePageComponent {
   reloadGames() {
     this.api.listGames().subscribe((g) => {
       this.games = g;
-      this.activeGames = g.filter((game) => game.status === 'IN_PROGRESS');
+      // Incluir partidos en progreso, suspendidos y programados en la lista de activos
+      this.activeGames = g.filter((game) => 
+        game.status === 'IN_PROGRESS' || game.status === 'SUSPENDED' || game.status === 'SCHEDULED'
+      );
     });
   }
 
   view(id: number) {
-    this.api.getGame(id).subscribe((d) => (this.detail = d));
+    this.selectedGameId = id;
+    this.api.getGame(id).subscribe({
+      next: (d) => {
+        this.detail = d;
+        // Asegurarse de que el partido esté en la lista de juegos activos
+        if (!this.activeGames.some(g => g.gameId === id)) {
+          this.reloadGames();
+        }
+      },
+      error: (err) => {
+        console.error('Error cargando partido:', err);
+        alert('No se pudo cargar el partido. Intente nuevamente.');
+      }
+    });
   }
 
   createGame(homeTeamId: number, awayTeamId: number) {
@@ -67,11 +166,15 @@ export class HomePageComponent {
     this.creating = true;
     this.api.pairGame(homeTeamId, awayTeamId).subscribe({
       next: ({ gameId }) => {
+        // Recargamos la lista de juegos
         this.reloadGames();
-        // Abre el panel de control del partido recién creado
+        // Cargamos el detalle del nuevo partido
         this.view(gameId);
       },
-      error: () => {},
+      error: (err) => {
+        console.error('Error creando partido:', err);
+        alert('Error al crear el partido. Por favor, intente nuevamente.');
+      },
       complete: () => (this.creating = false),
     });
   }

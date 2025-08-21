@@ -108,9 +108,43 @@ public static class GameEndpoints
             using var c = Open(cs());
             using var tx = c.BeginTransaction();
             var ok = await Exec(c, $"UPDATE {T}Games SET Status='FINISHED' WHERE GameId=@id AND Status='IN_PROGRESS';", new { id }, tx);
-            if (ok == 0) { tx.Rollback(); return Results.BadRequest(new { error = "No se pudo finalizar." }); }
+            if (ok == 0) { tx.Rollback(); return Results.BadRequest(new { error = "No se pudo finalizar. El partido no está en progreso o ya ha finalizado." }); }
             await Exec(c, $"UPDATE {T}GameClocks SET Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
-            tx.Commit(); return Results.NoContent();
+            tx.Commit(); 
+            return Results.NoContent();
+        }).WithOpenApi();
+
+        g.MapPost("/games/{id:int}/cancel", async (int id) =>
+        {
+            using var c = Open(cs());
+            using var tx = c.BeginTransaction();
+            var ok = await Exec(c, $"UPDATE {T}Games SET Status='CANCELLED' WHERE GameId=@id AND Status IN ('SCHEDULED', 'IN_PROGRESS', 'SUSPENDED');", new { id }, tx);
+            if (ok == 0) { tx.Rollback(); return Results.BadRequest(new { error = "No se pudo cancelar. El partido ya está finalizado o cancelado." }); }
+            await Exec(c, $"UPDATE {T}GameClocks SET Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
+            tx.Commit(); 
+            return Results.NoContent();
+        }).WithOpenApi();
+
+        g.MapPost("/games/{id:int}/suspend", async (int id) =>
+        {
+            using var c = Open(cs());
+            using var tx = c.BeginTransaction();
+            var ok = await Exec(c, $"UPDATE {T}Games SET Status='SUSPENDED' WHERE GameId=@id AND Status='IN_PROGRESS';", new { id }, tx);
+            if (ok == 0) { tx.Rollback(); return Results.BadRequest(new { error = "No se pudo suspender. El partido debe estar en progreso." }); }
+            await Exec(c, $"UPDATE {T}GameClocks SET Running=0, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
+            tx.Commit(); 
+            return Results.NoContent();
+        }).WithOpenApi();
+        
+        g.MapPost("/games/{id:int}/resume", async (int id) =>
+        {
+            using var c = Open(cs());
+            using var tx = c.BeginTransaction();
+            var ok = await Exec(c, $"UPDATE {T}Games SET Status='IN_PROGRESS' WHERE GameId=@id AND Status='SUSPENDED';", new { id }, tx);
+            if (ok == 0) { tx.Rollback(); return Results.BadRequest(new { error = "No se pudo reanudar. El partido debe estar suspendido." }); }
+            await Exec(c, $"UPDATE {T}GameClocks SET Running=1, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
+            tx.Commit(); 
+            return Results.NoContent();
         }).WithOpenApi();
 
         // ===== Score / Foul / Undo =====

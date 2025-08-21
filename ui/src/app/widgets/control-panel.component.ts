@@ -12,6 +12,7 @@ import { forkJoin } from 'rxjs';
 })
 export class ControlPanelComponent implements OnChanges {
   @Input({ required: true }) game!: Game;
+  @Input() isSuspended: boolean = false;
   @Output() changed = new EventEmitter<void>();
 
   homePlayers: Player[] = [];
@@ -38,7 +39,7 @@ export class ControlPanelComponent implements OnChanges {
 
   constructor(private api: ApiService) {}
 
-  get isInProgress() { return this.game?.status === 'IN_PROGRESS'; }
+  get isInProgress() { return this.game?.status === 'IN_PROGRESS' || this.game?.status === 'SCHEDULED' || this.isSuspended; }
 
   ngOnChanges(_: SimpleChanges) {
     if (!this.game) return;

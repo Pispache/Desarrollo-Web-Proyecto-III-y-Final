@@ -86,6 +86,46 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     return statusMap[status] || status;
   }
 
+  // Formatea el tiempo de juego mostrado en la pantalla
+  formatGameTime(): string {
+    return this.currentTime || '10:00';
+  }
+
+  // Formatea milisegundos a MM:SS
+  private formatTimeFromMs(ms: number): string {
+    const totalSeconds = Math.ceil(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  // Obtiene el número de faltas para un equipo de manera segura
+  getTeamFouls(team: 'home' | 'away'): number {
+    if (!this.detail) return 0;
+    
+    // Si hay una propiedad directa (puede no existir)
+    const directProperty = team === 'home' ? 'homeTeamFouls' : 'awayTeamFouls';
+    if (directProperty in this.detail.game) {
+      return (this.detail.game as any)[directProperty] || 0;
+    }
+    
+    // Si no, contar las faltas de los eventos
+    return this.detail.events?.filter(e => 
+      e.eventType === 'FOUL' && e.team === (team === 'home' ? 'HOME' : 'AWAY')
+    ).length || 0;
+  }
+
+  // Determina el mensaje del ganador o empate
+  getWinner(game: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number }): string {
+    if (game.homeScore > game.awayScore) {
+      return `¡${game.homeTeam} GANA EL PARTIDO!`;
+    } else if (game.awayScore > game.homeScore) {
+      return `¡${game.awayTeam} GANA EL PARTIDO!`;
+    } else {
+      return '¡EMPATE!';
+    }
+  }
+
   getEventDescription(event: GameEvent): string {
     if (!event) return '';
     
@@ -114,45 +154,5 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   private getQuarterName(quarter: number): string {
     const quarters = ['primer', 'segundo', 'tercer', 'cuarto', 'primer tiempo extra', 'segundo tiempo extra'];
     return quarters[quarter - 1] || `cuarto ${quarter}`;
-  }
-
-  // Formatea el tiempo de juego mostrado en la pantalla
-  formatGameTime(): string {
-    return this.currentTime || '10:00';
-  }
-  
-  // Determina el mensaje del ganador o empate
-  getWinner(game: { homeTeam: string; awayTeam: string; homeScore: number; awayScore: number }): string {
-    if (game.homeScore > game.awayScore) {
-      return `¡${game.homeTeam} GANA EL PARTIDO!`;
-    } else if (game.awayScore > game.homeScore) {
-      return `¡${game.awayTeam} GANA EL PARTIDO!`;
-    } else {
-      return '¡EMPATE!';
-    }
-  }
-
-  // Formatea milisegundos a MM:SS
-  private formatTimeFromMs(ms: number): string {
-    const totalSeconds = Math.ceil(ms / 1000);
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  }
-
-  // Obtiene el número de faltas para un equipo de manera segura
-  getTeamFouls(team: 'home' | 'away'): number {
-    if (!this.detail) return 0;
-    
-    // Si hay una propiedad directa (puede no existir)
-    const directProperty = team === 'home' ? 'homeTeamFouls' : 'awayTeamFouls';
-    if (directProperty in this.detail.game) {
-      return (this.detail.game as any)[directProperty] || 0;
-    }
-    
-    // Si no, contar las faltas de los eventos
-    return this.detail.events?.filter(e => 
-      e.eventType === 'FOUL' && e.team === (team === 'home' ? 'HOME' : 'AWAY')
-    ).length || 0;
   }
 }

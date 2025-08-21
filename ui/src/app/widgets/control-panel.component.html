@@ -2,19 +2,49 @@
   <div class="font-medium">Controles</div>
 
   <div class="flex flex-wrap gap-2">
-    <button class="border rounded px-3 py-1" (click)="start()"   [disabled]="game.status!=='SCHEDULED'">Start</button>
-    <button class="border rounded px-3 py-1" (click)="advance()" [disabled]="game.status!=='IN_PROGRESS' || game.quarter >= 4">Advance</button>
-    <button class="border rounded px-3 py-1" (click)="finish()"  [disabled]="game.status!=='IN_PROGRESS'">Finish</button>
-    <button class="border rounded px-3 py-1" (click)="undo()"    [disabled]="!game">Undo</button>
+    <button class="border rounded px-3 py-1" 
+            (click)="start()" 
+            [disabled]="game.status!=='SCHEDULED'"
+            class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
+      Iniciar Juego
+    </button>
+    <button class="border rounded px-3 py-1" 
+            (click)="advance()" 
+            [disabled]="game.status!=='IN_PROGRESS' || game.quarter >= 4"
+            [class.opacity-50]="game.status!=='IN_PROGRESS' || game.quarter >= 4">
+      Siguiente Cuarto
+    </button>
+    <button class="border rounded px-3 py-1" 
+            (click)="finish()" 
+            [disabled]="game.status!=='IN_PROGRESS'"
+            [class.opacity-50]="game.status!=='IN_PROGRESS'"
+            class="bg-red-600 text-white hover:bg-red-700">
+      Finalizar Partido
+    </button>
+    <button class="border rounded px-3 py-1" 
+            (click)="undo()" 
+            [disabled]="!game || game.status==='SCHEDULED'"
+            [class.opacity-50]="!game || game.status==='SCHEDULED'">
+      Deshacer
+    </button>
   </div>
 
   <!-- HOME -->
   <div class="flex flex-wrap gap-2 items-center">
     <span class="font-medium">HOME:</span>
 
-    <button class="border rounded px-3 py-1" (click)="score('HOME',1)" [disabled]="game.status!=='IN_PROGRESS'">+1</button>
-    <button class="border rounded px-3 py-1" (click)="score('HOME',2)" [disabled]="game.status!=='IN_PROGRESS'">+2</button>
-    <button class="border rounded px-3 py-1" (click)="score('HOME',3)" [disabled]="game.status!=='IN_PROGRESS'">+3</button>
+    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
+            (click)="score('HOME',1)" 
+            [disabled]="game.status!=='IN_PROGRESS'"
+            [class.opacity-50]="game.status!=='IN_PROGRESS'">+1</button>
+    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
+            (click)="score('HOME',2)" 
+            [disabled]="game.status!=='IN_PROGRESS'"
+            [class.opacity-50]="game.status!=='IN_PROGRESS'">+2</button>
+    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
+            (click)="score('HOME',3)" 
+            [disabled]="game.status!=='IN_PROGRESS'"
+            [class.opacity-50]="game.status!=='IN_PROGRESS'">+3</button>
 
     <select [(ngModel)]="selHomePlayerId" class="border rounded px-2 py-1" [disabled]="!homePlayers.length">
       <option [ngValue]="undefined">Jugador HOME (opcional)</option>
@@ -51,9 +81,18 @@
   <div class="flex flex-wrap gap-2 items-center">
     <span class="font-medium">AWAY:</span>
 
-    <button class="border rounded px-3 py-1" (click)="score('AWAY',1)" [disabled]="game.status!=='IN_PROGRESS'">+1</button>
-    <button class="border rounded px-3 py-1" (click)="score('AWAY',2)" [disabled]="game.status!=='IN_PROGRESS'">+2</button>
-    <button class="border rounded px-3 py-1" (click)="score('AWAY',3)" [disabled]="game.status!=='IN_PROGRESS'">+3</button>
+    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
+            (click)="score('AWAY',1)" 
+            [disabled]="game.status!=='IN_PROGRESS'"
+            [class.opacity-50]="game.status!=='IN_PROGRESS'">+1</button>
+    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
+            (click)="score('AWAY',2)" 
+            [disabled]="game.status!=='IN_PROGRESS'"
+            [class.opacity-50]="game.status!=='IN_PROGRESS'">+2</button>
+    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
+            (click)="score('AWAY',3)" 
+            [disabled]="game.status!=='IN_PROGRESS'"
+            [class.opacity-50]="game.status!=='IN_PROGRESS'">+3</button>
 
     <select [(ngModel)]="selAwayPlayerId" class="border rounded px-2 py-1" [disabled]="!awayPlayers.length">
       <option [ngValue]="undefined">Jugador AWAY (opcional)</option>
