@@ -1,120 +1,175 @@
-<div class="p-4 grid gap-2 border rounded bg-black text-white">
-  <div class="flex justify-between items-center">
-    <div class="text-xl font-semibold">Marcador</div>
+<div class="card shadow border-0 bg-dark text-white">
+  <div class="card-header bg-dark-subtle d-flex justify-content-between align-items-center">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-scoreboard me-2"></i>Marcador
+    </h5>
     <button 
       *ngIf="isAdmin"
       (click)="openAdjustModal()"
-      class="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors"
+      class="btn btn-warning btn-sm"
     >
-      Ajustar Puntuación
+      <i class="bi bi-sliders me-1"></i>Ajustar Puntuación
     </button>
   </div>
 
-  <div class="grid grid-cols-3 items-center gap-2">
-    <div class="text-right text-lg font-medium">{{ game.homeTeam }}</div>
-    <div class="text-center text-3xl font-bold">
-      {{ game.homeScore }} - {{ game.awayScore }}
+  <div class="card-body">
+    <!-- Marcador principal -->
+    <div class="row align-items-center mb-3">
+      <div class="col-5 text-end">
+        <div class="fw-bold text-truncate" [title]="game.homeTeam">{{ game.homeTeam }}</div>
+      </div>
+      <div class="col-2 text-center">
+        <div class="display-4 fw-bold">{{ game.homeScore }} - {{ game.awayScore }}</div>
+      </div>
+      <div class="col-5">
+        <div class="fw-bold text-truncate" [title]="game.awayTeam">{{ game.awayTeam }}</div>
+      </div>
     </div>
-    <div class="text-left text-lg font-medium">{{ game.awayTeam }}</div>
-  </div>
 
-  <div class="text-center text-sm mb-2">
-    <span *ngIf="game.status === 'FINISHED'; else showQuarter">
-      <strong>FINAL</strong>
-    </span>
-    <ng-template #showQuarter>
-      Cuarto: <strong>{{ game.quarter }}</strong> |
-      Estado: <strong>{{ game.status === 'IN_PROGRESS' ? 'EN CURSO' : 'PROGRAMADO' }}</strong>
-    </ng-template>
-  </div>
-  
-  <!-- Mostrar ganador si el partido ha terminado -->
-  <div *ngIf="game.status === 'FINISHED'" class="text-center py-2 mb-2 font-bold text-lg"
-       [ngClass]="{
-         'bg-green-100 text-green-800': true,
-         'rounded': true
-       }">
-    {{ getWinner() }}
-  </div>
+    <!-- Estado del partido -->
+    <div class="text-center mb-3">
+      <span *ngIf="game.status === 'FINISHED'" class="badge bg-danger p-2">
+        <i class="bi bi-flag-fill me-1"></i>FINAL
+      </span>
+      <div *ngIf="game.status !== 'FINISHED'">
+        <div class="d-inline-flex gap-3 align-items-center">
+          <span class="badge bg-primary p-2">
+            <i class="bi bi-123 me-1"></i>Cuarto: {{ game.quarter }}
+          </span>
+          <span 
+            class="badge p-2"
+            [ngClass]="game.status === 'IN_PROGRESS' ? 'bg-success' : 'bg-secondary'"
+          >
+            <i class="bi" [ngClass]="game.status === 'IN_PROGRESS' ? 'bi-play-circle' : 'bi-calendar3'" class="me-1"></i>
+            {{ game.status === 'IN_PROGRESS' ? 'EN CURSO' : 'PROGRAMADO' }}
+          </span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Ganador -->
+    <div *ngIf="game.status === 'FINISHED'" class="alert alert-success text-center fw-bold mb-3">
+      <i class="bi bi-trophy-fill me-2"></i>{{ getWinner() }}
+    </div>
 
-  <!-- ===================== -->
-  <!--  Eventos del partido  -->
-  <!-- ===================== -->
-  <div class="mt-3">
-    <div class="font-semibold mb-1">Eventos</div>
+    <!-- Eventos del partido -->
+    <div class="mt-4">
+      <h6 class="border-bottom pb-2 mb-2 d-flex align-items-center justify-content-between">
+        <span>
+          <i class="bi bi-list-ul me-2"></i>Eventos del Partido
+        </span>
+        <button 
+          class="btn btn-sm btn-outline-light"
+          (click)="toggleEvents()"
+          [attr.aria-expanded]="showEvents"
+          aria-controls="eventsCollapse"
+        >
+          <i class="bi" [ngClass]="showEvents ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+          {{ showEvents ? 'Ocultar' : 'Mostrar' }} eventos
+        </button>
+      </h6>
+      
+      <div *ngIf="showEvents" id="eventsCollapse" class="mt-2">
+        <ng-container *ngIf="events?.length; else noEvents">
+          <div class="list-group list-group-flush">
+            <div *ngFor="let e of events" class="list-group-item bg-transparent text-white border-secondary p-2">
+              <div class="d-flex align-items-center">
+                <span class="badge bg-primary me-2">Q{{ e.quarter }}</span>
+                <div class="flex-grow-1">
+                  <ng-container [ngSwitch]="e.eventType">
+                    <!-- Falta con tipo -->
+                    <span *ngSwitchCase="'FOUL'">
+                      <i class="bi bi-exclamation-triangle-fill text-warning me-1"></i>
+                      Falta
+                      <span *ngIf="e.foulType" class="text-warning">({{ e.foulType }})</span>
+                      <span *ngIf="e.playerNumber != null" class="text-muted ms-1">
+                        #{{ e.playerNumber }}
+                      </span>
+                    </span>
 
-    <ng-container *ngIf="events?.length; else noEvents">
-      <ul class="text-sm space-y-1">
-        <li *ngFor="let e of events">
-          [Q{{ e.quarter }}] {{ e.team }} →
-          <ng-container [ngSwitch]="e.eventType">
-            <!-- Falta con tipo -->
-            <span *ngSwitchCase="'FOUL'">
-              Falta
-              <span *ngIf="e.foulType">({{ e.foulType }})</span>
-              <span *ngIf="e.playerNumber != null">
-                · #{{ e.playerNumber }}
-              </span>
-            </span>
+                    <!-- Otros eventos -->
+                    <span *ngSwitchDefault>
+                      <i class="bi bi-info-circle-fill text-info me-1"></i>
+                      {{ e.eventType }}
+                      <span *ngIf="e.playerNumber != null" class="text-muted ms-1">
+                        #{{ e.playerNumber }}
+                      </span>
+                    </span>
+                  </ng-container>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
 
-            <!-- Otros eventos: puntos, undo, etc -->
-            <span *ngSwitchDefault>
-              {{ e.eventType }}
-              <span *ngIf="e.playerNumber != null">
-                · #{{ e.playerNumber }}
-              </span>
-            </span>
-          </ng-container>
-
-          <!-- marca de tiempo opcional (si usas createdAt) -->
-          <!-- <span class="text-gray-500"> · {{ e.createdAt | date:'shortTime' }}</span> -->
-        </li>
-      </ul>
-    </ng-container>
-
-    <ng-template #noEvents>
-      <div class="text-xs text-gray-600">Aún no hay eventos.</div>
-    </ng-template>
-  </div>
+        <ng-template #noEvents>
+          <div class="alert alert-secondary text-center mb-0">
+            <i class="bi bi-info-circle me-2"></i>No hay eventos registrados
+          </div>
+        </ng-template>
+      </div>
+    </div>
 
   <!-- Modal de ajuste de puntuación -->
-  <div *ngIf="showAdjustModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
-      <h3 class="text-lg font-semibold mb-4">Ajustar Puntuación</h3>
-      
-      <div class="space-y-4">
-        <div class="flex items-center justify-between">
-          <label class="w-32">{{ game.homeTeam }}:</label>
-          <input 
-            type="number" 
-            [(ngModel)]="adjustForm.homeDelta" 
-            class="border rounded px-2 py-1 w-20 text-center"
-            placeholder="+/- puntos"
-          >
+  <div *ngIf="showAdjustModal" class="modal d-block" tabindex="-1" style="background-color: rgba(0,0,0,0.5);">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header bg-dark text-white">
+          <h5 class="modal-title">
+            <i class="bi bi-sliders me-2"></i>Ajustar Puntuación
+          </h5>
+          <button type="button" class="btn-close btn-close-white" (click)="cancelAdjust()"></button>
         </div>
         
-        <div class="flex items-center justify-between">
-          <label class="w-32">{{ game.awayTeam }}:</label>
-          <input 
-            type="number" 
-            [(ngModel)]="adjustForm.awayDelta" 
-            class="border rounded px-2 py-1 w-20 text-center"
-            placeholder="+/- puntos"
-          >
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">{{ game.homeTeam }}:</label>
+            <div class="input-group">
+              <span class="input-group-text">Ajuste</span>
+              <input 
+                type="number" 
+                [(ngModel)]="adjustForm.homeDelta" 
+                class="form-control text-end"
+                placeholder="+/- puntos"
+              >
+              <span class="input-group-text">Nuevo: {{ game.homeScore + (adjustForm.homeDelta || 0) }}</span>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">{{ game.awayTeam }}:</label>
+            <div class="input-group">
+              <span class="input-group-text">Ajuste</span>
+              <input 
+                type="number" 
+                [(ngModel)]="adjustForm.awayDelta" 
+                class="form-control text-end"
+                placeholder="+/- puntos"
+              >
+              <span class="input-group-text">Nuevo: {{ game.awayScore + (adjustForm.awayDelta || 0) }}</span>
+            </div>
+          </div>
+          
+          <div class="alert alert-warning small">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            Solo usa esta función para corregir errores en el marcador.
+          </div>
         </div>
-        
-        <div class="flex justify-end space-x-2 mt-6">
+
+        <div class="modal-footer">
           <button 
-            (click)="showAdjustModal = false"
-            class="px-4 py-2 text-sm bg-gray-200 rounded hover:bg-gray-300 transition-colors"
+            type="button" 
+            class="btn btn-outline-secondary"
+            (click)="cancelAdjust()"
           >
-            Cancelar
+            <i class="bi bi-x-circle me-1"></i>Cancelar
           </button>
           <button 
-            (click)="onAdjustScore()"
-            class="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+            type="button" 
+            class="btn btn-primary"
+            (click)="saveAdjust()"
           >
-            Aplicar Ajuste
+            <i class="bi bi-check-circle me-1"></i>Guardar Cambios
           </button>
         </div>
       </div>

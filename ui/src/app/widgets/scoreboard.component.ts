@@ -27,6 +27,8 @@ export class ScoreboardComponent {
     awayDelta: 0
   };
   
+  showEvents = false;
+  
   openAdjustModal() {
     this.adjustForm = { homeDelta: 0, awayDelta: 0 };
     this.showAdjustModal = true;
@@ -40,6 +42,22 @@ export class ScoreboardComponent {
     this.showAdjustModal = false;
   }
 
+  // Método para cancelar el ajuste de puntuación
+  cancelAdjust() {
+    this.showAdjustModal = false;
+  }
+
+  // Método para guardar los cambios del ajuste de puntuación
+  saveAdjust() {
+    if (this.adjustForm.homeDelta !== 0 || this.adjustForm.awayDelta !== 0) {
+      this.adjustScore.emit({
+        homeDelta: this.adjustForm.homeDelta,
+        awayDelta: this.adjustForm.awayDelta
+      });
+    }
+    this.showAdjustModal = false;
+  }
+
   // Determina el mensaje del ganador o empate
   getWinner(): string {
     if (this.game.homeScore > this.game.awayScore) {
@@ -49,5 +67,9 @@ export class ScoreboardComponent {
     } else {
       return '¡EMPATE!';
     }
+  }
+
+  toggleEvents() {
+    this.showEvents = !this.showEvents;
   }
 }
