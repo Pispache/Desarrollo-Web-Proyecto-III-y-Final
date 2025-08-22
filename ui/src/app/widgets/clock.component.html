@@ -11,8 +11,9 @@
         {{ getStatusText() }}
       </span>
     </div>
-    <div class="text-sm font-medium bg-gray-100 px-2 py-0.5 rounded">
-      {{ quarter || 1 }}° Cuarto
+    <div class="text-sm font-medium bg-gray-100 px-2 py-0.5 rounded" [class.bg-yellow-200]="isOvertime()">
+      <span *ngIf="!isOvertime()">{{ quarter || 1 }}° Cuarto</span>
+      <span *ngIf="isOvertime()">T.E. {{ getOvertimeNumber() }}</span>
     </div>
   </div>
 
@@ -44,6 +45,15 @@
             (click)="resetQuarter()" 
             [disabled]="busy || !gameId">
       🔄 Reiniciar
+    </button>
+
+    <!-- Botón de tiempo extra (solo visible al final del 4to cuarto con empate) -->
+    <button *ngIf="quarter === 4 && vmSnap?.remainingMs === 0 && status === 'IN_PROGRESS'" 
+            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-medium transition-colors"
+            [class.opacity-50]="busy"
+            (click)="startOvertime()" 
+            [disabled]="busy">
+      ⏱ Iniciar Tiempo Extra
     </button>
   </div>
 

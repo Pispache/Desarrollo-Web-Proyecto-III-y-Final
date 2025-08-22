@@ -105,6 +105,33 @@ export class ClockComponent implements OnChanges, OnDestroy {
     this.foulsSub?.unsubscribe();
   }
 
+  // Verifica si el juego está en tiempo extra
+  isOvertime(): boolean {
+    return this.quarter ? this.quarter > 4 : false;
+  }
+
+  // Obtiene el número de tiempo extra actual (1er, 2do, etc.)
+  getOvertimeNumber(): number {
+    return this.quarter ? this.quarter - 4 : 1;
+  }
+
+  // Inicia un tiempo extra para el juego actual
+  startOvertime(): void {
+    if (!this.gameId) return;
+    
+    this.busy = true;
+    this.clock.startOvertime(this.gameId).subscribe({
+      next: () => {
+        console.log('Tiempo extra iniciado');
+        this.busy = false;
+      },
+      error: (err) => {
+        console.error('Error al iniciar tiempo extra:', err);
+        this.busy = false;
+      }
+    });
+  }
+
   /**
    * Handles the global reset of the game (scores + timer)
    */

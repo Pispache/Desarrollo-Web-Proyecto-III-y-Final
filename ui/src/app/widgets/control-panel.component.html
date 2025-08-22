@@ -114,6 +114,19 @@
           </div>
           
           <div class="row g-2">
+            <div class="col-md-7">
+              <select 
+                [(ngModel)]="selHomePlayerId" 
+                [disabled]="!homePlayers.length || game.status!=='IN_PROGRESS'"
+                class="form-select form-select-sm"
+              >
+                <option [ngValue]="undefined">Seleccionar jugador</option>
+                <option *ngFor="let p of homePlayers" [ngValue]="p.playerId">
+                  {{ p.number ? ('#'+p.number+' ') : '' }}{{ p.name }}
+                </option>
+              </select>
+            </div>
+            
             <div class="col-md-5">
               <select 
                 [(ngModel)]="selHomeFoulType" 

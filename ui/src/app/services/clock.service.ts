@@ -40,21 +40,16 @@ export class ClockService implements OnDestroy {
   // Evento que se emite cuando el tiempo del cuarto actual termina
   readonly expired = this.expiredSubject.asObservable();
 
-  constructor(private http: HttpClient) {
-    // Limpiar subscripciones al destruir el servicio
-    this.subscriptions.add(() => {
-      this.clockStates.forEach(state => state.complete());
-      this.clockStates.clear();
-    });
-  }
+  constructor(private http: HttpClient) {}
 
-  ngOnDestroy(): void {
-    this.subscriptions.unsubscribe();
-  }
-
-  /** Obtiene el estado actual del reloj para un juego */
+  /**
+   * Obtiene el estado actual del reloj para un juego específico
+   * @param gameId ID del juego
+   * @returns Observable con el estado actual del reloj
+   */
   getState(gameId: number): Observable<ClockState> {
     if (!this.clockStates.has(gameId)) {
+      // Si no existe un estado para este juego, creamos uno inicial
       const initialState: ClockState = {
         running: false,
         remainingMs: 0,
@@ -68,6 +63,28 @@ export class ClockService implements OnDestroy {
       this.setupPolling(gameId);
     }
     return this.clockStates.get(gameId)!.asObservable();
+  }
+
+  /**
+   * Limpia las subscripciones al destruir el servicio
+   */
+  ngOnDestroy(): void {
+    this.subscriptions.unsubscribe();
+    this.clockStates.forEach(state => state.complete());
+    this.clockStates.clear();
+  }
+
+  /**
+   * Inicia un tiempo extra para el juego especificado
+   * @param gameId ID del juego
+   */
+  startOvertime(gameId: number): Observable<void> {
+    return this.http.post<void>(`${this.base}/games/${gameId}/overtime`, {}).pipe(
+      tap(() => {
+        // Forzar una actualización del estado después de iniciar el tiempo extra
+        this.clockChanged$.next(gameId);
+      })
+    );
   }
 
   /** Configura el polling para un juego específico */

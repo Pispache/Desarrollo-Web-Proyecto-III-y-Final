@@ -1,8 +1,14 @@
-<div class="border rounded p-3 grid gap-3">
-  <div class="font-semibold">Gestión de jugadores por equipo</div>
+<div class="card shadow-sm">
+  <div class="card-header bg-primary text-white">
+    <h5 class="card-title mb-0">
+      <i class="bi bi-people-fill me-2"></i>
+      Gestión de jugadores por equipo
+    </h5>
+  </div>
+  <div class="card-body">
 
   <select
-    class="border rounded px-2 py-1"
+    class="form-select mb-3"
     [(ngModel)]="selectedTeamId"
     (ngModelChange)="onSelectTeam($event)"
     [ngModelOptions]="{ standalone: true }"
@@ -15,48 +21,111 @@
 
   <!-- Lista de jugadores -->
   <div *ngIf="selectedTeamId !== null; else noTeam">
-    <div class="text-sm text-gray-600">Equipo #{{ selectedTeamId }}</div>
+    <h6 class="mb-3">Equipo #{{ selectedTeamId }}</h6>
 
-    <div *ngIf="loading">Cargando jugadores…</div>
+    <div *ngIf="loading" class="text-center my-4">
+      <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+      <p class="mt-2">Cargando jugadores…</p>
+    </div>
+    
     <div *ngIf="!loading">
-      <table class="w-full text-sm" *ngIf="players.length; else empty">
-        <thead>
-          <tr class="text-left">
-            <th style="width:3rem;">#</th>
-            <th>Nombre</th>
-            <th style="width:8rem;">Posición</th>
-            <th style="width:6rem;"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let p of players; trackBy: trackPlayer">
-            <td>{{ p.number ?? '—' }}</td>
-            <td>{{ p.name }}</td>
-            <td>{{ p.position || '' }}</td>
-            <td><button class="border rounded px-2 py-0.5" (click)="deletePlayer(p)">Eliminar</button></td>
-          </tr>
-        </tbody>
-      </table>
-      <ng-template #empty><div class="text-sm text-gray-600">Sin jugadores.</div></ng-template>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover" *ngIf="players.length > 0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 3rem;">#</th>
+              <th>Nombre</th>
+              <th style="width: 8rem;">Posición</th>
+              <th style="width: 6rem;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of players; trackBy: trackPlayer">
+              <td>{{ p.number ?? '—' }}</td>
+              <td>{{ p.name }}</td>
+              <td>{{ p.position || '-' }}</td>
+              <td>
+                <button class="btn btn-sm btn-outline-danger" (click)="deletePlayer(p)">
+                  <i class="bi bi-trash"></i> Eliminar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div *ngIf="players.length === 0" class="alert alert-info">
+          <i class="bi bi-info-circle me-2"></i>No hay jugadores registrados en este equipo.
+        </div>
+      </div>
     </div>
 
-    <!-- Alta de jugador -->
-    <div class="mt-3 border-t pt-3">
-      <div class="font-medium mb-2">Agregar jugador</div>
-      <div class="flex flex-wrap items-center gap-2">
-        <input [(ngModel)]="pName" placeholder="Nombre" class="border rounded px-2 py-1" />
-        <input [(ngModel)]="pNumber" type="number" placeholder="N° (0–99 opcional)" class="border rounded px-2 py-1" />
-        <input [(ngModel)]="pPosition" placeholder="Posición (opcional)" class="border rounded px-2 py-1" />
-        <button class="px-3 py-1 rounded bg-green-600 text-white" [disabled]="saving" (click)="createPlayer()">
-          {{ saving ? 'Guardando…' : 'Agregar' }}
-        </button>
+    <!-- Formulario para agregar jugador -->
+    <div class="card mt-4">
+      <div class="card-header bg-light">
+        <h6 class="mb-0">Agregar nuevo jugador</h6>
       </div>
-      <div *ngIf="errorMsg" class="text-sm text-red-600 mt-1">{{ errorMsg }}</div>
-      <div class="text-xs text-gray-500 mt-1">* UNIQUE (Team, Number) cuando el número no es nulo.</div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Nombre</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              [(ngModel)]="pName" 
+              placeholder="Nombre completo"
+              [disabled]="saving"
+            >
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Número (opcional)</label>
+            <input 
+              type="number" 
+              class="form-control" 
+              [(ngModel)]="pNumber" 
+              placeholder="0-99" 
+              min="0" 
+              max="99"
+              [disabled]="saving"
+            >
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Posición (opcional)</label>
+            <input 
+              type="text" 
+              class="form-control" 
+              [(ngModel)]="pPosition" 
+              placeholder="Ej: Base, Alero..."
+              [disabled]="saving"
+            >
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button 
+              class="btn btn-primary w-100" 
+              [disabled]="!pName || saving" 
+              (click)="createPlayer()"
+            >
+              <span *ngIf="saving" class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+              {{ saving ? 'Guardando...' : 'Agregar' }}
+            </button>
+          </div>
+        </div>
+        
+        <div *ngIf="errorMsg" class="alert alert-danger mt-3 mb-0">
+          <i class="bi bi-exclamation-triangle me-2"></i>{{ errorMsg }}
+        </div>
+        
+        <div class="form-text mt-2">
+          <i class="bi bi-info-circle me-1"></i> El número de jugador debe ser único por equipo cuando se especifica.
+        </div>
+      </div>
     </div>
   </div>
 
   <ng-template #noTeam>
-    <div class="text-sm text-gray-600">Selecciona un equipo para gestionar su plantilla.</div>
+    <div class="alert alert-info mb-0">
+      <i class="bi bi-info-circle me-2"></i>Por favor, selecciona un equipo para gestionar su plantilla.
+    </div>
   </ng-template>
+  </div>
 </div>
