@@ -124,9 +124,15 @@ export class ControlPanelComponent implements OnChanges {
     }
   }
 
-  score(team:'HOME'|'AWAY', points:1|2|3) {
-    if (!this.isInProgress) return;
-    this.api.score(this.game.gameId, team, points).subscribe(() => this.refresh());
+  score(team: 'HOME' | 'AWAY', points: 1 | 2 | 3) {
+    if (this.game.status !== 'IN_PROGRESS' && !this.isSuspended) return;
+    const playerId = team === 'HOME' ? this.selHomePlayerId : this.selAwayPlayerId;
+    this.api.score(
+      this.game.gameId, 
+      team, 
+      points, 
+      { playerId: playerId ?? undefined }
+    ).subscribe(() => this.refresh());
   }
 
   foul(team:'HOME'|'AWAY') {

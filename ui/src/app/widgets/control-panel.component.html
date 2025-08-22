@@ -1,133 +1,234 @@
-<div class="p-4 grid gap-3 border rounded">
-  <div class="font-medium">Controles</div>
-
-  <div class="flex flex-wrap gap-2">
-    <button class="border rounded px-3 py-1" 
-            (click)="start()" 
-            [disabled]="game.status!=='SCHEDULED'"
-            class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700">
-      Iniciar Juego
-    </button>
-    <button class="border rounded px-3 py-1" 
-            (click)="advance()" 
-            [disabled]="game.status!=='IN_PROGRESS' || game.quarter >= 4"
-            [class.opacity-50]="game.status!=='IN_PROGRESS' || game.quarter >= 4">
-      Siguiente Cuarto
-    </button>
-    <button class="border rounded px-3 py-1" 
-            (click)="finish()" 
-            [disabled]="game.status!=='IN_PROGRESS'"
-            [class.opacity-50]="game.status!=='IN_PROGRESS'"
-            class="bg-red-600 text-white hover:bg-red-700">
-      Finalizar Partido
-    </button>
-    <button class="border rounded px-3 py-1" 
-            (click)="undo()" 
-            [disabled]="!game || game.status==='SCHEDULED'"
-            [class.opacity-50]="!game || game.status==='SCHEDULED'">
-      Deshacer
-    </button>
-    <button class="border rounded px-3 py-1 bg-yellow-500 text-white hover:bg-yellow-600"
-            (click)="resetAll()"
-            [disabled]="!game || game.status==='SCHEDULED'"
-            [class.opacity-50]="!game || game.status==='SCHEDULED'">
-      Reiniciar Todo
-    </button>
+<div class="bg-gray-900 rounded-xl shadow-sm overflow-hidden text-white">
+  <!-- Header -->
+  <div class="px-6 py-4 border-b border-gray-100">
+    <h3 class="text-lg font-semibold text-gray-800">Controles del Partido</h3>
   </div>
+  
+  <!-- Main Controls -->
+  <div class="p-6 space-y-6">
+    <!-- Game Controls -->
+    <div class="row g-2 mb-3">
+      <div class="col-6 col-md">
+        <button 
+          (click)="start()" 
+          [disabled]="game.status!=='SCHEDULED'"
+          class="btn btn-success w-100 mb-2"
+        >
+          Iniciar
+        </button>
+      </div>
+      
+      <div class="col-6 col-md">
+        <button 
+          (click)="advance()" 
+          [disabled]="game.status!=='IN_PROGRESS' || game.quarter >= 4"
+          class="btn btn-primary w-100 mb-2"
+        >
+          Siguiente Cuarto
+        </button>
+      </div>
+      
+      <div class="col-6 col-md">
+        <button 
+          (click)="finish()" 
+          [disabled]="game.status!=='IN_PROGRESS'"
+          class="btn btn-danger w-100 mb-2"
+        >
+          Finalizar
+        </button>
+      </div>
+      
+      <div class="col-6 col-md">
+        <button 
+          (click)="undo()" 
+          [disabled]="!game || game.status==='SCHEDULED'"
+          class="btn btn-warning w-100 mb-2 text-white"
+        >
+          Deshacer
+        </button>
+      </div>
+      
+      <div class="col-12 col-md">
+        <button 
+          (click)="resetAll()"
+          [disabled]="!game || game.status==='SCHEDULED'"
+          class="btn btn-secondary w-100 mb-2"
+        >
+          Reiniciar Todo
+        </button>
+      </div>
+    </div>
 
-  <!-- HOME -->
-  <div class="flex flex-wrap gap-2 items-center">
-    <span class="font-medium">HOME:</span>
+    <!-- Controles de Equipo -->
+    <div class="mb-4">
+      <!-- Equipo Local -->
+      <div class="card bg-dark text-white mb-4">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Equipo Local</h5>
+          <div class="d-flex align-items-center">
+            <span class="badge me-2" [class.bg-danger]="teamFouls.home >= 5" [class.bg-secondary]="teamFouls.home < 5">
+              {{ teamFouls.home }} falta{{ teamFouls.home !== 1 ? 's' : '' }}
+              <span *ngIf="teamFouls.home >= 5" class="fw-bold">(PENAL)</span>
+            </span>
+            <div class="btn-group btn-group-sm">
+              <span class="btn btn-sm btn-outline-light">P:{{ breakdown.home.PERSONAL || 0 }}</span>
+              <span class="btn btn-sm btn-outline-light">T:{{ breakdown.home.TECHNICAL || 0 }}</span>
+              <span class="btn btn-sm btn-outline-warning">A:{{ breakdown.home.UNSPORTSMANLIKE || 0 }}</span>
+              <span class="btn btn-sm btn-outline-danger">D:{{ breakdown.home.DISQUALIFYING || 0 }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-4">
+              <button 
+                (click)="score('HOME', 1)" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-outline-info w-100 d-flex flex-column align-items-center py-2"
+              >
+                <span class="fs-4 fw-bold">+1</span>
+                <small>Punto</small>
+              </button>
+            </div>
+            <div class="col-4">
+              <button 
+                (click)="score('HOME', 2)" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-outline-primary w-100 d-flex flex-column align-items-center py-2"
+              >
+                <span class="fs-4 fw-bold">+2</span>
+                <small>Puntos</small>
+              </button>
+            </div>
+            <div class="col-4">
+              <button 
+                (click)="score('HOME', 3)" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-outline-success w-100 d-flex flex-column align-items-center py-2"
+              >
+                <span class="fs-4 fw-bold">+3</span>
+                <small>Puntos</small>
+              </button>
+            </div>
+          </div>
+          
+          <div class="row g-2">
+            <div class="col-md-5">
+              <select 
+                [(ngModel)]="selHomeFoulType" 
+                [ngModelOptions]="{standalone:true}" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="form-select form-select-sm mb-2"
+              >
+                <option [ngValue]="'PERSONAL'">Falta Personal</option>
+                <option [ngValue]="'TECHNICAL'">Falta Técnica</option>
+                <option [ngValue]="'UNSPORTSMANLIKE'">Antideportiva</option>
+                <option [ngValue]="'DISQUALIFYING'">Descalificante</option>
+              </select>
+              
+              <button 
+                (click)="foul('HOME')" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-danger w-100"
+              >
+                <i class="bi bi-flag-fill me-1"></i> Falta
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
-            (click)="score('HOME',1)" 
-            [disabled]="game.status!=='IN_PROGRESS'"
-            [class.opacity-50]="game.status!=='IN_PROGRESS'">+1</button>
-    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
-            (click)="score('HOME',2)" 
-            [disabled]="game.status!=='IN_PROGRESS'"
-            [class.opacity-50]="game.status!=='IN_PROGRESS'">+2</button>
-    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
-            (click)="score('HOME',3)" 
-            [disabled]="game.status!=='IN_PROGRESS'"
-            [class.opacity-50]="game.status!=='IN_PROGRESS'">+3</button>
-
-    <select [(ngModel)]="selHomePlayerId" class="border rounded px-2 py-1" [disabled]="!homePlayers.length">
-      <option [ngValue]="undefined">Jugador HOME (opcional)</option>
-      <option *ngFor="let p of homePlayers" [ngValue]="p.playerId">
-        {{ p.number ? ('#'+p.number+' ') : '' }}{{ p.name }}
-      </option>
-    </select>
-
-    <!-- Tipo de falta HOME -->
-    <select [(ngModel)]="selHomeFoulType" class="border rounded px-2 py-1" [ngModelOptions]="{standalone:true}" [disabled]="game.status!=='IN_PROGRESS'">
-      <option [ngValue]="'PERSONAL'">Personal</option>
-      <option [ngValue]="'TECHNICAL'">Técnica</option>
-      <option [ngValue]="'UNSPORTSMANLIKE'">Antideportiva</option>
-      <option [ngValue]="'DISQUALIFYING'">Descalificante</option>
-    </select>
-
-    <button class="border rounded px-3 py-1" (click)="foul('HOME')" [disabled]="game.status!=='IN_PROGRESS'">Foul</button>
-
-    <!-- Totales por equipo (para scoreboard) -->
-    <span class="ml-2 text-sm" [class.text-red-600]="teamFouls.home >= 5">
-      Faltas HOME (Q{{game.quarter}}): {{ teamFouls.home }} {{ teamFouls.home >= 5 ? '(Penalización)' : '' }}
-    </span>
-
-    <!-- Desglose por tipo (panel de control) -->
-    <span class="ml-2 text-xs text-gray-600">
-      [P: {{ breakdown.home.PERSONAL || 0 }}
-       · T: {{ breakdown.home.TECHNICAL || 0 }}
-       · A: {{ breakdown.home.UNSPORTSMANLIKE || 0 }}
-       · D: {{ breakdown.home.DISQUALIFYING || 0 }}]
-    </span>
-  </div>
-
-  <!-- AWAY -->
-  <div class="flex flex-wrap gap-2 items-center">
-    <span class="font-medium">AWAY:</span>
-
-    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
-            (click)="score('AWAY',1)" 
-            [disabled]="game.status!=='IN_PROGRESS'"
-            [class.opacity-50]="game.status!=='IN_PROGRESS'">+1</button>
-    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
-            (click)="score('AWAY',2)" 
-            [disabled]="game.status!=='IN_PROGRESS'"
-            [class.opacity-50]="game.status!=='IN_PROGRESS'">+2</button>
-    <button class="border rounded px-3 py-1 bg-blue-100 hover:bg-blue-200" 
-            (click)="score('AWAY',3)" 
-            [disabled]="game.status!=='IN_PROGRESS'"
-            [class.opacity-50]="game.status!=='IN_PROGRESS'">+3</button>
-
-    <select [(ngModel)]="selAwayPlayerId" class="border rounded px-2 py-1" [disabled]="!awayPlayers.length">
-      <option [ngValue]="undefined">Jugador AWAY (opcional)</option>
-      <option *ngFor="let p of awayPlayers" [ngValue]="p.playerId">
-        {{ p.number ? ('#'+p.number+' ') : '' }}{{ p.name }}
-      </option>
-    </select>
-
-    <!-- Tipo de falta AWAY -->
-    <select [(ngModel)]="selAwayFoulType" class="border rounded px-2 py-1" [ngModelOptions]="{standalone:true}" [disabled]="game.status!=='IN_PROGRESS'">
-      <option [ngValue]="'PERSONAL'">Personal</option>
-      <option [ngValue]="'TECHNICAL'">Técnica</option>
-      <option [ngValue]="'UNSPORTSMANLIKE'">Antideportiva</option>
-      <option [ngValue]="'DISQUALIFYING'">Descalificante</option>
-    </select>
-
-    <button class="border rounded px-3 py-1" (click)="foul('AWAY')" [disabled]="game.status!=='IN_PROGRESS'">Foul</button>
-
-    <!-- Totales por equipo (para scoreboard) -->
-    <span class="ml-2 text-sm" [class.text-red-600]="teamFouls.away >= 5">
-      Faltas AWAY (Q{{game.quarter}}): {{ teamFouls.away }} {{ teamFouls.away >= 5 ? '(Penalización)' : '' }}
-    </span>
-
-    <!-- Desglose por tipo (panel de control) -->
-    <span class="ml-2 text-xs text-gray-600">
-      [P: {{ breakdown.away.PERSONAL || 0 }}
-       · T: {{ breakdown.away.TECHNICAL || 0 }}
-       · A: {{ breakdown.away.UNSPORTSMANLIKE || 0 }}
-       · D: {{ breakdown.away.DISQUALIFYING || 0 }}]
-    </span>
+      <!-- Equipo Visitante -->
+      <div class="card bg-dark text-white">
+        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+          <h5 class="card-title mb-0">Equipo Visitante</h5>
+          <div class="d-flex align-items-center">
+            <span class="badge me-2" [class.bg-danger]="teamFouls.away >= 5" [class.bg-secondary]="teamFouls.away < 5">
+              {{ teamFouls.away }} falta{{ teamFouls.away !== 1 ? 's' : '' }}
+              <span *ngIf="teamFouls.away >= 5" class="fw-bold">(PENAL)</span>
+            </span>
+            <div class="btn-group btn-group-sm">
+              <span class="btn btn-sm btn-outline-light">P:{{ breakdown.away.PERSONAL || 0 }}</span>
+              <span class="btn btn-sm btn-outline-light">T:{{ breakdown.away.TECHNICAL || 0 }}</span>
+              <span class="btn btn-sm btn-outline-warning">A:{{ breakdown.away.UNSPORTSMANLIKE || 0 }}</span>
+              <span class="btn btn-sm btn-outline-danger">D:{{ breakdown.away.DISQUALIFYING || 0 }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-body">
+          <div class="row g-2 mb-3">
+            <div class="col-4">
+              <button 
+                (click)="score('AWAY', 1)" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-outline-info w-100 d-flex flex-column align-items-center py-2"
+              >
+                <span class="fs-4 fw-bold">+1</span>
+                <small>Punto</small>
+              </button>
+            </div>
+            <div class="col-4">
+              <button 
+                (click)="score('AWAY', 2)" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-outline-primary w-100 d-flex flex-column align-items-center py-2"
+              >
+                <span class="fs-4 fw-bold">+2</span>
+                <small>Puntos</small>
+              </button>
+            </div>
+            <div class="col-4">
+              <button 
+                (click)="score('AWAY', 3)" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-outline-success w-100 d-flex flex-column align-items-center py-2"
+              >
+                <span class="fs-4 fw-bold">+3</span>
+                <small>Puntos</small>
+              </button>
+            </div>
+          </div>
+          
+          <div class="row g-2">
+            <div class="col-md-7">
+              <select 
+                [(ngModel)]="selAwayPlayerId" 
+                [disabled]="!awayPlayers.length || game.status!=='IN_PROGRESS'"
+                class="form-select form-select-sm"
+              >
+                <option [ngValue]="undefined">Seleccionar jugador</option>
+                <option *ngFor="let p of awayPlayers" [ngValue]="p.playerId">
+                  {{ p.number ? ('#'+p.number+' ') : '' }}{{ p.name }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="col-md-5">
+              <select 
+                [(ngModel)]="selAwayFoulType" 
+                [ngModelOptions]="{standalone:true}" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="form-select form-select-sm mb-2"
+              >
+                <option [ngValue]="'PERSONAL'">Falta Personal</option>
+                <option [ngValue]="'TECHNICAL'">Falta Técnica</option>
+                <option [ngValue]="'UNSPORTSMANLIKE'">Antideportiva</option>
+                <option [ngValue]="'DISQUALIFYING'">Descalificante</option>
+              </select>
+              
+              <button 
+                (click)="foul('AWAY')" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-danger w-100"
+              >
+                <i class="bi bi-flag-fill me-1"></i> Falta
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>

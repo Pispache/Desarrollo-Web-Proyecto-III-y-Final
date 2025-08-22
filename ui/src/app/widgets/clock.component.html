@@ -1,4 +1,4 @@
-<div class="p-4 border rounded-lg shadow-sm bg-white">
+<div class="p-4 border rounded-lg shadow-sm bg-black">
   <!-- Encabezado con indicador de estado -->
   <div class="flex justify-between items-center mb-2">
     <div class="text-sm font-medium text-gray-600">
@@ -62,6 +62,7 @@
           <select class="border rounded p-1 text-sm"
                   [value]="vm.quarterMs / 60000"
                   (change)="setDuration($event)">
+            <option value="1">1 minuto (pruebas)</option>
             <option value="5">5 minutos</option>
             <option value="8">8 minutos</option>
             <option value="10" selected>10 minutos</option>

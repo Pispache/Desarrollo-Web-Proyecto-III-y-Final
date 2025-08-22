@@ -1,27 +1,72 @@
-/* Importar Bootstrap */
+/* Importar variables de Bootstrap primero */
+@import 'bootstrap/scss/functions';
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+
+// Configuración del tema oscuro personalizado
+$dark-bg: #1a1a1a;
+$dark-card: #2d2d2d;
+$dark-border: #444;
+$dark-text: #e0e0e0;
+$dark-hover: #3a3a3a;
+
+// Sobrescribir variables de Bootstrap
+$body-bg: $dark-bg;
+$body-color: $dark-text;
+$card-bg: $dark-card;
+$card-border-color: $dark-border;
+$table-bg: $dark-card;
+$table-color: $dark-text;
+$table-border-color: $dark-border;
+$input-bg: $dark-card;
+$input-color: $dark-text;
+$input-border-color: $dark-border;
+$input-focus-bg: $dark-hover;
+$input-focus-border-color: $primary;
+$list-group-bg: $dark-card;
+$list-group-color: $dark-text;
+$list-group-border-color: $dark-border;
+$list-group-hover-bg: $dark-hover;
+$dropdown-bg: $dark-card;
+$dropdown-link-color: $dark-text;
+$dropdown-link-hover-bg: $dark-hover;
+$modal-content-bg: $dark-card;
+$modal-content-border-color: $dark-border;
+$modal-header-border-color: $dark-border;
+$modal-footer-border-color: $dark-border;
+$pagination-bg: $dark-card;
+$pagination-color: $dark-text;
+$pagination-border-color: $dark-border;
+$pagination-hover-bg: $dark-hover;
+$pagination-hover-border-color: $dark-border;
+
+/* Importar el resto de Bootstrap */
 @import 'bootstrap/scss/bootstrap';
+
+/* Importar el tema oscuro personalizado */
+@import './styles/dark-theme';
 
 /* Fuente LED Digital */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
 
 :root {
-  --led-bg: #000000;
-  --led-red: #ff0000;
-  --led-yellow: #ffff00;
-  --led-green: #00ff00;
-  --led-blue: #00a8ff;
-  --led-text: #ffffff;
-  --led-border: #333333;
-  --warning-color: #ffc107;
-  --success-color: #198754;
-  --danger-color: #dc3545;
-  --primary-color: #0d6efd;
-  --dark-color: #212529;
+  --led-bg: #1a1a1a;
+  --led-red: #ff6b6b;
+  --led-yellow: #ffd93d;
+  --led-green: #51cf66;
+  --led-blue: #4dabf7;
+  --led-text: #e0e0e0;
+  --led-border: #444;
+  --warning-color: #ffd43b;
+  --success-color: #40c057;
+  --danger-color: #ff6b6b;
+  --primary-color: #4dabf7;
+  --dark-color: #2d2d2d;
 }
 
 /* Estilos generales */
 body {
-  background-color: #000;
+  background-color: var(--led-bg);
   color: var(--led-text);
   margin: 0;
   padding: 0;
@@ -29,6 +74,105 @@ body {
   display: flex;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
   flex-direction: column;
+}
+
+/* Ajustes para el tema oscuro */
+.bg-light {
+  background-color: #2d2d2d !important;
+  color: #e0e0e0 !important;
+}
+
+.text-dark {
+  color: #e0e0e0 !important;
+}
+
+.text-muted {
+  color: #9e9e9e !important;
+}
+
+.border {
+  border-color: var(--led-border) !important;
+}
+
+/* Ajustes para las tarjetas */
+.card {
+  background-color: var(--dark-card);
+  border-color: var(--dark-border);
+  color: var(--led-text);
+  
+  .card-header {
+    background-color: #2d2d2d !important; // Sobrescribir cualquier clase bg-* de Bootstrap
+    border-bottom-color: var(--dark-border);
+    color: #f0f0f0 !important; // Forzar el color del texto
+    
+    .card-title, h5 {
+      color: #f0f0f0 !important; // Asegurar que los títulos sean claros
+    }
+    
+    // Estilos para los iconos en los encabezados
+    .bi {
+      color: #f0f0f0 !important;
+    }
+  }
+  
+  .card-footer {
+    background-color: #333;
+    border-top-color: var(--dark-border);
+  }
+}
+
+/* Ajustes para los botones */
+.btn-outline-secondary {
+  color: #e0e0e0;
+  border-color: #666;
+  
+  &:hover {
+    background-color: #444;
+    border-color: #666;
+    color: #fff;
+  }
+}
+
+/* Ajustes para las tablas */
+.table {
+  --bs-table-bg: transparent;
+  --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
+  --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
+  color: #f0f0f0;
+  
+  thead th {
+    background-color: #2d2d2d;
+    border-bottom-color: var(--dark-border);
+    color: #f0f0f0;
+  }
+  
+  tbody tr {
+    &:hover {
+      --bs-table-hover-color: #fff;
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+  }
+}
+
+/* Ajustes para la lista de partidos */
+.list-group-item {
+  background-color: var(--dark-card);
+  border-color: var(--dark-border);
+  color: #f0f0f0;
+  
+  &:hover, &.active {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: #fff;
+  }
+  
+  .text-muted {
+    color: #b0b0b0 !important;
+  }
+  
+  .badge {
+    background-color: #444;
+    color: #f0f0f0;
+  }
 }
 
 /* Contenedor principal del marcador LED */

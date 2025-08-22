@@ -8,6 +8,7 @@ import { ScoreboardComponent } from '../widgets/scoreboard.component';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
 import { ClockComponent } from '../widgets/clock.component';
 import { TeamRosterComponent } from '../widgets/team-roster.component';
+import { FilterPipe } from '../pipes/filter.pipe';
 import { finalize } from 'rxjs';
 
 @Component({
@@ -22,12 +23,14 @@ import { finalize } from 'rxjs';
     ClockComponent,
     TeamRosterComponent,
     AdminTeamRosterComponent,
+    FilterPipe,
   ],
   templateUrl: './home-page.component.html',
 })
 export class HomePageComponent {
   // filtros / estado
   q = '';
+  teamSearch = '';
   creating = false;
   advancing = false;
 

@@ -1,0 +1,168 @@
+// Variables de tema oscuro
+:root[data-bs-theme="dark"] {
+  // Colores base
+  --bs-body-bg: #1a1a1a;
+  --bs-body-color: #e0e0e0;
+  --bs-border-color: #444;
+  --bs-secondary-bg: #2d2d2d;
+  
+  // Tarjetas
+  --bs-card-bg: #2d2d2d;
+  --bs-card-border-color: #444;
+  
+  // Tablas
+  --bs-table-bg: #2d2d2d;
+  --bs-table-color: #e0e0e0;
+  --bs-table-border-color: #444;
+  --bs-table-striped-bg: #3a3a3a;
+  --bs-table-hover-bg: #3a3a3a;
+  
+  // Formularios
+  --bs-form-control-bg: #2d2d2d;
+  --bs-form-control-color: #e0e0e0;
+  --bs-form-control-border-color: #555;
+  --bs-form-control-focus-border-color: #0d6efd;
+  --bs-form-control-focus-bg: #3a3a3a;
+  
+  // List group
+  --bs-list-group-bg: #2d2d2d;
+  --bs-list-group-color: #e0e0e0;
+  --bs-list-group-border-color: #444;
+  --bs-list-group-hover-bg: #3a3a3a;
+  --bs-list-group-action-hover-bg: #3a3a3a;
+  --bs-list-group-action-hover-color: #fff;
+  
+  // Dropdowns
+  --bs-dropdown-bg: #2d2d2d;
+  --bs-dropdown-link-color: #e0e0e0;
+  --bs-dropdown-link-hover-bg: #3a3a3a;
+  --bs-dropdown-link-hover-color: #fff;
+  
+  // Badges
+  --bs-badge-bg: #444;
+  --bs-badge-color: #fff;
+  
+  // Input group
+  --bs-input-group-addon-bg: #3a3a3a;
+  --bs-input-group-addon-border-color: #555;
+  
+  // Pagination
+  --bs-pagination-bg: #2d2d2d;
+  --bs-pagination-color: #e0e0e0;
+  --bs-pagination-border-color: #555;
+  --bs-pagination-hover-bg: #3a3a3a;
+  --bs-pagination-hover-border-color: #555;
+  --bs-pagination-active-bg: #0d6efd;
+  --bs-pagination-active-border-color: #0d6efd;
+  --bs-pagination-disabled-bg: #2d2d2d;
+  --bs-pagination-disabled-border-color: #555;
+  --bs-pagination-disabled-color: #888;
+}
+
+// Aplicar el tema oscuro al body
+[data-bs-theme="dark"] {
+  body {
+    background-color: var(--bs-body-bg);
+    color: var(--bs-body-color);
+  }
+  
+  // Estilos para las tarjetas
+  .card {
+    background-color: var(--bs-card-bg);
+    border-color: var(--bs-card-border-color);
+    color: var(--bs-body-color);
+    
+    .card-header {
+      background-color: #333;
+      border-bottom-color: var(--bs-border-color);
+    }
+    
+    .card-footer {
+      background-color: #333;
+      border-top-color: var(--bs-border-color);
+    }
+  }
+  
+  // Estilos para las tablas
+  .table {
+    color: var(--bs-table-color);
+    
+    thead th {
+      background-color: #333;
+      border-bottom-color: var(--bs-border-color);
+    }
+    
+    tbody tr {
+      &:hover {
+        --bs-table-hover-color: #fff;
+      }
+    }
+  }
+  
+  // Estilos para los formularios
+  .form-control, .form-select {
+    background-color: var(--bs-form-control-bg);
+    border-color: var(--bs-form-control-border-color);
+    color: var(--bs-form-control-color);
+    
+    &:focus {
+      background-color: var(--bs-form-control-focus-bg);
+      border-color: var(--bs-form-control-focus-border-color);
+      color: var(--bs-form-control-color);
+    }
+    
+    &::placeholder {
+      color: #888;
+    }
+  }
+  
+  // Estilos para los botones
+  .btn-outline-secondary {
+    --bs-btn-color: #e0e0e0;
+    --bs-btn-border-color: #666;
+    --bs-btn-hover-bg: #444;
+    --bs-btn-hover-border-color: #666;
+    --bs-btn-active-bg: #555;
+    --bs-btn-active-border-color: #666;
+  }
+  
+  // Estilos para los badges
+  .badge {
+    &.bg-light {
+      background-color: #444 !important;
+      color: #fff !important;
+    }
+  }
+  
+  // Estilos para los input groups
+  .input-group-text {
+    background-color: var(--bs-input-group-addon-bg);
+    border-color: var(--bs-input-group-addon-border-color);
+    color: var(--bs-body-color);
+  }
+  
+  // Estilos para los modales
+  .modal-content {
+    background-color: #2d2d2d;
+    border-color: #444;
+    
+    .modal-header, .modal-footer {
+      border-color: #444;
+    }
+  }
+  
+  // Estilos para los tooltips
+  .tooltip {
+    --bs-tooltip-bg: #333;
+    --bs-tooltip-color: #fff;
+  }
+  
+  // Estilos para los popovers
+  .popover {
+    --bs-popover-bg: #2d2d2d;
+    --bs-popover-border-color: #444;
+    --bs-popover-header-bg: #333;
+    --bs-popover-header-color: #fff;
+    --bs-popover-body-color: #e0e0e0;
+  }
+}
