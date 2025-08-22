@@ -1,5 +1,8 @@
+<!-- ==============================================
+     DISPLAY PÚBLICO - VISTA PRINCIPAL DEL MARCADOR
+     ============================================== -->
 <div class="container-fluid bg-dark text-light min-vh-100 p-0">
-  <!-- Encabezado -->
+  <!-- Encabezado del marcador -->
   <header class="bg-black py-2 border-bottom border-secondary">
     <div class="container">
       <div class="row align-items-center">
@@ -83,9 +86,18 @@
           </div>
         </div>
 
-        <!-- Pie de página -->
+        <!-- Resultado final -->
+        <div *ngIf="d.game.status === 'FINISHED'" class="led-verdict">
+          <div class="verdict-text">
+            {{ getWinner(d.game) }}
+          </div>
+          <div class="verdict-scores">
+            {{ d.game.homeTeam }} {{ d.game.homeScore || 0 }} - {{ d.game.awayScore || 0 }} {{ d.game.awayTeam }}
+          </div>
+        </div>
+
+        <!-- Pie de página del marcador -->
         <div class="led-footer">
-          <div class="led-updated">Actualizado: {{ lastUpdated | date:'HH:mm:ss' }}</div>
           <div *ngIf="isGameSuspended" class="led-suspended">
             <i class="bi bi-pause-fill"></i> PARTIDO SUSPENDIDO
           </div>
@@ -103,12 +115,12 @@
     </div>
   </div>
 
-  <!-- Pie de página -->
-  <footer class="fixed-bottom bg-black py-1 border-top border-secondary">
+  <!-- Pie de página del sistema (oculto en producción) -->
+  <footer class="fixed-bottom bg-black py-1 border-top border-secondary d-none">
     <div class="container">
       <div class="row">
         <div class="col-12 text-center small text-muted">
-          Actualizado: {{ lastUpdated | date:'HH:mm:ss' }}
+          Sistema de Marcador de Baloncesto
         </div>
       </div>
     </div>

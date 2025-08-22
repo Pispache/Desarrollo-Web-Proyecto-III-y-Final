@@ -1,11 +1,11 @@
 import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { interval, Subscription, switchMap, merge, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 
 import { ApiService, GameDetail, GameStatus } from '../services/api.service';
-import { ClockService } from '../services/clock.service';
+import { ClockService, ClockState } from '../services/clock.service';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
 
 type GameEvent = GameDetail['events'][number];
@@ -13,7 +13,7 @@ type GameEvent = GameDetail['events'][number];
 @Component({
   selector: 'app-display-page',
   standalone: true,
-  imports: [CommonModule, DatePipe, ControlPanelComponent],
+  imports: [CommonModule, ControlPanelComponent],
   templateUrl: './display-page.component.html',
   styles: [`
     /* Estilos personalizados para la barra de desplazamiento */
@@ -37,7 +37,7 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   private gameId!: number;
   private sub?: Subscription;
   private clockSub?: Subscription;
-  private currentTime: string = '10:00';
+  private clockState: ClockState | null = null;
   
   // Propiedad para verificar si el juego está suspendido
   get isGameSuspended(): boolean {
@@ -175,14 +175,12 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
       this.clockSub = this.clock.getState(this.gameId).subscribe({
         next: (state) => {
           if (state) {
-            // Forzar la detección de cambios para actualizar la vista
-            this.currentTime = this.formatTimeFromMs(state.remainingMs);
+            // Actualizar el estado del reloj
+            this.clockState = state;
             
             // Forzar la detección de cambios
-            if (!(this as any).cdr) {
-              console.warn('ChangeDetectorRef no está inyectado');
-            } else {
-              (this as any).cdr.detectChanges();
+            if (this.cdr) {
+              this.cdr.detectChanges();
             }
             
             // Verificar si el tiempo ha llegado a 0 y el reloj está corriendo
@@ -325,12 +323,12 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
 
   // Formatea el tiempo de juego mostrado en la pantalla
   formatGameTime(): string {
-    // Usar currentTime que se actualiza desde el servicio de reloj
-    if (this.currentTime) {
-      return this.currentTime;
+    // Usar directamente el tiempo del reloj del servicio
+    if (this.clockState) {
+      return this.formatTimeFromMs(this.clockState.remainingMs);
     }
     
-    // Si no hay currentTime, usar el valor del juego como respaldo
+    // Si no hay estado del reloj, usar el valor del juego como respaldo
     if (this.detail?.game?.timeRemaining !== undefined) {
       return this.formatTimeFromMs(this.detail.game.timeRemaining);
     }
