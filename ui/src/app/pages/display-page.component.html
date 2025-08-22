@@ -1,126 +1,116 @@
-<div class="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white p-4">
-  <div class="max-w-5xl mx-auto">
-    <!-- Encabezado con logo y título -->
-    <div class="text-center mb-6">
-      <h1 class="text-3xl font-bold text-yellow-400 mb-2">MARCADOR EN VIVO</h1>
-      <div class="text-sm text-gray-400">Sigue el partido en tiempo real</div>
-      
-      <!-- Game Status Indicator -->
-      <div *ngIf="detail" class="mt-2">
-        <span 
-          class="px-3 py-1 text-sm font-semibold rounded-full"
-          [ngClass]="{
-            'bg-green-100 text-green-800': detail.game.status === 'IN_PROGRESS',
-            'bg-red-100 text-red-800': detail.game.status === 'FINISHED' || detail.game.status === 'CANCELLED',
-            'bg-yellow-100 text-yellow-800': detail.game.status === 'SUSPENDED',
-            'bg-blue-100 text-blue-800': detail.game.status === 'SCHEDULED'
-          }"
-        >
-          {{ 
-            detail.game.status === 'IN_PROGRESS' ? 'EN PROGRESO' :
-            detail.game.status === 'FINISHED' ? 'FINALIZADO' :
-            detail.game.status === 'CANCELLED' ? 'CANCELADO' :
-            detail.game.status === 'SUSPENDED' ? 'SUSPENDIDO' :
-            'PROGRAMADO'
-          }}
-        </span>
+<div class="container-fluid bg-dark text-light min-vh-100 p-0">
+  <!-- Encabezado -->
+  <header class="bg-black py-2 border-bottom border-secondary">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-12 text-center">
+          <h1 class="h4 mb-0 text-warning fw-bold">MARCADOR DE BALONCESTO</h1>
+          <div *ngIf="detail" class="badge mt-1" 
+               [ngClass]="{
+                 'bg-success': detail.game.status === 'IN_PROGRESS',
+                 'bg-danger': detail.game.status === 'FINISHED' || detail.game.status === 'CANCELLED',
+                 'bg-warning text-dark': detail.game.status === 'SUSPENDED',
+                 'bg-primary': detail.game.status === 'SCHEDULED'
+               }">
+            {{ 
+              detail.game.status === 'IN_PROGRESS' ? 'EN PROGRESO' :
+              detail.game.status === 'FINISHED' ? 'FINALIZADO' :
+              detail.game.status === 'CANCELLED' ? 'CANCELADO' :
+              detail.game.status === 'SUSPENDED' ? 'SUSPENDIDO' :
+              'PROGRAMADO'
+            }}
+          </div>
+        </div>
       </div>
     </div>
+  </header>
 
-    <!-- Indicador de carga -->
-    <div *ngIf="!detail" class="text-center py-12">
-      <div class="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-yellow-400 mb-4"></div>
-      <p class="text-gray-400">Cargando datos del partido...</p>
+  <!-- Indicador de carga -->
+  <div *ngIf="!detail" class="d-flex justify-content-center align-items-center vh-100">
+    <div class="text-center">
+      <div class="spinner-border text-warning" role="status">
+        <span class="visually-hidden">Cargando...</span>
+      </div>
+      <p class="mt-3 text-muted">Cargando datos del partido...</p>
     </div>
+  </div>
 
-    <!-- Contenido principal -->
-    <div *ngIf="detail as d" class="space-y-6">
-      <!-- Marcador principal -->
-      <div class="bg-gray-800 rounded-lg shadow-xl overflow-hidden">
-        <!-- Tiempo y cuarto -->
-        <div class="bg-gray-900 p-3 text-center">
-          <div class="text-4xl font-mono font-bold text-yellow-400">
-            {{ d.game.status === 'FINISHED' ? 'FINAL' : formatGameTime() }}
-          </div>
-          <div class="text-sm text-gray-400">
-            <span *ngIf="d.game.status !== 'FINISHED'">
-              CUARTO {{ d.game.quarter }} - {{ getGameStatus(d.game.status) }}
-            </span>
-            <span *ngIf="d.game.status === 'FINISHED'">
-              {{ getGameStatus(d.game.status) }}
-            </span>
+  <!-- Contenido principal -->
+  <div *ngIf="detail as d" class="py-3">
+    <div class="led-display">
+      <!-- Fondo negro para el display LED -->
+      <div class="led-container">
+        <!-- Encabezado con estado del partido -->
+        <div class="led-header">
+          <div class="led-league">{{ d.game.leagueName || 'LIGA' }}</div>
+          <div class="led-status" 
+               [class.led-status-in-progress]="d.game.status === 'IN_PROGRESS'"
+               [class.led-status-suspended]="d.game.status === 'SUSPENDED'"
+               [class.led-status-finished]="d.game.status === 'FINISHED'">
+            {{ getGameStatus(d.game.status) }}
           </div>
         </div>
 
-        <!-- Anuncio del ganador (solo si el partido ha terminado) -->
-        <div *ngIf="d.game.status === 'FINISHED'" class="bg-green-900 text-white py-3 px-4 text-center">
-          <div class="text-2xl font-bold">{{ getWinner(d.game) }}</div>
+        <!-- Cuarto y tiempo -->
+        <div class="led-period">
+          <div class="led-quarter">{{ getQuarterName(d.game.quarter) }}</div>
+          <div class="led-time" [class.led-time-warning]="isTimeLow()">{{ formatGameTime() }}</div>
         </div>
 
         <!-- Equipos y puntuación -->
-        <div class="p-6">
-          <div class="grid grid-cols-3 items-center gap-4">
-            <!-- Equipo local -->
-            <div class="text-right">
-              <div class="text-xl font-bold">{{ d.game.homeTeam }}</div>
-              <div class="text-sm text-gray-400">LOCAL</div>
+        <div class="led-teams">
+          <!-- Equipo Local -->
+          <div class="led-team led-team-home">
+            <div class="led-team-name">{{ d.game.homeTeam }}</div>
+            <div class="led-score">{{ d.game.homeScore || 0 }}</div>
+            <div class="led-fouls" [class.led-fouls-bonus]="getTeamFouls('home') >= 5">
+              FALTAS: {{ getTeamFouls('home') || 0 }}
+              <span *ngIf="getTeamFouls('home') >= 5" class="led-bonus">BONUS</span>
             </div>
-            
-            <!-- Marcador -->
-            <div class="text-center">
-              <div class="text-6xl font-bold">{{ d.game.homeScore }} - {{ d.game.awayScore }}</div>
-            </div>
-            
-            <!-- Equipo visitante -->
-            <div class="text-left">
-              <div class="text-xl font-bold">{{ d.game.awayTeam }}</div>
-              <div class="text-sm text-gray-400">VISITANTE</div>
+          </div>
+          
+          <!-- VS -->
+          <div class="led-vs">VS</div>
+          
+          <!-- Equipo Visitante -->
+          <div class="led-team led-team-away">
+            <div class="led-team-name">{{ d.game.awayTeam }}</div>
+            <div class="led-score">{{ d.game.awayScore || 0 }}</div>
+            <div class="led-fouls" [class.led-fouls-bonus]="getTeamFouls('away') >= 5">
+              FALTAS: {{ getTeamFouls('away') || 0 }}
+              <span *ngIf="getTeamFouls('away') >= 5" class="led-bonus">BONUS</span>
             </div>
           </div>
         </div>
 
-        <!-- Faltas de equipo (si están disponibles) -->
-        <div *ngIf="getTeamFouls('home') !== null || getTeamFouls('away') !== null" 
-             class="bg-gray-900 p-3 grid grid-cols-2 gap-4 text-center">
-          <div>
-            <div class="text-yellow-400 font-medium">FALTAS</div>
-            <div class="text-2xl font-bold">
-              <span [class.text-red-500]="getTeamFouls('home') >= 5">
-                {{ getTeamFouls('home') || 0 }}
-              </span>
-              <span *ngIf="getTeamFouls('home') >= 5" class="text-red-500 ml-1">BONUS</span>
-            </div>
-          </div>
-          <div>
-            <div class="text-yellow-400 font-medium">FALTAS</div>
-            <div class="text-2xl font-bold">
-              <span [class.text-red-500]="getTeamFouls('away') >= 5">
-                {{ getTeamFouls('away') || 0 }}
-              </span>
-              <span *ngIf="getTeamFouls('away') >= 5" class="text-red-500 ml-1">BONUS</span>
-            </div>
+        <!-- Pie de página -->
+        <div class="led-footer">
+          <div class="led-updated">Actualizado: {{ lastUpdated | date:'HH:mm:ss' }}</div>
+          <div *ngIf="isGameSuspended" class="led-suspended">
+            <i class="bi bi-pause-fill"></i> PARTIDO SUSPENDIDO
           </div>
         </div>
       </div>
-
-      <!-- Últimos eventos -->
-      <div *ngIf="d.events?.length" class="bg-gray-800 rounded-lg p-4">
-        <h3 class="text-lg font-semibold mb-3 text-yellow-400 border-b border-gray-700 pb-2">ÚLTIMOS EVENTOS</h3>
-        <div class="space-y-2 max-h-60 overflow-y-auto">
-          <div *ngFor="let e of d.events | slice:0:10" class="text-sm border-b border-gray-700 pb-2 last:border-0">
-            <span class="text-yellow-400">Q{{ e.quarter }}</span> 
-            - {{ getEventDescription(e) }}
-            <span *ngIf="e.createdAt" class="text-gray-500 text-xs ml-2">
-              {{ e.createdAt | date:'HH:mm' }}
-            </span>
-          </div>
-        </div>
-      </div>
+    </div>
+    
+    <!-- Panel de control (solo visible para administradores) -->
+    <div *ngIf="isAdmin && detail" class="admin-panel">
+      <app-control-panel 
+        [game]="detail.game"
+        (changed)="refreshGame()"
+        (resetRequested)="refreshGame()">
+      </app-control-panel>
     </div>
   </div>
 
   <!-- Pie de página -->
-  <div class="text-center text-xs text-gray-500 mt-8">
-    Actualizado: {{ lastUpdated | date:'HH:mm:ss' }}
-  </div>
+  <footer class="fixed-bottom bg-black py-1 border-top border-secondary">
+    <div class="container">
+      <div class="row">
+        <div class="col-12 text-center small text-muted">
+          Actualizado: {{ lastUpdated | date:'HH:mm:ss' }}
+        </div>
+      </div>
+    </div>
+  </footer>
 </div>

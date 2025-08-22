@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { interval, Subscription, switchMap, merge, of } from 'rxjs';
@@ -32,6 +32,8 @@ type GameEvent = GameDetail['events'][number];
 export class DisplayPageComponent implements OnInit, OnDestroy {
   detail?: GameDetail;
   lastUpdated: Date = new Date();
+  isAdmin: boolean = false; // Cambiar a true para habilitar el panel de control
+  
   private gameId!: number;
   private sub?: Subscription;
   private clockSub?: Subscription;
@@ -42,11 +44,128 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     return this.detail?.game.status === 'SUSPENDED';
   }
 
+  // Verifica si el tiempo restante es bajo (menos de 1 minuto)
+  isTimeLow(): boolean {
+    if (!this.detail?.game.timeRemaining) return false;
+    return this.detail.game.timeRemaining < 60000; // Menos de 1 minuto
+  }
+
+  // Obtiene el nombre del cuarto actual
+  getQuarterName(quarter: number): string {
+    if (!quarter) return '1er CUARTO';
+    switch (quarter) {
+      case 1: return '1er CUARTO';
+      case 2: return '2do CUARTO';
+      case 3: return '3er CUARTO';
+      case 4: return '4to CUARTO';
+      default: return `PRÓRROGA ${quarter - 4}`;
+    }
+  }
+
   constructor(
     private route: ActivatedRoute, 
     private api: ApiService,
-    private clock: ClockService
+    private clock: ClockService,
+    private cdr: ChangeDetectorRef
   ) {}
+
+  // Métodos para el panel de control
+  onScore(event: { team: 'HOME' | 'AWAY', points: 1 | 2 | 3, playerId?: number, playerNumber?: number }): void {
+    if (!this.detail) return;
+    
+    this.api.score(this.gameId, event.team, event.points, {
+      playerId: event.playerId,
+      playerNumber: event.playerNumber
+    }).subscribe({
+      next: () => this.refreshGame(),
+      error: (err) => console.error('Error al registrar puntos:', err)
+    });
+  }
+
+  onFoul(event: { team: 'HOME' | 'AWAY', playerId?: number, playerNumber?: number, type?: string }): void {
+    if (!this.detail) return;
+    
+    this.api.foul(this.gameId, event.team, {
+      playerId: event.playerId,
+      playerNumber: event.playerNumber,
+      type: event.type as any
+    }).subscribe({
+      next: () => this.refreshGame(),
+      error: (err) => console.error('Error al registrar falta:', err)
+    });
+  }
+
+  onTimeout(event: { team: 'HOME' | 'AWAY' }): void {
+    // Implementar lógica de tiempo muerto si es necesario
+    console.log(`Tiempo muerto solicitado por el equipo: ${event.team}`);
+  }
+
+  onUndo(): void {
+    if (!this.detail) return;
+    
+    this.api.undo(this.gameId).subscribe({
+      next: () => this.refreshGame(),
+      error: (err) => console.error('Error al deshacer la última acción:', err)
+    });
+  }
+
+  onAdvance(): void {
+    if (!this.detail) return;
+    
+    this.api.advance(this.gameId).subscribe({
+      next: () => this.refreshGame(),
+      error: (err) => console.error('Error al avanzar de cuarto:', err)
+    });
+  }
+
+  onFinish(): void {
+    if (!this.detail) return;
+    
+    if (confirm('¿Estás seguro de que deseas finalizar el partido?')) {
+      this.api.finish(this.gameId).subscribe({
+        next: () => this.refreshGame(),
+        error: (err) => console.error('Error al finalizar el partido:', err)
+      });
+    }
+  }
+
+  onSuspend(): void {
+    if (!this.detail) return;
+    
+    this.api.suspendGame(this.gameId).subscribe({
+      next: () => this.refreshGame(),
+      error: (err) => console.error('Error al suspender el partido:', err)
+    });
+  }
+
+  onResume(): void {
+    if (!this.detail) return;
+    
+    this.api.resumeGame(this.gameId).subscribe({
+      next: () => this.refreshGame(),
+      error: (err) => console.error('Error al reanudar el partido:', err)
+    });
+  }
+
+  onReset(): void {
+    if (!this.detail) return;
+    
+    if (confirm('¿Estás seguro de que deseas reiniciar el partido? Se perderán todos los datos.')) {
+      this.api.resetGame(this.gameId).subscribe({
+        next: () => this.refreshGame(),
+        error: (err) => console.error('Error al reiniciar el partido:', err)
+      });
+    }
+  }
+
+  onAdjustScore(event: { home: number, away: number }): void {
+    if (!this.detail) return;
+    
+    this.api.adjustScore(this.gameId, event.home, event.away).subscribe({
+      next: () => this.refreshGame(),
+      error: (err) => console.error('Error al ajustar el marcador:', err)
+    });
+  }
 
   ngOnInit(): void {
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
@@ -56,7 +175,15 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
       this.clockSub = this.clock.getState(this.gameId).subscribe({
         next: (state) => {
           if (state) {
+            // Forzar la detección de cambios para actualizar la vista
             this.currentTime = this.formatTimeFromMs(state.remainingMs);
+            
+            // Forzar la detección de cambios
+            if (!(this as any).cdr) {
+              console.warn('ChangeDetectorRef no está inyectado');
+            } else {
+              (this as any).cdr.detectChanges();
+            }
             
             // Verificar si el tiempo ha llegado a 0 y el reloj está corriendo
             if (state.remainingMs <= 0 && state.running) {
@@ -198,7 +325,17 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
 
   // Formatea el tiempo de juego mostrado en la pantalla
   formatGameTime(): string {
-    return this.currentTime || '10:00';
+    // Usar currentTime que se actualiza desde el servicio de reloj
+    if (this.currentTime) {
+      return this.currentTime;
+    }
+    
+    // Si no hay currentTime, usar el valor del juego como respaldo
+    if (this.detail?.game?.timeRemaining !== undefined) {
+      return this.formatTimeFromMs(this.detail.game.timeRemaining);
+    }
+    
+    return '10:00'; // Valor por defecto
   }
 
   // Formatea milisegundos a MM:SS
@@ -213,16 +350,17 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   getTeamFouls(team: 'home' | 'away'): number {
     if (!this.detail) return 0;
     
-    // Si hay una propiedad directa (puede no existir)
-    const directProperty = team === 'home' ? 'homeTeamFouls' : 'awayTeamFouls';
-    if (directProperty in this.detail.game) {
-      return (this.detail.game as any)[directProperty] || 0;
+    // Si ya tenemos las faltas en el objeto del juego, las usamos
+    if (team === 'home' && this.detail.game.homeFouls !== undefined) {
+      return this.detail.game.homeFouls;
+    } else if (team === 'away' && this.detail.game.awayFouls !== undefined) {
+      return this.detail.game.awayFouls;
     }
     
-    // Si no, contar las faltas de los eventos
-    return this.detail.events?.filter(e => 
-      e.eventType === 'FOUL' && e.team === (team === 'home' ? 'HOME' : 'AWAY')
-    ).length || 0;
+    // Si no, calculamos a partir de los eventos
+    return this.detail.events
+      .filter(event => event.team === team.toUpperCase() && event.eventType === 'FOUL')
+      .length;
   }
 
   // Determina el mensaje del ganador o empate
@@ -261,8 +399,4 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     return event.eventType;
   }
 
-  private getQuarterName(quarter: number): string {
-    const quarters = ['primer', 'segundo', 'tercer', 'cuarto', 'primer tiempo extra', 'segundo tiempo extra'];
-    return quarters[quarter - 1] || `cuarto ${quarter}`;
-  }
 }

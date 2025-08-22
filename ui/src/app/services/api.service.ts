@@ -17,6 +17,11 @@ export interface Game {
   createdAt: string;
   homeTeamId?: number | null;
   awayTeamId?: number | null;
+  leagueName?: string;
+  division?: string;
+  timeRemaining?: number;
+  homeFouls?: number;
+  awayFouls?: number;
 }
 
 export interface GameDetail {

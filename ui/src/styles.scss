@@ -1,1 +1,309 @@
-/* You can add global styles to this file, and also import other style files */
+/* Importar Bootstrap */
+@import 'bootstrap/scss/bootstrap';
+
+/* Fuente LED Digital */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
+
+:root {
+  --led-bg: #000000;
+  --led-red: #ff0000;
+  --led-yellow: #ffff00;
+  --led-green: #00ff00;
+  --led-blue: #00a8ff;
+  --led-text: #ffffff;
+  --led-border: #333333;
+  --warning-color: #ffc107;
+  --success-color: #198754;
+  --danger-color: #dc3545;
+  --primary-color: #0d6efd;
+  --dark-color: #212529;
+}
+
+/* Estilos generales */
+body {
+  background-color: #000;
+  color: var(--led-text);
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  display: flex;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  flex-direction: column;
+}
+
+/* Contenedor principal del marcador LED */
+.led-display {
+  font-family: 'Orbitron', sans-serif;
+  background-color: var(--led-bg);
+  color: var(--led-text);
+  width: 100%;
+  padding: 20px 0;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+/* Encabezado con información del partido */
+.led-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px 10px;
+  border-bottom: 2px solid var(--led-border);
+  margin-bottom: 15px;
+}
+
+.led-league {
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--led-yellow);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.led-status {
+  font-size: 1.2rem;
+  font-weight: 500;
+  padding: 5px 15px;
+  border-radius: 20px;
+  text-transform: uppercase;
+}
+
+.led-status-in-progress {
+  background-color: var(--led-green);
+  color: #000;
+  animation: pulse 2s infinite;
+}
+
+.led-status-suspended {
+  background-color: var(--led-yellow);
+  color: #000;
+}
+
+.led-status-finished {
+  background-color: var(--led-red);
+  color: #fff;
+}
+
+/* Sección de tiempo y periodo */
+.led-period {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #111;
+  padding: 10px 20px;
+  margin: 0 10px 15px;
+  border: 2px solid var(--led-border);
+  border-radius: 5px;
+}
+
+.led-quarter {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--led-yellow);
+}
+
+.led-time {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--led-red);
+  text-shadow: 0 0 10px rgba(255, 0, 0, 0.7);
+  letter-spacing: 2px;
+}
+
+.led-time-warning {
+  animation: blink 1s infinite;
+  color: #ff0000 !important;
+}
+
+/* Sección de equipos y puntuación */
+.led-teams {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 20px;
+  margin-bottom: 20px;
+}
+
+.led-team {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  margin: 0 5px;
+  border: 2px solid var(--led-border);
+  border-radius: 5px;
+  background-color: #111;
+}
+
+.led-team-home {
+  border-color: var(--led-blue);
+}
+
+.led-team-away {
+  border-color: var(--led-red);
+}
+
+.led-team-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  color: var(--led-text);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.led-score {
+  font-size: 5rem;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+  margin: 10px 0;
+  padding: 5px 0;
+  background-color: #000;
+  border-radius: 5px;
+  border: 2px solid #333;
+}
+
+.led-fouls {
+  font-size: 1.2rem;
+  color: var(--led-yellow);
+  margin-top: 5px;
+  padding: 3px 0;
+  border-top: 1px solid var(--led-border);
+}
+
+.led-fouls-bonus {
+  color: var(--led-red);
+  font-weight: 700;
+  animation: pulse 1.5s infinite;
+}
+
+/* Sección de faltas por cuarto */
+.led-quarter-fouls {
+  display: flex;
+  justify-content: space-around;
+  padding: 0 20px;
+  margin-bottom: 20px;
+}
+
+.led-quarter-foul {
+  text-align: center;
+  padding: 5px 10px;
+  background-color: #111;
+  border: 1px solid var(--led-border);
+  border-radius: 3px;
+  width: 100%;
+  margin: 0 2px;
+}
+
+.led-quarter-foul-label {
+  font-size: 0.9rem;
+  color: var(--led-text);
+  margin-bottom: 3px;
+}
+
+.led-quarter-foul-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--led-yellow);
+}
+
+/* Pie de página */
+.led-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 20px 0;
+  border-top: 2px solid var(--led-border);
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.led-suspended {
+  color: var(--led-yellow);
+  font-weight: 700;
+  text-transform: uppercase;
+  animation: blink 1.5s infinite;
+}
+
+/* Animaciones */
+@keyframes blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.3; }
+  100% { opacity: 1; }
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+  .led-team-name {
+    font-size: 1.4rem;
+  }
+  
+  .led-score {
+    font-size: 3.5rem;
+  }
+  
+  .led-time {
+    font-size: 2rem;
+  }
+  
+  .led-quarter {
+    font-size: 1.2rem;
+  }
+}
+
+/* Estilos para la lista de eventos */
+.event-list {
+  max-height: 300px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--warning-color) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--warning-color);
+    border-radius: 3px;
+  }
+}
+
+/* Estilos para el estado del partido */
+.game-status {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 0.25rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+
+  &.live {
+    background-color: var(--success-color);
+    color: white;
+  }
+
+  &.finished {
+    background-color: var(--danger-color);
+    color: white;
+  }
+
+  &.scheduled {
+    background-color: var(--primary-color);
+    color: white;
+  }
+
+  &.suspended {
+    background-color: var(--warning-color);
+    color: var(--dark-color);
+  }
+}
