@@ -89,18 +89,79 @@ public static class GameEndpoints
             using var c = Open(cs());
             using var tx = c.BeginTransaction();
 
-            var cur = await One<(int Quarter, string Status)>(c, $"SELECT Quarter, Status FROM {T}Games WHERE GameId=@id;", new { id }, tx);
+            // Obtener el estado actual del juego incluyendo puntuación
+            var cur = await One<(int Quarter, string Status, int HomeScore, int AwayScore)>(
+                c, 
+                $"SELECT Quarter, Status, HomeScore, AwayScore FROM {T}Games WHERE GameId=@id;", 
+                new { id }, 
+                tx);
+                
             if (cur == default) { tx.Rollback(); return Results.NotFound(); }
             if (!string.Equals(cur.Status, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
-            { tx.Rollback(); return Results.BadRequest(new { error = "Juego no está IN_PROGRESS." }); }
-            if (cur.Quarter >= 4) { tx.Rollback(); return Results.BadRequest(new { error = "Último cuarto." }); }
+            { 
+                tx.Rollback(); 
+                return Results.BadRequest(new { error = "El juego debe estar en progreso para avanzar de cuarto." }); 
+            }
 
-            await Exec(c, $"UPDATE {T}Games SET Quarter = Quarter + 1 WHERE GameId=@id;", new { id }, tx);
-            await Exec(c, $@"
-                UPDATE c SET Running=0, RemainingMs=QuarterMs, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME()
-                FROM {T}GameClocks c WHERE c.GameId=@id;", new { id }, tx);
+            // Verificar si es el final del 4to cuarto o tiempo extra
+            if (cur.Quarter >= 4)
+            {
+                // Si hay empate, permitir tiempo extra ilimitado
+                if (cur.HomeScore == cur.AwayScore)
+                {
+                    // Avanzar al siguiente tiempo extra
+                    await Exec(c, $"UPDATE {T}Games SET Quarter = Quarter + 1 WHERE GameId=@id;", new { id }, tx);
+                    
+                    // Configurar el reloj para el tiempo extra (5 minutos por defecto)
+                    await Exec(c, $@"
+                        UPDATE c SET 
+                            QuarterMs = 300000,  -- 5 minutos en milisegundos
+                            RemainingMs = 300000,
+                            Running = 0, 
+                            StartedAt = NULL, 
+                            UpdatedAt = SYSUTCDATETIME()
+                        FROM {T}GameClocks c 
+                        WHERE c.GameId=@id;", new { id }, tx);
+                        
+                    tx.Commit(); 
+                    return Results.Ok(new { 
+                        message = "Tiempo extra iniciado", 
+                        quarter = cur.Quarter + 1,
+                        isOvertime = true
+                    });
+                }
+                else
+                {
+                    tx.Rollback();
+                    return Results.BadRequest(new { 
+                        error = "No se puede cambiar de cuarto en tiempo extra con marcador diferente.",
+                        homeScore = cur.HomeScore,
+                        awayScore = cur.AwayScore
+                    });
+                }
+            }
+            else
+            {
+                // Avance de cuarto normal (1-4)
+                await Exec(c, $"UPDATE {T}Games SET Quarter = Quarter + 1 WHERE GameId=@id;", new { id }, tx);
+                
+                // Reiniciar el reloj para el nuevo cuarto
+                await Exec(c, $@"
+                    UPDATE c SET 
+                        Running = 0, 
+                        RemainingMs = QuarterMs, 
+                        StartedAt = NULL, 
+                        UpdatedAt = SYSUTCDATETIME()
+                    FROM {T}GameClocks c 
+                    WHERE c.GameId=@id;", new { id }, tx);
 
-            tx.Commit(); return Results.NoContent();
+                tx.Commit(); 
+                return Results.Ok(new { 
+                    message = "Siguiente cuarto iniciado", 
+                    quarter = cur.Quarter + 1,
+                    isOvertime = false
+                });
+            }
         }).WithOpenApi();
 
         g.MapPost("/games/{id:int}/finish", async (int id) =>
@@ -402,6 +463,89 @@ public static class GameEndpoints
             tx.Commit(); return Results.NoContent();
         }).WithOpenApi();
 
+        // ===== Overtime =====
+        g.MapPost("/games/{gameId}/overtime", async (int gameId) =>
+        {
+            using var c = Open(cs());
+            using var tx = c.BeginTransaction();
+
+            // Verificar que el juego existe y está en progreso
+            var game = await c.QueryFirstOrDefaultAsync<dynamic>(
+                $"""
+                SELECT g.GameId, g.Status, g.HomeScore, g.AwayScore, g.Quarter, 
+                       gc.QuarterMs, gc.RemainingMs, gc.Running
+                FROM {T}Games g
+                LEFT JOIN {T}GameClocks gc ON g.GameId = gc.GameId AND g.Quarter = gc.Quarter
+                WHERE g.GameId = @GameId;
+                """, 
+                new { GameId = gameId }, 
+                tx);
+
+            if (game == null) return Results.NotFound(new { error = "Juego no encontrado." });
+            if (game.Status != "IN_PROGRESS") 
+                return Results.BadRequest(new { error = "El juego no está en progreso." });
+            if (game.HomeScore != game.AwayScore)
+                return Results.BadRequest(new { error = "Solo se puede iniciar tiempo extra con empate." });
+            if (game.Quarter < 4)
+                return Results.BadRequest(new { error = "El tiempo extra solo está permitido después del 4to cuarto." });
+
+            // Verificar si ya hay un tiempo extra en curso
+            int nextQuarter = game.Quarter + 1;
+            var existingOvertime = await c.QueryFirstOrDefaultAsync<dynamic>(
+                $"SELECT 1 FROM {T}GameClocks WHERE GameId = @GameId AND Quarter = @NextQuarter",
+                new { GameId = gameId, NextQuarter = nextQuarter }, 
+                tx);
+
+            if (existingOvertime != null)
+                return Results.BadRequest(new { error = "Ya hay un tiempo extra en curso." });
+
+            // Crear un nuevo tiempo extra (5 minutos)
+            int overtimeMs = 5 * 60 * 1000; // 5 minutos en milisegundos
+            
+            await c.ExecuteAsync(
+                $"""
+                -- Primero, verificar si ya existe un registro para este cuarto
+                IF EXISTS (SELECT 1 FROM {T}GameClocks WHERE GameId = @GameId AND Quarter = @NextQuarter)
+                BEGIN
+                    -- Actualizar el tiempo extra existente
+                    UPDATE {T}GameClocks 
+                    SET QuarterMs = @OvertimeMs,
+                        RemainingMs = @OvertimeMs,
+                        Running = 0,
+                        StartedAt = NULL,
+                        UpdatedAt = SYSUTCDATETIME()
+                    WHERE GameId = @GameId AND Quarter = @NextQuarter;
+                END
+                ELSE
+                BEGIN
+                    -- Insertar nuevo registro de tiempo extra
+                    INSERT INTO {T}GameClocks (GameId, Quarter, QuarterMs, RemainingMs, Running, StartedAt, UpdatedAt)
+                    VALUES (@GameId, @NextQuarter, @OvertimeMs, @OvertimeMs, 0, NULL, SYSUTCDATETIME());
+                END
+
+                -- Actualizar el juego al siguiente cuarto
+                UPDATE {T}Games 
+                SET Quarter = @NextQuarter,
+                    Status = 'IN_PROGRESS',
+                    CreatedAt = SYSUTCDATETIME()
+                WHERE GameId = @GameId;
+                """, 
+                new { 
+                    GameId = gameId, 
+                    NextQuarter = nextQuarter, 
+                    OvertimeMs = overtimeMs 
+                }, 
+                tx);
+
+            tx.Commit();
+            return Results.Ok(new { 
+                success = true, 
+                message = "Tiempo extra iniciado correctamente",
+                quarter = nextQuarter,
+                durationMs = overtimeMs
+            });
+        }).WithOpenApi();
+
         // ===== Teams & Players =====
         g.MapGet("/teams", async () =>
         {
@@ -584,12 +728,19 @@ public static class GameEndpoints
                 ORDER BY Quarter, Team, FoulType;", new { id });
 
             var players = await c.QueryAsync($@"
-                SELECT Quarter, Team, PlayerId, COALESCE(FoulType,'PERSONAL') AS FoulType,
+                SELECT 
+                    e.Quarter, 
+                    e.Team, 
+                    e.PlayerId,
+                    p.Name AS PlayerName,
+                    p.Number AS PlayerNumber,
+                    COALESCE(e.FoulType,'PERSONAL') AS FoulType,
                     COUNT(*) AS Fouls
-                FROM {T}GameEvents
-                WHERE GameId=@id AND EventType='FOUL' AND PlayerId IS NOT NULL
-                GROUP BY Quarter, Team, PlayerId, COALESCE(FoulType,'PERSONAL')
-                ORDER BY Quarter, Team, PlayerId, FoulType;", new { id });
+                FROM {T}GameEvents e
+                LEFT JOIN dbo.Players p ON e.PlayerId = p.PlayerId
+                WHERE e.GameId=@id AND e.EventType='FOUL' AND e.PlayerId IS NOT NULL
+                GROUP BY e.Quarter, e.Team, e.PlayerId, p.Name, p.Number, COALESCE(e.FoulType,'PERSONAL')
+                ORDER BY e.Quarter, e.Team, e.PlayerId, FoulType;", new { id });
 
             return Results.Ok(new { team, players });
         }).WithOpenApi();
@@ -626,9 +777,15 @@ public static class GameEndpoints
                         new { id }, tx);
 
                     // 3. Resetear reloj
+                    // Primero eliminamos todos los registros existentes para este juego
                     await c.ExecuteAsync(
-                        $"UPDATE {T}GameClocks SET Quarter=1, RemainingMs=QuarterMs, " +
-                        "Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id", 
+                        $"DELETE FROM {T}GameClocks WHERE GameId = @id", 
+                        new { id }, tx);
+                        
+                    // Luego insertamos un nuevo registro para el primer cuarto
+                    await c.ExecuteAsync(
+                        $"INSERT INTO {T}GameClocks (GameId, Quarter, QuarterMs, RemainingMs, Running, StartedAt, UpdatedAt) " +
+                        "VALUES (@id, 1, 600000, 600000, 0, NULL, SYSUTCDATETIME())", 
                         new { id }, tx);
 
                     tx.Commit();

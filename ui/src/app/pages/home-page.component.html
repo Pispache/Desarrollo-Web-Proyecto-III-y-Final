@@ -31,15 +31,6 @@
   </div>
 
   <!-- Sección de Gestión de Equipos -->
-  <div class="row mb-4">
-    <div class="col-12">
-        <div class="card-header bg-primary text-white">
-        </div>
-        <div class="card-body">
-          <app-admin-team-roster></app-admin-team-roster>
-      </div>
-    </div>
-  </div>
 
   <!-- Sección de Juegos Activos y Programados -->
   <div class="row mb-4" *ngIf="activeGames.length > 0">
@@ -240,6 +231,9 @@
         </div>
       </div>
 
+      <!-- Gestión de jugadores por equipo (admin) -->
+      <app-admin-team-roster class="mb-4"></app-admin-team-roster>
+
       <!-- Crear nuevo equipo -->
       <div class="card shadow-sm">
         <div class="card-header">
@@ -272,11 +266,6 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Gestión de jugadores por equipo (admin) -->
-    <div class="mt-4">
-      <app-admin-team-roster></app-admin-team-roster>
     </div>
 
     <!-- Detalle seleccionado -->
@@ -344,6 +333,7 @@
               *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED' || d.game.status === 'SCHEDULED'"
               [game]="d.game" 
               (changed)="view(d.game.gameId)" 
+              (resetRequested)="onResetRequested()"
               [isSuspended]="d.game.status === 'SUSPENDED'">
             </app-control-panel>
             

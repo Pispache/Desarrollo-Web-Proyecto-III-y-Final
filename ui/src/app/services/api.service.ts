@@ -149,6 +149,10 @@ export class ApiService {
     return this.post(`/games/${id}/resume`, {});
   }
 
+  startOvertime(id: number) {
+    return this.post(`/games/${id}/overtime`, {});
+  }
+
   score(
     id: number,
     team: 'HOME'|'AWAY',
@@ -203,7 +207,18 @@ export class ApiService {
    * @param gameId The ID of the game to reset
    */
   resetAll(gameId: number): Observable<void> {
-    return this.post(`/games/${gameId}/reset-all`, {});
+    return this.http.post<void>(`${this.base}/games/${gameId}/reset-all`, {}).pipe(
+      catchError((error: HttpErrorResponse) => {
+        console.error('Error en resetAll:', {
+          status: error.status,
+          statusText: error.statusText,
+          error: error.error,
+          url: error.url,
+          headers: error.headers
+        });
+        return throwError(() => error);
+      })
+    );
   }
 
   /* ========= Equipos ========= */

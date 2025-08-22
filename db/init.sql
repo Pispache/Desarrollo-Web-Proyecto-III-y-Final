@@ -60,16 +60,31 @@ BEGIN
 END
 GO
 
-ALTER TABLE dbo.GameEvents
-ADD FoulType NVARCHAR(20) NULL;   -- 'PERSONAL' | 'TECHNICAL' | 'UNSPORTSMANLIKE' | 'DISQUALIFYING'
+-- Add FoulType column if it doesn't exist
+IF COL_LENGTH('dbo.GameEvents', 'FoulType') IS NULL
+BEGIN
+    ALTER TABLE dbo.GameEvents
+    ADD FoulType NVARCHAR(20) NULL;   -- 'PERSONAL' | 'TECHNICAL' | 'UNSPORTSMANLIKE' | 'DISQUALIFYING'
+END
 
-CREATE INDEX IX_GameEvents_Player_Type
-  ON dbo.GameEvents (PlayerId, FoulType, Quarter);
-
-/* Si no existe, agregar PlayerId para relacionar eventos con jugadores */
+-- Add PlayerId column if it doesn't exist
 IF COL_LENGTH('dbo.GameEvents', 'PlayerId') IS NULL
 BEGIN
-    ALTER TABLE dbo.GameEvents ADD PlayerId INT NULL;
+    -- First add the column as nullable
+    ALTER TABLE dbo.GameEvents 
+    ADD PlayerId INT NULL;
+    
+    -- Then add the foreign key constraint
+    ALTER TABLE dbo.GameEvents
+    ADD CONSTRAINT FK_GameEvents_Players
+    FOREIGN KEY (PlayerId) REFERENCES dbo.Players(PlayerId);
+END
+
+-- Create index if it doesn't exist
+IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = 'IX_GameEvents_Player_Type' AND object_id = OBJECT_ID('dbo.GameEvents'))
+BEGIN
+    CREATE INDEX IX_GameEvents_Player_Type
+    ON dbo.GameEvents (PlayerId, FoulType, Quarter);
 END
 GO
 
@@ -79,14 +94,15 @@ GO
 IF OBJECT_ID('dbo.GameClocks') IS NULL
 BEGIN
     CREATE TABLE dbo.GameClocks(
-        GameId      INT         NOT NULL PRIMARY KEY
-                                REFERENCES dbo.Games(GameId) ON DELETE CASCADE,
-        Quarter     TINYINT     NOT NULL DEFAULT 1,
+        GameId      INT         NOT NULL,
+        Quarter     TINYINT     NOT NULL,
         QuarterMs   INT         NOT NULL DEFAULT 600000,  -- 10 min por cuarto (FIBA)
         RemainingMs INT         NOT NULL DEFAULT 600000,  -- 10 min por cuarto (FIBA)
         Running     BIT         NOT NULL DEFAULT 0,
         StartedAt   DATETIME2   NULL,
-        UpdatedAt   DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME()
+        UpdatedAt   DATETIME2   NOT NULL DEFAULT SYSUTCDATETIME(),
+        PRIMARY KEY (GameId, Quarter),
+        FOREIGN KEY (GameId) REFERENCES dbo.Games(GameId) ON DELETE CASCADE
     );
 END
 GO

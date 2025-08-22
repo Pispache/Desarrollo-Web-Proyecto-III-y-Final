@@ -20,8 +20,8 @@ public static class ClockEndpoints
         app.MapGet("/api/games/{id:int}/clock", async (int id) =>
         {
             using var c = new SqlConnection(cs());
-            var dto = await c.QuerySingleOrDefaultAsync($@"
-                SELECT GameId, Quarter, QuarterMs, Running, StartedAt, UpdatedAt,
+            var dto = await c.QueryFirstOrDefaultAsync($@"
+                SELECT TOP 1 GameId, Quarter, QuarterMs, Running, StartedAt, UpdatedAt,
                        RemainingMs = CASE
                          WHEN Running=1 AND StartedAt IS NOT NULL THEN
                            CASE WHEN RemainingMs - DATEDIFF(ms, StartedAt, SYSUTCDATETIME()) > 0
@@ -29,7 +29,9 @@ public static class ClockEndpoints
                                 ELSE 0 END
                          ELSE RemainingMs
                        END
-                FROM {T}GameClocks WHERE GameId=@id;", new { id });
+                FROM {T}GameClocks 
+                WHERE GameId=@id
+                ORDER BY UpdatedAt DESC;", new { id });
 
             if (dto is null) return Results.NotFound();
 

@@ -13,6 +13,8 @@ export interface ClockState {
   gameStatus: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | 'SUSPENDED';
   lastUpdated: Date;
   autoAdvance: boolean;
+  homeScore: number;
+  awayScore: number;
 }
 
 // DTO del backend
@@ -25,6 +27,8 @@ interface ClockStateDto {
   updatedAt: string;
   gameStatus: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | 'SUSPENDED';
   autoAdvance: boolean;
+  homeScore: number;
+  awayScore: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -57,7 +61,9 @@ export class ClockService implements OnDestroy {
         quarter: 1,
         gameStatus: 'SCHEDULED',
         lastUpdated: new Date(),
-        autoAdvance: false
+        autoAdvance: false,
+        homeScore: 0,
+        awayScore: 0
       };
       this.clockStates.set(gameId, new BehaviorSubject<ClockState>(initialState));
       this.setupPolling(gameId);
@@ -113,7 +119,9 @@ export class ClockService implements OnDestroy {
           quarter: state.quarter ?? currentState.quarter,
           gameStatus: state.gameStatus ?? currentState.gameStatus,
           lastUpdated: state.lastUpdated ?? currentState.lastUpdated,
-          autoAdvance: state.autoAdvance ?? currentState.autoAdvance
+          autoAdvance: state.autoAdvance ?? currentState.autoAdvance,
+          homeScore: state.homeScore ?? currentState.homeScore,
+          awayScore: state.awayScore ?? currentState.awayScore
         };
         
         this.clockStates.get(gameId)?.next(newState);
@@ -137,7 +145,9 @@ export class ClockService implements OnDestroy {
         quarter: dto.quarter,
         gameStatus: dto.gameStatus,
         lastUpdated: new Date(dto.updatedAt),
-        autoAdvance: dto.autoAdvance ?? false
+        autoAdvance: dto.autoAdvance ?? false,
+        homeScore: dto.homeScore ?? 0,
+        awayScore: dto.awayScore ?? 0
       })),
       catchError(() => of({}))
     );
@@ -156,7 +166,9 @@ export class ClockService implements OnDestroy {
       if (quarter < 4) {
         // Avanzar al siguiente cuarto después de un breve retraso
         setTimeout(() => {
-          this.advanceQuarter(gameId);
+          this.advanceClock(gameId).subscribe({
+            error: (error) => this.handleError('Error al avanzar automáticamente de cuarto:', error)
+          });
         }, this.AUTO_ADVANCE_DELAY);
       } else if (quarter >= 4) {
         // Si es el último cuarto, finalizar el partido
@@ -238,24 +250,9 @@ export class ClockService implements OnDestroy {
     this.http.post(`${this.base}/games/${gameId}/clock/auto-advance`, { enabled })
       .pipe(tap(() => this.clockChanged$.next(gameId)))
       .subscribe({
-        next: () => this.updateState(gameId, { autoAdvance: enabled }),
+        next: () => {},
         error: (error) => this.handleError('Error al cambiar el avance automático:', error)
       });
-  }
-
-  advanceQuarter(gameId: number): void {
-    this.http.post(`${this.base}/games/${gameId}/advance-quarter`, {})
-      .pipe(tap(() => this.clockChanged$.next(gameId)))
-      .subscribe({
-        error: (error) => this.handleError('Error al avanzar el cuarto:', error)
-      });
-  }
-
-  // Iniciar o reanudar el reloj
-  startClock(gameId: number): Observable<void> {
-    return this.http.post<void>(`${this.base}/clocks/${gameId}/start`, {}).pipe(
-      tap(() => this.refreshClock(gameId))
-    );
   }
 
   // Avanzar al siguiente cuarto

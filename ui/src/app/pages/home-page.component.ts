@@ -265,4 +265,14 @@ export class HomePageComponent {
       }, 100);
     });
   }
+
+  // Maneja el evento de reinicio solicitado desde el panel de control
+  onResetRequested() {
+    if (this.detail) {
+      // Recargar el juego después de reiniciar
+      this.view(this.detail.game.gameId);
+      // Recargar también la lista de juegos
+      this.reloadGames();
+    }
+  }
 }

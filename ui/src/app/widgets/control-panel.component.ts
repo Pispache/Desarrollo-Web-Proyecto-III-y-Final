@@ -105,6 +105,38 @@ export class ControlPanelComponent implements OnChanges {
   start()   { this.api.start(this.game.gameId).subscribe(() => this.refresh()); }
   advance() { this.api.advance(this.game.gameId).subscribe(() => { this.refresh(); this.refreshAll(); }); }
   finish()  { this.api.finish(this.game.gameId).subscribe(() => { this.refresh(); this.refreshAll(); }); }
+
+  /**
+   * Inicia o agrega un tiempo extra al partido
+   * Maneja tanto el primer tiempo extra como los adicionales
+   */
+  startOvertime() {
+    if (this.game.status !== 'IN_PROGRESS' || this.game.homeScore !== this.game.awayScore) {
+      return;
+    }
+    
+    // Mostrar confirmación para el primer tiempo extra
+    const isFirstOvertime = this.game.quarter === 4;
+    const message = isFirstOvertime 
+      ? '¿Iniciar primer tiempo extra (5 minutos)?'
+      : `¿Agregar tiempo extra #${this.game.quarter - 3} (5 minutos)?`;
+    
+    if (!confirm(message)) {
+      return;
+    }
+    
+    this.api.startOvertime(this.game.gameId).subscribe({
+      next: () => {
+        console.log('Tiempo extra iniciado exitosamente');
+        this.refresh();
+        this.refreshAll();
+      },
+      error: (err) => {
+        console.error('Error iniciando tiempo extra:', err);
+        alert('No se pudo iniciar el tiempo extra. Por favor, intente nuevamente.');
+      }
+    });
+  }
   undo() {
     this.api.undo(this.game.gameId).subscribe({
       next: () => this.changed.emit(),
@@ -114,12 +146,23 @@ export class ControlPanelComponent implements OnChanges {
 
   resetAll() {
     if (confirm('¿Estás seguro de que deseas reiniciar TODO el partido? Se reiniciará el marcador, el tiempo y el cuarto actual.')) {
+      console.log('Iniciando reinicio completo del partido...');
       this.api.resetAll(this.game.gameId).subscribe({
         next: () => {
+          console.log('Reinicio completado exitosamente');
           this.changed.emit();
           this.resetRequested.emit();
         },
-        error: (err) => console.error('Error reiniciando el partido:', err)
+        error: (err) => {
+          console.error('Error reiniciando el partido:', err);
+          alert(`Error al reiniciar el partido: ${err.message || 'Error desconocido'}`);
+          if (err.error) {
+            console.error('Detalles del error:', err.error);
+            if (err.error.errors) {
+              console.error('Errores de validación:', err.error.errors);
+            }
+          }
+        }
       });
     }
   }

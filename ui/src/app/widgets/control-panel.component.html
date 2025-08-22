@@ -30,6 +30,17 @@
       
       <div class="col-6 col-md">
         <button 
+          (click)="startOvertime()" 
+          [disabled]="game.status!=='IN_PROGRESS' || game.homeScore !== game.awayScore"
+          class="btn btn-warning w-100 mb-2"
+          *ngIf="game.quarter >= 4 && game.homeScore === game.awayScore"
+        >
+          {{ game.quarter > 4 ? 'Agregar' : 'Iniciar' }} Tiempo Extra {{ game.quarter > 4 ? 'Adicional' : '' }}
+        </button>
+      </div>
+      
+      <div class="col-6 col-md">
+        <button 
           (click)="finish()" 
           [disabled]="game.status!=='IN_PROGRESS'"
           class="btn btn-danger w-100 mb-2"

@@ -1,60 +1,69 @@
-<div class="p-4 border rounded-lg shadow-sm bg-black">
-  <!-- Encabezado con indicador de estado -->
-  <div class="flex justify-between items-center mb-2">
-    <div class="text-sm font-medium text-gray-600">
-      <span [ngClass]="{
-        'text-green-600': status === 'IN_PROGRESS',
-        'text-yellow-600': status === 'PAUSED',
-        'text-red-600': status === 'FINISHED' || status === 'CANCELLED' || status === 'SUSPENDED',
-        'text-blue-600': status === 'SCHEDULED'
-      }">
-        {{ getStatusText() }}
-      </span>
+<div class="clock-container position-relative">
+  <div class="card shadow-sm h-100">
+    <div class="card-header bg-dark text-white py-2">
+      <div class="d-flex justify-content-between align-items-center">
+        <span class="badge" [ngClass]="{
+          'bg-success': status === 'IN_PROGRESS',
+          'bg-warning text-dark': status === 'PAUSED',
+          'bg-danger': status === 'FINISHED' || status === 'CANCELLED' || status === 'SUSPENDED',
+          'bg-primary': status === 'SCHEDULED'
+        }">
+          {{ getStatusText() }}
+        </span>
+        <span class="badge" [class.bg-warning]="isOvertime()" [class.text-dark]="isOvertime()">
+          <span *ngIf="!isOvertime()">{{ quarter || 1 }}° Cuarto</span>
+          <span *ngIf="isOvertime()">T.E. {{ getOvertimeNumber() }}</span>
+        </span>
+      </div>
     </div>
-    <div class="text-sm font-medium bg-gray-100 px-2 py-0.5 rounded" [class.bg-yellow-200]="isOvertime()">
-      <span *ngIf="!isOvertime()">{{ quarter || 1 }}° Cuarto</span>
-      <span *ngIf="isOvertime()">T.E. {{ getOvertimeNumber() }}</span>
-    </div>
-  </div>
-
-  <!-- Tiempo principal -->
-  <div class="text-5xl font-mono font-bold text-center py-3 mb-2 transition-colors duration-500" 
-       [ngClass]="{
-         'text-red-600': isLast30Seconds(),
-         'text-gray-800': !isLast30Seconds()
-       }">
-    {{ (vmSnap?.remainingMs ?? 0) | msToClock }}
-  </div>
-
-  <!-- Controles principales -->
-  <div class="flex justify-center gap-3 mb-3">
-    <button class="px-4 py-2 rounded-md font-medium transition-colors"
-            [class.bg-green-600]="!vmSnap?.running"
-            [class.hover:bg-green-700]="!vmSnap?.running"
-            [class.bg-yellow-500]="vmSnap?.running"
-            [class.hover:bg-yellow-600]="vmSnap?.running"
-            [class.text-white]="true"
-            [class.opacity-50]="busy || !gameId || status === 'FINISHED'"
-            (click)="toggle()" 
-            [disabled]="busy || !gameId || status === 'FINISHED'">
-      {{ vmSnap?.running ? '⏸ Pausar' : '▶ Iniciar' }}
-    </button>
     
-    <button class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-md font-medium transition-colors"
-            [class.opacity-50]="busy || !gameId"
-            (click)="resetQuarter()" 
-            [disabled]="busy || !gameId">
-      🔄 Reiniciar
-    </button>
+    <div class="card-body text-center p-4 d-flex flex-column">
+      <!-- Tiempo principal -->
+      <div class="display-1 fw-bold my-auto" 
+           [ngClass]="{
+             'text-danger': isLast30Seconds(),
+             'text-light': !isLast30Seconds()
+           }">
+        {{ (vmSnap?.remainingMs ?? 0) | msToClock }}
+      </div>
 
-    <!-- Botón de tiempo extra (solo visible al final del 4to cuarto con empate) -->
-    <button *ngIf="quarter === 4 && vmSnap?.remainingMs === 0 && status === 'IN_PROGRESS'" 
-            class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-medium transition-colors"
-            [class.opacity-50]="busy"
-            (click)="startOvertime()" 
-            [disabled]="busy">
-      ⏱ Iniciar Tiempo Extra
-    </button>
+      <!-- Mensaje de tiempo extra -->
+      <div *ngIf="quarter === 4 && status === 'IN_PROGRESS' && isGameTied() && !isOvertime()" 
+           class="alert alert-info text-center my-3 py-2">
+        <p class="fw-bold mb-0">¡Empate al final del 4to cuarto!</p>
+        <p class="mb-0 small">Presiona "Iniciar T.E." para continuar</p>
+      </div>
+
+      <!-- Controles principales -->
+      <div class="mt-auto">
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+          <!-- Botón de Iniciar/Pausar -->
+          <button class="btn btn-sm"
+                  [class.btn-success]="!vmSnap?.running"
+                  [class.btn-warning]="vmSnap?.running"
+                  [disabled]="busy || !gameId || status === 'FINISHED'"
+                  (click)="toggle()">
+            <i class="bi" [class.bi-play-fill]="!vmSnap?.running" [class.bi-pause-fill]="vmSnap?.running"></i>
+            {{ vmSnap?.running ? ' Pausar' : ' Iniciar' }}
+          </button>
+          
+          <!-- Botón de Reiniciar -->
+          <button class="btn btn-sm btn-secondary"
+                  [disabled]="busy || !gameId"
+                  (click)="resetQuarter()">
+            <i class="bi bi-arrow-clockwise"></i>
+            Reiniciar
+          </button>
+          
+          <!-- Botón de Siguiente Cuarto -->
+          <button class="btn btn-sm btn-primary"
+                  [disabled]="busy || !gameId || status === 'FINISHED'"
+                  (click)="advanceQuarter()">
+            <i class="bi bi-skip-forward-fill"></i>
+            Siguiente
+          </button>
+        </div>
+      </div>
   </div>
 
   <!-- Controles avanzados (colapsables) -->

@@ -99,17 +99,22 @@ body {
   background-color: var(--dark-card);
   border-color: var(--dark-border);
   color: var(--led-text);
+  position: relative;
+  z-index: 10;
+  margin-bottom: 1rem;
   
   .card-header {
-    background-color: #2d2d2d !important; // Sobrescribir cualquier clase bg-* de Bootstrap
+    background-color: #2d2d2d !important;
     border-bottom-color: var(--dark-border);
-    color: #f0f0f0 !important; // Forzar el color del texto
+    color: #f0f0f0 !important;
+    position: relative;
+    z-index: 2;
     
     .card-title, h5 {
-      color: #f0f0f0 !important; // Asegurar que los títulos sean claros
+      color: #f0f0f0 !important;
+      margin-bottom: 0;
     }
     
-    // Estilos para los iconos en los encabezados
     .bi {
       color: #f0f0f0 !important;
     }
@@ -175,6 +180,43 @@ body {
   }
 }
 
+/* Contenedor del reloj */
+.clock-container {
+  position: relative;
+  z-index: 10;
+  margin-bottom: 1rem;
+  
+  .card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    
+    .card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 200px; // Altura mínima para evitar que se vea muy comprimido
+      
+      .display-1 {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0;
+        line-height: 1.2;
+      }
+      
+      .alert {
+        margin: 0.5rem 0;
+      }
+      
+      .btn-group {
+        margin-top: auto;
+      }
+    }
+  }
+}
+
 /* Contenedor principal del marcador LED */
 .led-display {
   font-family: 'Orbitron', sans-serif;
@@ -183,6 +225,9 @@ body {
   width: 100%;
   padding: 20px 0;
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
 }
 
 /* Encabezado con información del partido */
