@@ -200,16 +200,16 @@ Una evolución natural es sustituir el polling por WebSockets o SignalR para act
 
 En operación se recomienda separar volúmenes de datos de SQL Server para facilitar respaldos, y versionar los scripts de inicialización. Para cambios en el modelo de datos, las migraciones de EF Core documentan la evolución del esquema. Es conveniente adoptar un control de versiones semántico para la API y etiquetar imágenes de Docker con el número de versión. El monitoreo de salud con /health habilita integraciones con orquestadores o pipelines CI para verificar despliegues.
 
+---
+## Instalación y ejecución
+
 ## Requisitos previos
 
 1. Docker y Docker Compose v2  
    - Windows: Docker Desktop con WSL2 habilitado.  
    - Linux: Docker Engine y complemento de docker compose.  
 2. Git instalado.
-
----
-## Instalación y ejecución
-
+   
 ### 1. Clonar el repositorio
 ```bash
 git clone https://github.com/CesarTecun/Marcador-de-baloncesto.git
