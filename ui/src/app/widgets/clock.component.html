@@ -35,7 +35,7 @@
       </div>
 
       <!-- Controles principales -->
-      <div class="mt-auto">
+      <div class="mt-auto" *ngIf="controls">
         <div class="d-flex flex-wrap justify-content-center gap-2">
           <!-- Botón de Iniciar/Pausar -->
           <button class="btn btn-sm"
@@ -58,10 +58,10 @@
           <!-- Botón de Siguiente Cuarto eliminado (se usa el del panel de control) -->
         </div>
       </div>
-  </div>
+    </div>
 
   <!-- Controles avanzados -->
-  <div class="card-footer bg-light">
+  <div class="card-footer bg-light" *ngIf="controls">
     <div class="row g-2">
       <!-- Selector de duración -->
       <div class="col-12">

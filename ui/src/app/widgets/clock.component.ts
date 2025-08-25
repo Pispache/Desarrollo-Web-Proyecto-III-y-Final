@@ -24,15 +24,13 @@ export class MsToClockPipe implements PipeTransform {
 })
 export class ClockComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) gameId!: number;
-  @Input() status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'CANCELLED' | 'SUSPENDED' | 'PAUSED';
+  @Input() status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED';
   @Input() quarter?: number;
   @Input() showTeamFouls = true; 
   /** Mostrar/ocultar botones (en público: [controls]="false") */
   @Input() controls = true;
-  showAdvanced = false;
 
   @Output() expired = new EventEmitter<void>();
-  @Output() resetGame = new EventEmitter<void>();
 
   vm$?: Observable<ClockState>;
   vmSnap?: ClockState;
@@ -55,243 +53,35 @@ export class ClockComponent implements OnChanges, OnDestroy {
     if (!this.vm$ || (ch['gameId'] && !ch['gameId'].firstChange && ch['gameId'].previousValue !== ch['gameId'].currentValue)) {
       this.prevRemaining = -1;
       this.prevRunning = false;
-      this.vm$ = this.clock.getState(this.gameId).pipe(
-        map((state: ClockState) => {
-          // Emitir evento cuando el tiempo llega a 0
-          if (this.prevRunning && this.prevRemaining > 0 && state.remainingMs === 0) {
-            this.expired.emit();
-          }
-          
-          this.vmSnap = state;
-          this.prevRunning = state.running;
-          this.prevRemaining = state.remainingMs;
-          
-          // Actualizar el estado local si viene del servidor
-          if (this.status !== state.gameStatus) {
-            this.status = state.gameStatus;
-          }
-          if (this.quarter !== state.quarter) {
-            this.quarter = state.quarter;
-          }
-          
-          return state;
+      this.vm$ = this.clock.state$(this.gameId).pipe(
+        map(s => {
+          if (this.prevRunning && this.prevRemaining > 0 && s.remainingMs === 0) this.expired.emit();
+          this.vmSnap = s;
+          this.prevRunning = !!s.running;
+          this.prevRemaining = s.remainingMs;
+          return s;
         })
       );
     }
 
     // 2) Si cambia el status, asegura start/pause del servicio
     if (ch['status'] && !ch['status'].firstChange && ch['status'].previousValue !== ch['status'].currentValue) {
-      if (this.status === 'IN_PROGRESS') {
-        this.clock.start(this.gameId);
-      } else {
-        this.clock.pause(this.gameId);
-      }
+      if (this.status === 'IN_PROGRESS') this.clock.start(this.gameId);
+      else this.clock.pause(this.gameId);
     }
 
-    // 3) Si cambia el quarter, reinicia la duración
+    // 3) Si cambia el quarter realmente, reinicia duración desde backend
     if (ch['quarter'] && !ch['quarter'].firstChange && ch['quarter'].previousValue !== ch['quarter'].currentValue) {
-      this.clock.reset(this.gameId);
-      if (this.status === 'IN_PROGRESS') {
-        this.clock.start(this.gameId);
-      }
+      this.clock.resetForNewQuarter(this.gameId);
+      if (this.status === 'IN_PROGRESS') this.clock.start(this.gameId);
     }
-    
-    if (ch['gameId'] || ch['status'] || ch['quarter']) {
+      if (ch['gameId'] || ch['status'] || ch['quarter']) {
       this.startFoulsPolling();
-    }
+      }
   }
 
   ngOnDestroy(): void {
     this.foulsSub?.unsubscribe();
-  }
-
-  // Verifica si el juego está en tiempo extra
-  isOvertime(): boolean {
-    return this.quarter ? this.quarter > 4 : false;
-  }
-
-  // Obtiene el número de tiempo extra actual (1er, 2do, etc.)
-  getOvertimeNumber(): number {
-    return this.quarter ? this.quarter - 4 : 0;
-  }
-
-  // Verifica si estamos al final del 4to cuarto con empate
-  isEndOfRegulationWithTie(): boolean {
-    return this.quarter === 4 && 
-           this.status === 'IN_PROGRESS' && 
-           this.isGameTied() && 
-           (this.vmSnap?.remainingMs ?? 0) <= 0;
-  }
-
-  // Maneja el avance al siguiente período (cuarto o tiempo extra)
-  handleNextPeriod(): void {
-    if (this.isEndOfRegulationWithTie()) {
-      this.startOvertime();
-    } else {
-      this.advanceQuarter();
-    }
-  }
-
-  // Devuelve el texto del botón según el estado actual
-  getNextPeriodButtonText(): string {
-    if (this.isEndOfRegulationWithTie()) {
-      return ' Iniciar T.E.';
-    } else if (this.isOvertime()) {
-      return ` T.E. ${this.getOvertimeNumber() + 1}°`;
-    } else {
-      return ' Siguiente';
-    }
-  }
-
-  // Inicia un tiempo extra de 5 minutos
-  private startOvertime(): void {
-    if (!this.gameId || this.busy) return;
-    
-    this.busy = true;
-    
-    // Usar el método startOvertime del servicio
-    this.clock.startOvertime(this.gameId).subscribe({
-      next: () => {
-        console.log('Tiempo extra iniciado');
-        this.busy = false;
-      },
-      error: (err: any) => {
-        console.error('Error al iniciar tiempo extra:', err);
-        this.busy = false;
-      }
-    });
-  }
-
-  /**
-   * Handles the global reset of the game (scores + timer)
-   */
-  onResetGame() {
-    if (confirm('¿Estás seguro de que deseas reiniciar el marcador y el temporizador? Esta acción no se puede deshacer.')) {
-      this.resetGame.emit();
-    }
-  }
-
-  getStatusText(): string {
-    const statusMap: {[key: string]: string} = {
-      'IN_PROGRESS': 'En progreso',
-      'PAUSED': 'Pausado',
-      'FINISHED': 'Finalizado',
-      'CANCELLED': 'Cancelado',
-      'SUSPENDED': 'Suspendido',
-      'SCHEDULED': 'Programado'
-    };
-    
-    return this.status ? statusMap[this.status] || 'Desconocido' : 'Desconocido';
-  }
-
-  // Verifica si quedan menos de 30 segundos
-  isLast30Seconds(): boolean {
-    const remainingMs = this.vmSnap?.remainingMs || 0;
-    return remainingMs > 0 && remainingMs <= 30000; // 30 segundos
-  }
-
-  // Establece la duración del cuarto en minutos
-  setDuration(event: Event): void {
-    if (!this.gameId || !event) return;
-    const target = event.target as HTMLSelectElement;
-    if (!target) return;
-    
-    const minutes = target.value;
-    const minutesNum = parseInt(minutes, 10);
-    if (isNaN(minutesNum) || minutesNum <= 0) return;
-    
-    this.busy = true;
-    
-    // Obtener el estado actual
-    const currentState = this.vmSnap;
-    if (!currentState) {
-      console.warn('No se pudo obtener el estado actual del reloj');
-      this.busy = false;
-      return;
-    }
-    
-    try {
-      // Actualizar el estado local inmediatamente
-      const newState = {
-        ...currentState,
-        quarterMs: minutesNum * 60 * 1000,
-        remainingMs: minutesNum * 60 * 1000
-      };
-      this.vmSnap = newState;
-      
-      // Enviar la actualización al servidor
-      this.clock.setDuration(this.gameId, minutesNum);
-    } catch (error) {
-      console.error('Error al establecer la duración:', error);
-      this.busy = false;
-    }
-    
-    // Restablecer el estado de ocupado después de un tiempo
-    setTimeout(() => {
-      this.busy = false;
-    }, 500);
-  }
-
-  // Activa/desactiva el avance automático
-  toggleAutoAdvance(event: Event): void {
-    if (!this.gameId || !event) return;
-    const target = event.target as HTMLInputElement;
-    if (!target) return;
-    
-    const enabled = target.checked;
-    this.busy = true;
-    this.clock.toggleAutoAdvance(this.gameId, enabled);
-    // Asumimos que el servicio maneja la actualización del estado
-    // y que el polling actualizará la UI
-    setTimeout(() => this.busy = false, 500);
-  }
-
-  // Verifica si el juego está empatado
-  isGameTied(): boolean {
-    return this.vmSnap?.homeScore === this.vmSnap?.awayScore;
-  }
-
-  // Verifica si se debe mostrar el botón de tiempo extra
-  shouldShowOvertimeButton(): boolean {
-    // Verificar si el tiempo del cuarto actual ha terminado
-    const timeExpired = (this.vmSnap?.remainingMs ?? 0) <= 0;
-    
-    // Para el 4to cuarto o cualquier tiempo extra
-    if ((this.quarter === 4 || this.isOvertime()) && 
-        this.status === 'IN_PROGRESS' && 
-        this.isGameTied() && 
-        timeExpired) {
-      return true;
-    }
-    
-    return false;
-  }
-
-  // Avanza al siguiente cuarto o inicia tiempo extra si es necesario
-  advanceQuarter(): void {
-    if (this.busy || !this.gameId || this.status !== 'IN_PROGRESS') return;
-    
-    // Si es el final del 4to cuarto y el juego está empatado, iniciar tiempo extra
-    if (this.quarter === 4 && this.isGameTied()) {
-      this.startOvertime();
-      return;
-    }
-    
-    // No permitir avanzar si estamos en tiempo extra y el tiempo no ha terminado
-    if (this.isOvertime() && (this.vmSnap?.remainingMs ?? 0) > 0) {
-      return;
-    }
-
-    this.busy = true;
-    this.clock.advanceClock(this.gameId).subscribe({
-      next: () => {
-        this.busy = false;
-      },
-      error: (error: any) => {
-        console.error('Error al avanzar de cuarto:', error);
-        this.busy = false;
-      }
-    });
   }
 
   toggle() {
@@ -304,7 +94,7 @@ export class ClockComponent implements OnChanges, OnDestroy {
   resetQuarter() {
     if (this.busy || !this.gameId) return;
     this.busy = true;
-    this.clock.reset(this.gameId);
+    this.clock.resetForNewQuarter(this.gameId);
     setTimeout(() => (this.busy = false), 150);
   }
   // +++ AÑADIR: inicia/renueva el polling de faltas
@@ -342,6 +132,7 @@ private startFoulsPolling() {
         this.bonusHome = this.teamFoulsHome >= 5;
         this.bonusAway = this.teamFoulsAway >= 5;
       },
+      
       error: () => {
         // no romper UI en caso de error/transitorio
         this.teamFoulsHome = 0;
