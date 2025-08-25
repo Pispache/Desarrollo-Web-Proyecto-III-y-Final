@@ -13,6 +13,10 @@ import { SoundService } from '../services/sound.service';
 })
 export class ControlPanelComponent implements OnChanges {
   @Input({ required: true }) game!: Game;
+
+  /** NUEVO: para que [isSuspended] del HomePage no falle */
+  @Input() isSuspended: boolean = false;
+
   @Output() changed = new EventEmitter<void>();
 
   homePlayers: Player[] = [];
@@ -33,7 +37,7 @@ export class ControlPanelComponent implements OnChanges {
     if (changes['game']?.currentValue) {
       this.loadPlayers();
       this.refreshFouls();
-      this.sound.preloadAll(); // opcional
+      this.sound.preloadAll();
     }
   }
 
@@ -64,7 +68,10 @@ export class ControlPanelComponent implements OnChanges {
     });
   }
 
-  disabledScore() { return this.game?.status !== 'IN_PROGRESS'; }
+  /** Deshabilita anotación si no está en juego o si está suspendido */
+  disabledScore() {
+    return this.game?.status !== 'IN_PROGRESS' || this.isSuspended;
+  }
 
   start() {
     this.api.start(this.game.gameId).subscribe({
@@ -116,6 +123,7 @@ export class ControlPanelComponent implements OnChanges {
   }
 
   score(team:'HOME'|'AWAY', points:1|2|3) {
+    if (this.disabledScore()) return;
     this.api.score(this.game.gameId, team, points).subscribe({
       next: () => {
         this.refresh();
@@ -129,6 +137,7 @@ export class ControlPanelComponent implements OnChanges {
   }
 
   foul(team:'HOME'|'AWAY') {
+    if (this.isSuspended) return;
     const playerId = team === 'HOME' ? this.selHomePlayerId : this.selAwayPlayerId;
     this.api.foul(this.game.gameId, team, { playerId: playerId ?? undefined }).subscribe({
       next: () => {

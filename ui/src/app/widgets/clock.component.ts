@@ -1,145 +1,132 @@
-import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, SimpleChanges, Pipe, PipeTransform } from '@angular/core';
+import { Component, Input, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Observable, map } from 'rxjs';
-import { ClockService, ClockState } from '../services/clock.service';
-import { interval, Subscription } from 'rxjs';
-import { ApiService, FoulSummary } from '../services/api.service';
+import { FormsModule } from '@angular/forms';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { MsToClockPipe } from '../pipes/ms-to-clock.pipe';
 
-@Pipe({ name: 'msToClock', standalone: true })
-export class MsToClockPipe implements PipeTransform {
-  transform(ms?: number): string {
-    if (ms == null) return '--:--';
-    const total = Math.max(0, Math.floor(ms / 1000));
-    const m = Math.floor(total / 60).toString().padStart(2, '0');
-    const s = (total % 60).toString().padStart(2, '0');
-    return `${m}:${s}`;
-  }
+/** Estados que la plantilla usa */
+export type GameStatus =
+  | 'SCHEDULED'
+  | 'IN_PROGRESS'
+  | 'FINISHED'
+  | 'SUSPENDED'
+  | 'PAUSED'
+  | 'CANCELLED';
+
+interface ClockVM {
+  quarterMs: number;
+  autoAdvance: boolean;
+}
+interface VmSnap {
+  running: boolean;
+  remainingMs: number;
 }
 
 @Component({
   selector: 'app-clock',
   standalone: true,
-  imports: [CommonModule, MsToClockPipe],
+  imports: [CommonModule, FormsModule, MsToClockPipe],
   templateUrl: './clock.component.html',
 })
-export class ClockComponent implements OnChanges, OnDestroy {
-  @Input({ required: true }) gameId!: number;
-  @Input() status?: 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED';
-  @Input() quarter?: number;
-  @Input() showTeamFouls = true; 
-  /** Mostrar/ocultar botones (en público: [controls]="false") */
-  @Input() controls = true;
+export class ClockComponent implements OnDestroy {
+  /** Inputs ya usados por tu HTML */
+  @Input() status?: GameStatus;         // [status]="d.game.status"
+  @Input() quarter: number = 1;         // [quarter]="d.game.quarter"
+  @Input() remainingMs: number = 0;     // si lo enlazan externamente
+  @Input() gameId?: number | string;    // si se pasa desde el padre
+  @Input() homeScore: number = 0;       // para isGameTied()
+  @Input() awayScore: number = 0;
 
-  @Output() expired = new EventEmitter<void>();
+  /** NUEVOS Inputs que tu plantilla espera */
+  @Input() controls: boolean = true;         // *ngIf="controls"
+  @Input() showTeamFouls: boolean = false;   // [showTeamFouls]="false"
+  @Input() teamFoulsHome: number = 0;
+  @Input() teamFoulsAway: number = 0;
+  @Input() bonusHome: boolean = false;
+  @Input() bonusAway: boolean = false;
 
-  vm$?: Observable<ClockState>;
-  vmSnap?: ClockState;
-  teamFoulsHome = 0;
-  teamFoulsAway = 0;
-  bonusHome = false;
-  bonusAway = false;
+  /** ViewModel para (vm$ | async) */
+  private vmSubject = new BehaviorSubject<ClockVM>({
+    quarterMs: 10 * 60 * 1000, // 10 minutos por defecto
+    autoAdvance: false,
+  });
+  vm$: Observable<ClockVM> = this.vmSubject.asObservable();
 
-  private prevRemaining = -1; // guarda estado previo para detectar llegada a 0
-  private prevRunning = false;
+  /** Snapshot que la plantilla usa como vmSnap */
+  vmSnap: VmSnap = { running: false, remainingMs: 0 };
+
+  /** Estado UI */
   busy = false;
-  private foulsSub?: Subscription; 
 
-  constructor(private clock: ClockService, private api: ApiService) {}
+  private timerId: any = null;
 
-  ngOnChanges(ch: SimpleChanges): void {
-    if (!this.gameId) return;
+  ngOnDestroy(): void { this.clearTimer(); }
 
-    // 1) (Re)crear stream cuando cambia gameId
-    if (!this.vm$ || (ch['gameId'] && !ch['gameId'].firstChange && ch['gameId'].previousValue !== ch['gameId'].currentValue)) {
-      this.prevRemaining = -1;
-      this.prevRunning = false;
-      this.vm$ = this.clock.state$(this.gameId).pipe(
-        map(s => {
-          if (this.prevRunning && this.prevRemaining > 0 && s.remainingMs === 0) this.expired.emit();
-          this.vmSnap = s;
-          this.prevRunning = !!s.running;
-          this.prevRemaining = s.remainingMs;
-          return s;
-        })
-      );
+  // -------- Helpers que tu HTML invoca --------
+  getStatusText(): string {
+    switch (this.status) {
+      case 'SCHEDULED': return 'Programado';
+      case 'IN_PROGRESS': return 'En juego';
+      case 'PAUSED': return 'Pausado';
+      case 'SUSPENDED': return 'Suspendido';
+      case 'CANCELLED': return 'Cancelado';
+      case 'FINISHED': return 'Finalizado';
+      default: return '—';
     }
-
-    // 2) Si cambia el status, asegura start/pause del servicio
-    if (ch['status'] && !ch['status'].firstChange && ch['status'].previousValue !== ch['status'].currentValue) {
-      if (this.status === 'IN_PROGRESS') this.clock.start(this.gameId);
-      else this.clock.pause(this.gameId);
-    }
-
-    // 3) Si cambia el quarter realmente, reinicia duración desde backend
-    if (ch['quarter'] && !ch['quarter'].firstChange && ch['quarter'].previousValue !== ch['quarter'].currentValue) {
-      this.clock.resetForNewQuarter(this.gameId);
-      if (this.status === 'IN_PROGRESS') this.clock.start(this.gameId);
-    }
-      if (ch['gameId'] || ch['status'] || ch['quarter']) {
-      this.startFoulsPolling();
-      }
   }
-
-  ngOnDestroy(): void {
-    this.foulsSub?.unsubscribe();
+  isOvertime(): boolean { return (this.quarter ?? 1) > 4; }
+  getOvertimeNumber(): number { return (this.quarter ?? 1) > 4 ? (this.quarter - 4) : 0; }
+  isLast30Seconds(): boolean {
+    const ms = this.vmSnap?.remainingMs ?? this.remainingMs ?? 0;
+    return ms <= 30_000;
   }
+  isGameTied(): boolean { return this.homeScore === this.awayScore; }
 
+  // -------- Controles que usa la plantilla --------
   toggle() {
-    if (this.busy || !this.gameId || this.status === 'FINISHED') return;
-    this.busy = true;
-    this.vmSnap?.running ? this.clock.pause(this.gameId) : this.clock.start(this.gameId);
-    setTimeout(() => (this.busy = false), 150);
+    if (this.status === 'FINISHED' || this.status === 'CANCELLED') return;
+    if (this.vmSnap.remainingMs <= 0) {
+      this.vmSnap.remainingMs = this.vmSubject.value.quarterMs;
+    }
+    this.vmSnap.running = !this.vmSnap.running;
+    this.vmSnap.running ? this.startTimer() : this.clearTimer();
   }
 
   resetQuarter() {
-    if (this.busy || !this.gameId) return;
-    this.busy = true;
-    this.clock.resetForNewQuarter(this.gameId);
-    setTimeout(() => (this.busy = false), 150);
+    this.vmSnap.running = false;
+    this.clearTimer();
+    this.vmSnap.remainingMs = this.vmSubject.value.quarterMs;
   }
-  // +++ AÑADIR: inicia/renueva el polling de faltas
-private startFoulsPolling() {
-  this.foulsSub?.unsubscribe();
 
-  // si no hay juego o el partido terminó, solo hace un refresh y no sigue
-  if (!this.gameId) return;
-
-  // refresco inmediato
-  this.refreshFouls();
-
-  // Si está en progreso, actualiza cada 2s; si no, no gasta polling
-  if (this.status === 'IN_PROGRESS') {
-    this.foulsSub = interval(2000).subscribe(() => this.refreshFouls());
+  setDuration(evt: Event) {
+    const minutes = Number((evt.target as HTMLSelectElement).value);
+    const qms = Math.max(1, minutes) * 60 * 1000;
+    this.vmSubject.next({ ...this.vmSubject.value, quarterMs: qms });
+    if (!this.vmSnap.running) this.vmSnap.remainingMs = qms;
   }
-}
 
-  // +++ AÑADIR: consulta el summary y calcula conteos/bonus del cuarto actual
-  private refreshFouls() {
-    if (!this.gameId) return;
-    const curQ = this.quarter ?? 1;
+  toggleAutoAdvance(evt: Event) {
+    const checked = (evt.target as HTMLInputElement).checked;
+    this.vmSubject.next({ ...this.vmSubject.value, autoAdvance: checked });
+  }
 
-    this.api.getFoulSummary(this.gameId).subscribe({
-      next: (s: FoulSummary) => {
-        const sumOf = (team: 'HOME'|'AWAY') =>
-          (s.team ?? [])
-            .filter(r => (r.team?.toString().toUpperCase() === team) && r.quarter === curQ)
-            .reduce((a, r) => a + (r.fouls ?? 0), 0);
-
-        this.teamFoulsHome = sumOf('HOME');
-        this.teamFoulsAway = sumOf('AWAY');
-
-        // Regla FIBA: bonus a partir de la 5ª falta del período
-        this.bonusHome = this.teamFoulsHome >= 5;
-        this.bonusAway = this.teamFoulsAway >= 5;
-      },
-      
-      error: () => {
-        // no romper UI en caso de error/transitorio
-        this.teamFoulsHome = 0;
-        this.teamFoulsAway = 0;
-        this.bonusHome = this.bonusAway = false;
+  // -------- Temporizador interno simple (para que funcione) --------
+  private startTimer() {
+    this.clearTimer();
+    let last = performance.now();
+    this.timerId = setInterval(() => {
+      const now = performance.now();
+      const dt = now - last;
+      last = now;
+      this.vmSnap.remainingMs = Math.max(0, this.vmSnap.remainingMs - dt);
+      if (this.vmSnap.remainingMs <= 0) {
+        this.vmSnap.running = false;
+        this.clearTimer();
+        // Aquí podrías disparar auto-advance si vmSubject.value.autoAdvance === true
       }
-    });
+    }, 100);
   }
-
+  private clearTimer() {
+    if (this.timerId) { clearInterval(this.timerId); this.timerId = null; }
+  }
 }

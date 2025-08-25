@@ -60,57 +60,58 @@
       </div>
     </div>
 
-  <!-- Controles avanzados -->
-  <div class="card-footer bg-light" *ngIf="controls">
-    <div class="row g-2">
-      <!-- Selector de duración -->
-      <div class="col-12">
-        <label class="form-label small mb-1">Duración del cuarto:</label>
-        <div *ngIf="(vm$ | async) as vm; else loadingDuration">
-          <select class="form-select form-select-sm"
-                  [value]="vm.quarterMs / 60000"
-                  (change)="setDuration($event)">
-            <option value="1">1 minuto (pruebas)</option>
-            <option value="5">5 minutos</option>
-            <option value="8">8 minutos</option>
-            <option value="10" selected>10 minutos</option>
-            <option value="12">12 minutos</option>
-          </select>
+    <!-- Controles avanzados -->
+    <div class="card-footer bg-light" *ngIf="controls">
+      <div class="row g-2">
+        <!-- Selector de duración -->
+        <div class="col-12">
+          <label class="form-label small mb-1">Duración del cuarto:</label>
+          <div *ngIf="(vm$ | async) as vm; else loadingDuration">
+            <select class="form-select form-select-sm"
+                    [value]="vm.quarterMs / 60000"
+                    (change)="setDuration($event)">
+              <option value="1">1 minuto (pruebas)</option>
+              <option value="5">5 minutos</option>
+              <option value="8">8 minutos</option>
+              <option value="10" selected>10 minutos</option>
+              <option value="12">12 minutos</option>
+            </select>
+          </div>
+          <ng-template #loadingDuration>
+            <select class="form-select form-select-sm" disabled>
+              <option>Cargando...</option>
+            </select>
+          </ng-template>
         </div>
-        <ng-template #loadingDuration>
-          <select class="form-select form-select-sm" disabled>
-            <option>Cargando...</option>
-          </select>
-        </ng-template>
-      </div>
-      
-      <!-- Toggle avance automático -->
-      <div class="col-12 d-flex align-items-center justify-content-between">
-        <span class="small">Avance automático</span>
-        <div class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" role="switch"
-                 [checked]="(vm$ | async)?.autoAdvance"
-                 (change)="toggleAutoAdvance($event)">
+        
+        <!-- Toggle avance automático -->
+        <div class="col-12 d-flex align-items-center justify-content-between">
+          <span class="small">Avance automático</span>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch"
+                   [checked]="(vm$ | async)?.autoAdvance"
+                   (change)="toggleAutoAdvance($event)">
+          </div>
         </div>
+        
+        <!-- Botón para avanzar cuarto eliminado (se usa el del panel de control) -->
       </div>
-      
-      <!-- Botón para avanzar cuarto eliminado (se usa el del panel de control) -->
     </div>
-  </div>
 
-  <!-- Faltas de equipo (solo si está habilitado) -->
-  <div *ngIf="showTeamFouls" class="card-footer bg-light border-top">
-    <div class="small text-muted mb-2">Faltas de equipo</div>
-    <div class="row g-3">
-      <div class="col-6 text-center">
-        <div class="fw-medium">LOCAL</div>
-        <div class="h4 mb-0">{{ teamFoulsHome }}</div>
-        <div *ngIf="bonusHome" class="badge bg-danger mt-1">BONUS</div>
-      </div>
-      <div class="col-6 text-center border-start">
-        <div class="fw-medium">VISITANTE</div>
-        <div class="h4 mb-0">{{ teamFoulsAway }}</div>
-        <div *ngIf="bonusAway" class="badge bg-danger mt-1">BONUS</div>
+    <!-- Faltas de equipo (solo si está habilitado) -->
+    <div *ngIf="showTeamFouls" class="card-footer bg-light border-top">
+      <div class="small text-muted mb-2">Faltas de equipo</div>
+      <div class="row g-3">
+        <div class="col-6 text-center">
+          <div class="fw-medium">LOCAL</div>
+          <div class="h4 mb-0">{{ teamFoulsHome }}</div>
+          <div *ngIf="bonusHome" class="badge bg-danger mt-1">BONUS</div>
+        </div>
+        <div class="col-6 text-center border-start">
+          <div class="fw-medium">VISITANTE</div>
+          <div class="h4 mb-0">{{ teamFoulsAway }}</div>
+          <div *ngIf="bonusAway" class="badge bg-danger mt-1">BONUS</div>
+        </div>
       </div>
     </div>
   </div>
