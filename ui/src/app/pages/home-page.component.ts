@@ -14,6 +14,8 @@ import { finalize } from 'rxjs';
 @Component({
   selector: 'app-home-page',
   standalone: true,
+  templateUrl: './home-page.component.html',
+  styleUrls: ['./home-page.component.scss'],
   imports: [
     CommonModule,
     FormsModule,
@@ -24,8 +26,7 @@ import { finalize } from 'rxjs';
     TeamRosterComponent,
     AdminTeamRosterComponent,
     FilterPipe,
-  ],
-  templateUrl: './home-page.component.html',
+  ]
 })
 export class HomePageComponent {
   // filtros / estado
