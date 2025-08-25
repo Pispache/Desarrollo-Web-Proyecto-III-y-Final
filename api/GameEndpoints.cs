@@ -8,6 +8,24 @@ public class AdjustScoreDto
     public int AwayDelta { get; set; }
 }
 
+public class ScoreDto
+{
+    public string Team { get; set; } = "";
+    public int Points { get; set; }
+    public int? PlayerId { get; set; }
+    public int? PlayerNumber { get; set; }
+}
+
+public class FoulDto
+{
+    public string? Team { get; set; }
+    public int? PlayerId { get; set; }
+    public int? PlayerNumber { get; set; }
+    public string? FoulType { get; set; }
+    public string? Type { get; set; }
+    public string? foul_type { get; set; }
+}
+
 public static class GameEndpoints
 {
     const string T = "MarcadorDB.dbo."; // prefijo schema
@@ -222,55 +240,107 @@ public static class GameEndpoints
                 "WHERE GameId=@id;", 
                 new { id }, tx);
                 
-            tx.Commit(); 
+            tx.Commit();
+            return Results.NoContent();
+        }).WithOpenApi();
+        
+        // ===== Score / Foul / Undo =====
+        g.MapPost("/games/{id:int}/score", async (int id, [FromBody] ScoreDto dto) =>
+        {
+            if (dto is null || dto.Points is not (1 or 2 or 3)) 
+                return Results.BadRequest(new { error = "Puntos inválidos. Use 1, 2 o 3." });
+
+            using var c = Open(cs());
+            using var tx = c.BeginTransaction();
+            
+            var game = await One<dynamic>(c,
+                $"SELECT Status, Quarter, HomeScore, AwayScore FROM {T}Games WHERE GameId=@id;", 
+                new { id }, tx);
+            
+            if (game is null) { tx.Rollback(); return Results.NotFound(); }
+            if (game.Status != "IN_PROGRESS" && game.Status != "SUSPENDED") 
+                { tx.Rollback(); return Results.BadRequest(new { error = "El partido debe estar en progreso o suspendido." }); }
+
+            var col = dto.Team == "HOME" ? "HomeScore" : "AwayScore";
+            
+            await Exec(c, 
+                $"UPDATE {T}Games SET {col} = {col} + @points WHERE GameId=@id;", 
+                new { id, points = dto.Points }, tx);
+
+            await Exec(c, 
+                $"INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, PlayerNumber) " +
+                "VALUES(@id, @quarter, @team, @eventType, @playerId, @playerNumber);",
+                new 
+                { 
+                    id, 
+                    quarter = game.Quarter, 
+                    team = dto.Team,
+                    eventType = $"POINT_{dto.Points}",
+                    playerId = dto.PlayerId,
+                    playerNumber = dto.PlayerNumber
+                }, tx);
+
+            tx.Commit();
             return Results.NoContent();
         }).WithOpenApi();
 
-        // ===== Score / Foul / Undo =====
-        g.MapPost("/games/{id:int}/score", async (int id, [FromBody] ScoreDto b) =>
+        // Endpoint para restar un punto
+        g.MapPost("/games/{id:int}/subtract-point", async (int id, [FromBody] ScoreDto dto) =>
         {
-            var team = (b?.Team ?? "").ToUpperInvariant();
-            if ((team != "HOME" && team != "AWAY") || (b?.Points is not (1 or 2 or 3)))
-                return Results.BadRequest(new { error = "Team HOME/AWAY y Points 1|2|3." });
+            if (dto is null || string.IsNullOrEmpty(dto.Team))
+                return Results.BadRequest(new { error = "Datos inválidos." });
 
             using var c = Open(cs());
-            var st = await One<string>(c, $"SELECT Status FROM {T}Games WHERE GameId=@id;", new { id });
-            if (!string.Equals(st, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
-                return Results.BadRequest(new { error = "Juego no IN_PROGRESS." });
+            using var tx = c.BeginTransaction();
+            
+            // Obtener el estado actual del juego
+            var game = await One<dynamic>(c,
+                $"SELECT Status, Quarter, HomeScore, AwayScore FROM {T}Games WHERE GameId=@id;", 
+                new { id }, tx);
+            
+            if (game is null) { tx.Rollback(); return Results.NotFound(); }
+            if (game.Status != "IN_PROGRESS" && game.Status != "SUSPENDED")
+                { tx.Rollback(); return Results.BadRequest(new { error = "El partido debe estar en progreso o suspendido." }); }
 
-            var setScore = team == "HOME"
-                ? $"UPDATE {T}Games SET HomeScore = HomeScore + @pts WHERE GameId=@id;"
-                : $"UPDATE {T}Games SET AwayScore = AwayScore + @pts WHERE GameId=@id;";
+            // Verificar que el puntaje no sea menor a 0
+            var currentScore = dto.Team == "HOME" ? game.HomeScore : game.AwayScore;
+            if (currentScore <= 0)
+                { tx.Rollback(); return Results.BadRequest(new { error = "El puntaje ya es 0." }); }
 
-            var sql = $@"
-                {setScore}
-                INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerNumber, PlayerId)
-                SELECT @id, Quarter, @team, @etype, @pnum, @pid FROM {T}Games WHERE GameId=@id;";
+            // Actualizar el puntaje
+            var col = dto.Team == "HOME" ? "HomeScore" : "AwayScore";
+            await Exec(c, 
+                $"UPDATE {T}Games SET {col} = {col} - 1 WHERE GameId=@id AND {col} > 0;", 
+                new { id }, tx);
 
-            var ok = await c.ExecuteAsync(sql, new
-            {
-                id,
-                team,
-                pts = b!.Points,
-                etype = $"POINT_{b.Points}",
-                pnum = b.PlayerNumber,
-                pid = b.PlayerId
-            });
-            return ok > 0 ? Results.NoContent() : Results.BadRequest(new { error = "No se pudo registrar." });
+            // Registrar el evento
+            await Exec(c, 
+                $"INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerId, PlayerNumber) " +
+                "VALUES(@id, @quarter, @team, @eventType, @playerId, @playerNumber);",
+                new 
+                { 
+                    id, 
+                    quarter = game.Quarter, 
+                    team = dto.Team,
+                    eventType = "POINT_UNDO",
+                    playerId = dto.PlayerId,
+                    playerNumber = dto.PlayerNumber
+                }, tx);
+
+            tx.Commit();
+            return Results.NoContent();
         }).WithOpenApi();
 
-//GAMES FOUL
         g.MapPost("/games/{id:int}/foul", async (
-            int id,
+            int id, 
             [FromBody] FoulDto b,
             [FromQuery(Name = "type")] string? qType,
             [FromQuery(Name = "foulType")] string? qFoulType,
-            [FromQuery(Name = "foul_type")] string? qFoulTypeSnake
-        ) =>
+            [FromQuery(Name = "foul_type")] string? qFoulTypeSnake) =>
         {
             var team = (b?.Team ?? "").ToUpperInvariant();
             if (team is not ("HOME" or "AWAY"))
-                return Results.BadRequest(new { error = "Team HOME/AWAY." });
+                return Results.BadRequest(new { error = "Equipo inválido. Use HOME o AWAY." });
 
             using var c = Open(cs());
 

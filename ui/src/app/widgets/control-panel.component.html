@@ -92,7 +92,18 @@
         
         <div class="card-body">
           <div class="row g-2 mb-3">
-            <div class="col-4">
+            <div class="col-3">
+              <button 
+                (click)="subtractPoint('HOME')" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-outline-danger w-100 d-flex flex-column align-items-center py-2"
+                title="Restar 1 punto"
+              >
+                <span class="fs-4 fw-bold">-1</span>
+                <small>Restar</small>
+              </button>
+            </div>
+            <div class="col-3">
               <button 
                 (click)="score('HOME', 1)" 
                 [disabled]="game.status!=='IN_PROGRESS'"
@@ -102,7 +113,7 @@
                 <small>Punto</small>
               </button>
             </div>
-            <div class="col-4">
+            <div class="col-3">
               <button 
                 (click)="score('HOME', 2)" 
                 [disabled]="game.status!=='IN_PROGRESS'"
@@ -112,7 +123,7 @@
                 <small>Puntos</small>
               </button>
             </div>
-            <div class="col-4">
+            <div class="col-3">
               <button 
                 (click)="score('HOME', 3)" 
                 [disabled]="game.status!=='IN_PROGRESS'"
@@ -183,7 +194,18 @@
         
         <div class="card-body">
           <div class="row g-2 mb-3">
-            <div class="col-4">
+            <div class="col-3">
+              <button 
+                (click)="subtractPoint('AWAY')" 
+                [disabled]="game.status!=='IN_PROGRESS'"
+                class="btn btn-outline-danger w-100 d-flex flex-column align-items-center py-2"
+                title="Restar 1 punto"
+              >
+                <span class="fs-4 fw-bold">-1</span>
+                <small>Restar</small>
+              </button>
+            </div>
+            <div class="col-3">
               <button 
                 (click)="score('AWAY', 1)" 
                 [disabled]="game.status!=='IN_PROGRESS'"
@@ -193,7 +215,7 @@
                 <small>Punto</small>
               </button>
             </div>
-            <div class="col-4">
+            <div class="col-3">
               <button 
                 (click)="score('AWAY', 2)" 
                 [disabled]="game.status!=='IN_PROGRESS'"

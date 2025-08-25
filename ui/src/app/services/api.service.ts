@@ -167,6 +167,18 @@ export class ApiService {
     });
   }
 
+  subtractPoint(
+    id: number,
+    team: 'HOME'|'AWAY',
+    opts?: { playerId?: number; playerNumber?: number }
+  ) {
+    return this.post(`/games/${id}/subtract-point`, {
+      team,
+      playerId: opts?.playerId ?? null,
+      playerNumber: opts?.playerNumber ?? null
+    });
+  }
+
   foul(
     id: number,
     team: 'HOME'|'AWAY',

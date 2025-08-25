@@ -178,6 +178,33 @@ export class ControlPanelComponent implements OnChanges {
     ).subscribe(() => this.refresh());
   }
 
+  subtractPoint(team: 'HOME' | 'AWAY') {
+    if (this.game?.status !== 'IN_PROGRESS' && !this.isSuspended) return;
+    
+    // Prevent going below 0
+    const currentScore = team === 'HOME' ? this.game.homeScore : this.game.awayScore;
+    if (currentScore <= 0) {
+      alert('El puntaje ya es 0.');
+      return;
+    }
+
+    const playerId = team === 'HOME' ? this.selHomePlayerId : this.selAwayPlayerId;
+    
+    if (confirm(`¿Restar 1 punto al equipo ${team === 'HOME' ? 'local' : 'visitante'}?`)) {
+      this.api.subtractPoint(
+        this.game.gameId,
+        team,
+        { playerId: playerId ?? undefined }
+      ).subscribe({
+        next: () => this.refresh(),
+        error: (err) => {
+          console.error('Error al restar punto:', err);
+          alert(err.error?.error || 'No se pudo restar el punto.');
+        }
+      });
+    }
+  }
+
   foul(team:'HOME'|'AWAY') {
     if (this.game?.status !== 'IN_PROGRESS') return;
     const playerId = team === 'HOME' ? this.selHomePlayerId : this.selAwayPlayerId;
