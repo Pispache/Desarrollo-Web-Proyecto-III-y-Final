@@ -1,67 +1,55 @@
-<div class="clock-container position-relative">
-  <div class="card shadow-sm h-100">
-    <div class="card-header bg-dark text-white py-2">
-      <div class="d-flex justify-content-between align-items-center">
-        <span class="badge" [ngClass]="{
-          'bg-success': status === 'IN_PROGRESS',
-          'bg-warning text-dark': status === 'PAUSED',
-          'bg-danger': status === 'FINISHED' || status === 'CANCELLED' || status === 'SUSPENDED',
-          'bg-primary': status === 'SCHEDULED'
-        }">
-          {{ getStatusText() }}
-        </span>
-        <span class="badge" [class.bg-warning]="isOvertime()" [class.text-dark]="isOvertime()">
-          <span *ngIf="!isOvertime()">{{ quarter || 1 }}° Cuarto</span>
-          <span *ngIf="isOvertime()">T.E. {{ getOvertimeNumber() }}</span>
-        </span>
+<div class="clock-card">
+  <div class="clock-header">
+    <div class="d-flex justify-content-between align-items-center w-100">
+      <span [ngClass]="['badge', 'status', status]">{{ getStatusText() }}</span>
+      <span class="badge">
+        <span *ngIf="!isOvertime()">{{ quarter || 1 }}° Cuarto</span>
+        <span *ngIf="isOvertime()">T.E. {{ getOvertimeNumber() }}</span>
+      </span>
+    </div>
+  </div>
+  
+  <div class="clock-body d-flex flex-column">
+    <!-- Tiempo principal -->
+    <div class="time my-auto" [class.danger]="isLast30Seconds()">
+      {{ vmSnap.remainingMs | msToClock }}
+    </div>
+
+    <!-- Mensaje de tiempo extra -->
+    <div *ngIf="quarter === 4 && status === 'IN_PROGRESS' && isGameTied() && !isOvertime()" 
+         class="alert alert-info text-center my-3 py-2">
+      <p class="fw-bold mb-0">¡Empate al final del 4to cuarto!</p>
+      <p class="mb-0 small">Presiona "Iniciar T.E." para continuar</p>
+    </div>
+
+    <!-- Controles principales -->
+    <div class="mt-auto" *ngIf="controls">
+      <div class="d-flex flex-wrap justify-content-center gap-2">
+        <!-- Botón de Iniciar/Pausar -->
+        <button class="btn btn-sm"
+                [class.btn-success]="!vmSnap.running"
+                [class.btn-warning]="vmSnap.running"
+                [disabled]="busy || !gameId || status === 'FINISHED'"
+                (click)="toggle()">
+          <i class="bi" [class.bi-play-fill]="!vmSnap.running" [class.bi-pause-fill]="vmSnap.running"></i>
+          {{ vmSnap.running ? ' Pausar' : ' Iniciar' }}
+        </button>
+        
+        <!-- Botón de Reiniciar -->
+        <button class="btn btn-sm btn-secondary"
+                [disabled]="busy || !gameId"
+                (click)="resetQuarter()">
+          <i class="bi bi-arrow-clockwise"></i>
+          Reiniciar
+        </button>
+        
+        <!-- Botón de Siguiente Cuarto eliminado (se usa el del panel de control) -->
       </div>
     </div>
-    
-    <div class="card-body text-center p-4 d-flex flex-column">
-      <!-- Tiempo principal -->
-      <div class="display-1 fw-bold my-auto" 
-           [ngClass]="{
-             'text-danger': isLast30Seconds(),
-             'text-light': !isLast30Seconds()
-           }">
-        {{ vmSnap.remainingMs | msToClock }}
-      </div>
-
-      <!-- Mensaje de tiempo extra -->
-      <div *ngIf="quarter === 4 && status === 'IN_PROGRESS' && isGameTied() && !isOvertime()" 
-           class="alert alert-info text-center my-3 py-2">
-        <p class="fw-bold mb-0">¡Empate al final del 4to cuarto!</p>
-        <p class="mb-0 small">Presiona "Iniciar T.E." para continuar</p>
-      </div>
-
-      <!-- Controles principales -->
-      <div class="mt-auto" *ngIf="controls">
-        <div class="d-flex flex-wrap justify-content-center gap-2">
-          <!-- Botón de Iniciar/Pausar -->
-          <button class="btn btn-sm"
-                  [class.btn-success]="!vmSnap.running"
-                  [class.btn-warning]="vmSnap.running"
-                  [disabled]="busy || !gameId || status === 'FINISHED'"
-                  (click)="toggle()">
-            <i class="bi" [class.bi-play-fill]="!vmSnap.running" [class.bi-pause-fill]="vmSnap.running"></i>
-            {{ vmSnap.running ? ' Pausar' : ' Iniciar' }}
-          </button>
-          
-          <!-- Botón de Reiniciar -->
-          <button class="btn btn-sm btn-secondary"
-                  [disabled]="busy || !gameId"
-                  (click)="resetQuarter()">
-            <i class="bi bi-arrow-clockwise"></i>
-            Reiniciar
-          </button>
-          
-          <!-- Botón de Siguiente Cuarto eliminado (se usa el del panel de control) -->
-        </div>
-      </div>
-    </div>
+  </div>
 
     <!-- Controles avanzados -->
-    <div class="card-footer bg-light" *ngIf="controls">
+    <div class="clock-footer" *ngIf="controls">
       <div class="row g-2">
         <!-- Selector de duración -->
         <div class="col-12">
@@ -99,20 +87,19 @@
     </div>
 
     <!-- Faltas de equipo (solo si está habilitado) -->
-    <div *ngIf="showTeamFouls" class="card-footer bg-light border-top">
-      <div class="small text-muted mb-2">Faltas de equipo</div>
+    <div *ngIf="showTeamFouls" class="clock-footer">
+      <div class="small mb-2">Faltas de equipo</div>
       <div class="row g-3">
         <div class="col-6 text-center">
           <div class="fw-medium">LOCAL</div>
           <div class="h4 mb-0">{{ teamFoulsHome }}</div>
-          <div *ngIf="bonusHome" class="badge bg-danger mt-1">BONUS</div>
+          <div *ngIf="bonusHome" class="badge status FINISHED mt-1">BONUS</div>
         </div>
         <div class="col-6 text-center border-start">
           <div class="fw-medium">VISITANTE</div>
           <div class="h4 mb-0">{{ teamFoulsAway }}</div>
-          <div *ngIf="bonusAway" class="badge bg-danger mt-1">BONUS</div>
+          <div *ngIf="bonusAway" class="badge status FINISHED mt-1">BONUS</div>
         </div>
       </div>
     </div>
-  </div>
 </div>

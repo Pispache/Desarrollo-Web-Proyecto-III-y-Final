@@ -9,6 +9,7 @@ import { Subject, merge, of, switchMap, takeUntil } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './admin-team-roster.component.html',
+  styleUrls: ['./admin-team-roster.component.scss'],
 })
 export class AdminTeamRosterComponent implements OnInit, OnDestroy {
   teams: Team[] = [];

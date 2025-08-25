@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { AdminTeamRosterComponent } from '../widgets/admin-team-roster.component';
 import { ApiService, Game, GameDetail, Team } from '../services/api.service';
+import { ClockService } from '../services/clock.service';
+
 import { NotificationService } from '../services/notification.service';
 import { SoundService } from '../services/sound.service';
 import { ScoreboardComponent } from '../widgets/scoreboard.component';
@@ -47,7 +49,7 @@ export class HomePageComponent {
   detail: GameDetail | null = null;
   selectedGameId: number | null = null;
 
-  constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService) {
+  constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService, private clock: ClockService) {
     this.reloadAll();
     // Asegurar que los sonidos estén precargados para reproducir en auto-advance
     try { this.sound.preloadAll(); } catch {}
@@ -120,6 +122,8 @@ export class HomePageComponent {
         next: () => {
           this.reloadGames();
           this.view(gameId);
+          // Iniciar el reloj backend y notificar a los suscriptores (Display)
+          this.clock.start(gameId);
         },
         error: (err: any) => {
           console.error('Error al iniciar el partido:', err);

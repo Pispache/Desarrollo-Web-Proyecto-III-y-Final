@@ -1,25 +1,25 @@
-<div class="card shadow border-0 bg-dark text-white">
-  <div class="card-header bg-dark-subtle d-flex justify-content-between align-items-center">
+<div class="scoreboard">
+  <div class="scoreboard-header d-flex justify-content-between align-items-center">
     <h5 class="card-title mb-0">
       <i class="bi bi-scoreboard me-2"></i>Marcador
     </h5>
     <button 
       *ngIf="isAdmin"
       (click)="openAdjustModal()"
-      class="btn btn-warning btn-sm"
+      class="btn btn-primary btn-sm"
     >
       <i class="bi bi-sliders me-1"></i>Ajustar Puntuación
     </button>
   </div>
 
-  <div class="card-body">
+  <div class="scoreboard-body">
     <!-- Marcador principal -->
     <div class="row align-items-center mb-3">
       <div class="col-5 text-end">
         <div class="fw-bold text-truncate" [title]="game.homeTeam">{{ game.homeTeam }}</div>
       </div>
       <div class="col-2 text-center">
-        <div class="display-4 fw-bold">{{ game.homeScore }} - {{ game.awayScore }}</div>
+        <div class="display-4 fw-bold score-value">{{ game.homeScore }} - {{ game.awayScore }}</div>
       </div>
       <div class="col-5">
         <div class="fw-bold text-truncate" [title]="game.awayTeam">{{ game.awayTeam }}</div>
@@ -40,7 +40,7 @@
             class="badge p-2"
             [ngClass]="game.status === 'IN_PROGRESS' ? 'bg-success' : 'bg-secondary'"
           >
-            <i class="bi" [ngClass]="game.status === 'IN_PROGRESS' ? 'bi-play-circle' : 'bi-calendar3'" class="me-1"></i>
+            <i class="bi me-1" [ngClass]="game.status === 'IN_PROGRESS' ? 'bi-play-circle' : 'bi-calendar3'"></i>
             {{ game.status === 'IN_PROGRESS' ? 'EN CURSO' : 'PROGRAMADO' }}
           </span>
         </div>
@@ -111,8 +111,11 @@
     </div>
 </div>
 
+<!-- Placeholder to restore modal back when closing -->
+<div #modalHost></div>
+
 <!-- Modal de ajuste de puntuación -->
-<div *ngIf="showAdjustModal" class="modal" tabindex="-1">
+<div *ngIf="showAdjustModal" #adjustModalRef class="modal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header bg-dark text-white">

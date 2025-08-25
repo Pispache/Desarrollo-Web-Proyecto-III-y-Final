@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
+import { Component, OnDestroy, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { interval, Subscription, switchMap, merge, of } from 'rxjs';
@@ -15,19 +15,7 @@ type GameEvent = GameDetail['events'][number];
   standalone: true,
   imports: [CommonModule, ControlPanelComponent],
   templateUrl: './display-page.component.html',
-  styles: [`
-    /* Estilos personalizados para la barra de desplazamiento */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #1f2937;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #f59e0b;
-      border-radius: 3px;
-    }
-  `]
+  styleUrls: ['./display-page.component.scss']
 })
 export class DisplayPageComponent implements OnInit, OnDestroy {
   detail?: GameDetail;
@@ -46,8 +34,13 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
 
   // Verifica si el tiempo restante es bajo (menos de 1 minuto)
   isTimeLow(): boolean {
-    if (!this.detail?.game.timeRemaining) return false;
-    return this.detail.game.timeRemaining < 60000; // Menos de 1 minuto
+    if (this.clockState) {
+      return this.clockState.remainingMs < 60_000;
+    }
+    if (this.detail?.game.timeRemaining !== undefined) {
+      return this.detail.game.timeRemaining < 60_000;
+    }
+    return false;
   }
 
   // Obtiene el nombre del cuarto actual
@@ -66,7 +59,8 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute, 
     private api: ApiService,
     private clock: ClockService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private zone: NgZone
   ) {}
 
   // Métodos para el panel de control
@@ -175,13 +169,11 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
       this.clockSub = this.clock.getState(this.gameId).subscribe({
         next: (state) => {
           if (state) {
-            // Actualizar el estado del reloj
-            this.clockState = state;
-            
-            // Forzar la detección de cambios
-            if (this.cdr) {
-              this.cdr.detectChanges();
-            }
+            // Actualizar dentro de la zona de Angular y solicitar render
+            this.zone.run(() => {
+              this.clockState = state;
+              this.cdr.markForCheck();
+            });
             
             // Verificar si el tiempo ha llegado a 0 y el reloj está corriendo
             if (state.remainingMs <= 0 && state.running) {

@@ -1,7 +1,8 @@
 import { Component, Input, OnChanges, SimpleChanges, OnDestroy, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { ClockService } from '../services/clock.service';
 import { MsToClockPipe } from '../pipes/ms-to-clock.pipe';
 import { SoundService } from '../services/sound.service';
 
@@ -15,6 +16,7 @@ interface VmSnap { running: boolean; remainingMs: number; }
   standalone: true,
   imports: [CommonModule, FormsModule, MsToClockPipe],
   templateUrl: './clock.component.html',
+  styleUrls: ['./clock.component.scss']
 })
 export class ClockComponent implements OnChanges, OnDestroy, OnInit {
   // Inputs del template
@@ -48,10 +50,12 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
   vmSnap: VmSnap = { running: false, remainingMs: 0 };
   busy = false;
   private timerId: any = null;
+  private serviceSub?: Subscription;
+  private useServiceClock = false;
   // Guarda la duración elegida por el usuario para cuartos reglamentarios (no OT)
   private userQuarterMs: number | null = null;
 
-  constructor(private sound: SoundService) {}
+  constructor(private sound: SoundService, private clockSvc: ClockService) {}
 
   ngOnInit(): void {
     // Cargar preferencia desde localStorage si existe
@@ -65,7 +69,7 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
           if (!this.isOvertime()) {
             this.vmSubject.next({ ...this.vmSubject.value, quarterMs: val });
             if (!this.vmSnap.running) this.vmSnap.remainingMs = val;
-          }
+  }
         }
       }
       // Cargar preferencia de avance automático
@@ -78,6 +82,26 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
       // Ignorar errores de acceso a storage
       console.warn('No se pudo cargar preferencia de duración:', e);
     }
+
+    // Si tenemos gameId, usar el reloj del servicio como fuente de verdad
+    const id = this.gameId != null ? Number(this.gameId) : NaN;
+    if (!Number.isNaN(id)) {
+      this.useServiceClock = true;
+      // Cancelar cualquier temporizador local
+      this.clearTimer();
+      // Suscribirse al estado compartido
+      this.serviceSub = this.clockSvc.getState(id).subscribe(state => {
+        // Reflejar duración/autoAdvance y tiempo restante/corriendo
+        this.vmSubject.next({
+          quarterMs: state.quarterMs,
+          autoAdvance: state.autoAdvance
+        });
+        this.vmSnap = {
+          running: state.running,
+          remainingMs: state.remainingMs
+        };
+      });
+    }
   }
 
   ngOnChanges(ch: SimpleChanges): void {
@@ -86,7 +110,10 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
       this.syncDurationWithQuarter();
     }
   }
-  ngOnDestroy(): void { this.clearTimer(); }
+  ngOnDestroy(): void {
+    this.clearTimer();
+    this.serviceSub?.unsubscribe();
+  }
 
   // ===== Helpers del template =====
   getStatusText(): string {
@@ -113,13 +140,43 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
     if (this.status === 'FINISHED' || this.status === 'CANCELLED') return;
     if (this.vmSnap.remainingMs <= 0) this.vmSnap.remainingMs = this.vmSubject.value.quarterMs;
     this.vmSnap.running = !this.vmSnap.running;
-    this.vmSnap.running ? this.startTimer() : this.clearTimer();
+    // En modo servicio, no usamos temporizador local
+    if (!this.useServiceClock) {
+      this.vmSnap.running ? this.startTimer() : this.clearTimer();
+    }
+
+    // Propagar al backend para que el Display se sincronice
+    const id = this.gameId != null ? Number(this.gameId) : NaN;
+    if (!Number.isNaN(id)) {
+      try {
+        if (this.vmSnap.running) {
+          this.clockSvc.start(id);
+        } else {
+          this.clockSvc.pause(id);
+        }
+      } catch (e) {
+        console.warn('No se pudo sincronizar start/pause con backend:', e);
+      }
+    }
   }
 
   resetQuarter() {
     this.vmSnap.running = false;
-    this.clearTimer();
-    this.vmSnap.remainingMs = this.vmSubject.value.quarterMs;
+    // En modo servicio, no tocamos el timer local; solo reflejamos en UI
+    if (!this.useServiceClock) {
+      this.clearTimer();
+      this.vmSnap.remainingMs = this.vmSubject.value.quarterMs;
+    }
+
+    // Propagar reset al backend con la duración actual para que el Display se sincronice
+    const id = this.gameId != null ? Number(this.gameId) : NaN;
+    if (!Number.isNaN(id)) {
+      try {
+        this.clockSvc.reset(id, this.vmSubject.value.quarterMs);
+      } catch (e) {
+        console.warn('No se pudo sincronizar reset con backend:', e);
+      }
+    }
   }
 
   setDuration(evt: Event) {
@@ -131,6 +188,22 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
     if (!this.vmSnap.running) this.vmSnap.remainingMs = qms;
     // Persistir en localStorage
     try { localStorage.setItem('clock.userQuarterMs', String(qms)); } catch {}
+
+    // Si hay gameId, propagar la duración al backend para sincronizar Display
+    const id = this.gameId != null ? Number(this.gameId) : NaN;
+    if (!Number.isNaN(id)) {
+      try {
+        // Si es múltiplo exacto de minuto, usar endpoint de minutos; si no, usar reset con ms
+        if (qms % 60000 === 0) {
+          const minutes = Math.max(1, Math.floor(qms / 60000));
+          this.clockSvc.setDuration(id, minutes);
+        } else {
+          this.clockSvc.reset(id, qms);
+        }
+      } catch (e) {
+        console.warn('No se pudo enviar nueva duración al backend:', e);
+      }
+    }
   }
 
   async toggleAutoAdvance(evt: Event) {
@@ -198,6 +271,8 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
 
   /** Ajusta quarterMs/remainingMs según si es OT o no (OT = 5:00) */
   private syncDurationWithQuarter() {
+    // Si usamos el reloj del servicio, no tocar duraciones ni remainingMs aquí
+    if (this.useServiceClock) return;
     const isOT = this.isOvertime();
     // En OT usamos duración fija de prórroga; en tiempo reglamentario respetamos
     // la selección del usuario si existe, si no, usamos el valor actual/default

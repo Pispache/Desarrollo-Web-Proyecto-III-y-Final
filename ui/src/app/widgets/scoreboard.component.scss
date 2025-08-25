@@ -1,40 +1,104 @@
+// Glass/LED styling inside scoreboard
+:host {
+  --fg-0: var(--fg-0, #e7e9ff);
+  --muted: var(--muted, #9aa0bd);
+  --accent: var(--accent, #9b5cff);
+  --accent-2: var(--accent-2, #00e0ff);
+  --stroke: var(--stroke, rgba(255,255,255,0.08));
+}
+
+.scoreboard {
+  color: var(--fg-0);
+}
+
+.scoreboard-header {
+  position: relative;
+  padding: .5rem 0 .75rem;
+  margin-bottom: .75rem;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+    opacity: .7;
+  }
+}
+
+@media (max-width: 576px) {
+  .modal {
+    padding: 0.5rem;
+    .modal-dialog {
+      width: 100vw;
+      max-height: 96vh;
+    }
+    .modal-content {
+      border-radius: 12px;
+    }
+  }
+}
+
+.scoreboard-body {
+  color: var(--fg-0);
+}
+
+.score-value {
+  font-family: 'Orbitron', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px rgba(155,92,255,.8), 0 0 14px rgba(0,224,255,.35);
+}
+
 // Estilos para el modal de ajuste de puntuación
 .modal {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1050; // Asegura que esté por encima de otros elementos
+  inset: 0;
+  z-index: 99999; // asegurar sobre todo
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(0, 0, 0, 0.5);
+  padding: 1rem;
+  background: radial-gradient(ellipse at center, rgba(6,5,20,0.8), rgba(6,5,20,0.6)) , rgba(0,0,0,0.5);
+  backdrop-filter: blur(2px);
   
   .modal-dialog {
-    width: 100%;
-    max-width: 500px;
-    margin: 1.75rem auto;
+    width: min(96vw, 900px);
+    max-height: 90vh;
+    margin: 0 auto;
     pointer-events: auto;
+    display: flex;
     
     .modal-content {
       position: relative;
       display: flex;
       flex-direction: column;
       width: 100%;
+      max-height: 90vh;
       pointer-events: auto;
-      background-color: #1e1e1e;
-      background-clip: padding-box;
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 0.3rem;
+      background: rgba(20, 18, 43, 0.75);
+      -webkit-backdrop-filter: blur(10px);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 16px;
       outline: 0;
       
       .modal-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 1rem;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+        color: var(--fg-0);
+        position: relative;
+        
+        &::after {
+          content: '';
+          position: absolute;
+          left: 0; right: 0; bottom: 0;
+          height: 2px;
+          background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+          opacity: .7;
+        }
         
         .modal-title {
           margin-bottom: 0;
@@ -58,7 +122,32 @@
       .modal-body {
         position: relative;
         flex: 1 1 auto;
-        padding: 1rem;
+        padding: 1rem 1.25rem;
+        overflow: auto;
+        color: var(--fg-0);
+
+        // Inputs y grupos de inputs con tema oscuro translúcido
+        .form-label { color: var(--fg-0); }
+
+        .form-control {
+          background: rgba(255,255,255,0.06);
+          color: var(--fg-0);
+          border: 1px solid rgba(255,255,255,0.12);
+          border-radius: 12px;
+          &::placeholder { color: rgba(231,233,255,0.6); }
+          &:focus {
+            background: rgba(255,255,255,0.08);
+            border-color: transparent;
+            box-shadow: 0 0 0 3px rgba(155,92,255,.25), 0 0 12px rgba(0,224,255,.25);
+            color: var(--fg-0);
+          }
+        }
+
+        .input-group-text {
+          background: rgba(255,255,255,0.08);
+          color: var(--fg-0);
+          border: 1px solid rgba(255,255,255,0.12);
+        }
       }
       
       .modal-footer {
@@ -66,10 +155,10 @@
         flex-wrap: wrap;
         align-items: center;
         justify-content: flex-end;
-        padding: 0.75rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
-        border-bottom-right-radius: calc(0.3rem - 1px);
-        border-bottom-left-radius: calc(0.3rem - 1px);
+        padding: 0.75rem 1.25rem 1rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+        border-bottom-right-radius: 16px;
+        border-bottom-left-radius: 16px;
         
         > * {
           margin: 0.25rem;
@@ -80,10 +169,7 @@
 }
 
 // Asegura que el modal esté por encima de otros elementos
-:host {
-  position: relative;
-  z-index: 1;
-}
+:host { position: relative; z-index: 1; }
 
 // Asegura que el fondo del modal ocupe toda la pantalla
 ::ng-deep body.modal-open {

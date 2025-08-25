@@ -1,11 +1,11 @@
-<div class="bg-gray-900 rounded-xl shadow-sm overflow-hidden text-white">
+<div class="control-panel">
   <!-- Header -->
-  <div class="px-6 py-4 border-b border-gray-100">
-    <h3 class="text-lg font-semibold text-gray-800">Controles del Partido</h3>
+  <div class="panel-header">
+    <h3 class="text-lg font-semibold">Controles del Partido</h3>
   </div>
   
   <!-- Main Controls -->
-  <div class="p-6 space-y-6">
+  <div class="panel-body">
     <!-- Game Controls -->
     <div class="row g-2 mb-3">
       <div class="col-6 col-md">
@@ -85,8 +85,8 @@
     <!-- Controles de Equipo -->
     <div class="mb-4">
       <!-- Equipo Local -->
-      <div class="card bg-dark text-white mb-4">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+      <div class="team-card mb-4">
+        <div class="team-header">
           <h5 class="card-title mb-0">Equipo Local</h5>
           <div class="d-flex align-items-center">
             <span class="badge me-2" [class.bg-danger]="teamFouls.home >= 5" [class.bg-secondary]="teamFouls.home < 5">
@@ -102,7 +102,7 @@
           </div>
         </div>
         
-        <div class="card-body">
+        <div class="team-body">
           <div class="row g-2 mb-3">
             <div class="col-3">
               <button 
@@ -187,8 +187,8 @@
       </div>
 
       <!-- Equipo Visitante -->
-      <div class="card bg-dark text-white">
-        <div class="card-header bg-dark d-flex justify-content-between align-items-center">
+      <div class="team-card">
+        <div class="team-header">
           <h5 class="card-title mb-0">Equipo Visitante</h5>
           <div class="d-flex align-items-center">
             <span class="badge me-2" [class.bg-danger]="teamFouls.away >= 5" [class.bg-secondary]="teamFouls.away < 5">
@@ -204,7 +204,7 @@
           </div>
         </div>
         
-        <div class="card-body">
+        <div class="team-body">
           <div class="row g-2 mb-3">
             <div class="col-3">
               <button 
@@ -237,7 +237,7 @@
                 <small>Puntos</small>
               </button>
             </div>
-            <div class="col-4">
+            <div class="col-3">
               <button 
                 (click)="score('AWAY', 3)" 
                 [disabled]="game.status!=='IN_PROGRESS'"

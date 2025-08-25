@@ -271,7 +271,7 @@
 
     <!-- Marcador debajo del detalle del partido -->
     <div *ngIf="detail as d" class="col-lg-8 offset-lg-4 mb-4">
-      <div class="card shadow-sm">
+      <div class="card home-card mb-3 border-0 shadow-sm">
         <div class="card-body p-2">
           <app-scoreboard 
             [game]="d.game" 
@@ -347,39 +347,40 @@
             </div>
         </div>
 
-        <div style="display:flex; align-items:flex-start; gap: 1rem;" *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED' || d.game.status === 'SCHEDULED'">
-          <div style="flex: 1;">
+        <div class="game-layout" *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED' || d.game.status === 'SCHEDULED'">
+          <div>
             <app-control-panel 
-              *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED' || d.game.status === 'SCHEDULED'"
               [game]="d.game" 
               (changed)="view(d.game.gameId)" 
               (resetRequested)="onResetRequested()"
               [isSuspended]="d.game.status === 'SUSPENDED'">
             </app-control-panel>
-            
+
             <div *ngIf="d.game.status === 'SCHEDULED'" class="mt-2">
               <button 
                 (click)="startGame(d.game.gameId)" 
-                class="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700">
+                class="btn btn-success w-100">
                 Iniciar Juego
               </button>
             </div>
           </div>
-          
-          <app-clock
-            *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED'"
-            [gameId]="d.game.gameId"
-            [status]="d.game.status"
-            [quarter]="d.game.quarter"
-            [showTeamFouls]="false"
-            [autoAdvance]="true"
-            (advanceQuarter)="onExpire()"
-            (resetGame)="onResetGame()">
-          </app-clock>
+
+          <div>
+            <app-clock
+              *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED'"
+              [gameId]="d.game.gameId"
+              [status]="d.game.status"
+              [quarter]="d.game.quarter"
+              [showTeamFouls]="false"
+              [autoAdvance]="true"
+              (advanceQuarter)="onExpire()"
+              (resetGame)="onResetGame()">
+            </app-clock>
+          </div>
         </div>
       </div>
 
-      <div class="mt-4" style="display:grid; gap:1rem; grid-template-columns: 1fr 1fr;">
+      <div class="mt-4 rosters-grid">
         <app-team-roster [gameId]="d.game.gameId" side="HOME"></app-team-roster>
         <app-team-roster [gameId]="d.game.gameId" side="AWAY"></app-team-roster>
       </div>

@@ -2,6 +2,7 @@ import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Game, Player, FoulSummary, FoulType } from '../services/api.service';
+import { ClockService } from '../services/clock.service';
 import { NotificationService } from '../services/notification.service';
 import { SoundService } from '../services/sound.service';
 import { forkJoin } from 'rxjs';
@@ -11,6 +12,7 @@ import { forkJoin } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './control-panel.component.html',
+  styleUrls: ['./control-panel.component.scss']
 })
 export class ControlPanelComponent implements OnChanges {
   @Input({ required: true }) game!: Game;
@@ -67,7 +69,8 @@ export class ControlPanelComponent implements OnChanges {
   constructor(
     private api: ApiService,
     private notify: NotificationService,
-    private sound: SoundService
+    private sound: SoundService,
+    private clock: ClockService
   ) {}
 
   get isInProgress() {
@@ -142,6 +145,8 @@ export class ControlPanelComponent implements OnChanges {
         this.refresh();
         this.notify.showSuccess('Partido iniciado', `Quarter ${this.game.quarter} en curso`, 2200);
         this.sound.play('start');
+        // Iniciar el reloj del backend para que el Display reciba running=true inmediatamente
+        this.clock.start(this.game.gameId);
       },
       error: () => { this.notify.showError('Error', 'No se pudo iniciar el partido', true); this.sound.play('error'); },
       complete: () => this.prevBusyClear('start')

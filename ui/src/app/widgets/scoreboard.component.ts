@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Game, GameDetail } from '../services/api.service';
 import { FormsModule } from '@angular/forms';
@@ -22,6 +22,9 @@ export class ScoreboardComponent {
   
   @Output() adjustScore = new EventEmitter<{homeDelta: number, awayDelta: number}>();
   
+  @ViewChild('adjustModalRef') adjustModalRef?: ElementRef<HTMLDivElement>;
+  @ViewChild('modalHost') modalHost?: ElementRef<HTMLDivElement>;
+
   showAdjustModal = false;
   adjustForm = {
     homeDelta: 0,
@@ -33,6 +36,13 @@ export class ScoreboardComponent {
   openAdjustModal() {
     this.adjustForm = { homeDelta: 0, awayDelta: 0 };
     this.showAdjustModal = true;
+    // Mover el modal al body para evitar clipping por contenedores padres
+    setTimeout(() => {
+      const el = this.adjustModalRef?.nativeElement;
+      if (el && el.parentNode !== document.body) {
+        document.body.appendChild(el);
+      }
+    });
   }
   
   onAdjustScore() {
@@ -41,11 +51,20 @@ export class ScoreboardComponent {
       awayDelta: this.adjustForm.awayDelta
     });
     this.showAdjustModal = false;
+    // eliminar modal del body si quedó anexado
+    const el = this.adjustModalRef?.nativeElement;
+    if (el && el.parentNode === document.body) {
+      document.body.removeChild(el);
+    }
   }
 
   // Método para cancelar el ajuste de puntuación
   cancelAdjust() {
     this.showAdjustModal = false;
+    const el = this.adjustModalRef?.nativeElement;
+    if (el && el.parentNode === document.body) {
+      document.body.removeChild(el);
+    }
   }
 
   // Método para guardar los cambios del ajuste de puntuación

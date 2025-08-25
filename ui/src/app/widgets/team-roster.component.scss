@@ -1,0 +1,110 @@
+.roster-card {
+  --bg: rgba(16, 14, 32, 0.55);
+  --bg-2: rgba(16, 14, 32, 0.35);
+  --glass: rgba(255, 255, 255, 0.04);
+  --fg-0: #e7e9ff;
+  --fg-1: rgba(231, 233, 255, 0.72);
+  --border: rgba(255, 255, 255, 0.12);
+  --accent: #9b5cff;
+  --accent-2: #00e0ff;
+
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--bg), var(--bg-2));
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(255, 255, 255, 0.02);
+  color: var(--fg-0);
+  overflow: hidden;
+
+  .roster-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .85rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+
+    h6 { margin: 0; color: var(--fg-0); }
+
+    .badge {
+      background: rgba(255,255,255,0.08);
+      color: var(--fg-0);
+      border: 1px solid var(--border);
+    }
+  }
+
+  .roster-body {
+    padding: 0;
+    color: var(--fg-0);
+
+    .p-3 { padding: 1rem !important; }
+
+    .alert { border-radius: 12px; }
+
+    .form-label { color: var(--fg-0); }
+
+    .form-control {
+      background: rgba(255,255,255,0.06);
+      color: var(--fg-0);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      &::placeholder { color: rgba(231,233,255,0.6); }
+      &:focus {
+        background: rgba(255,255,255,0.08);
+        border-color: transparent;
+        box-shadow: 0 0 0 3px rgba(155,92,255,.25), 0 0 12px rgba(0,224,255,.25);
+        color: var(--fg-0);
+      }
+    }
+
+    .list-group { background: transparent; }
+    .list-group-item {
+      background: rgba(255,255,255,0.03);
+      color: var(--fg-0);
+      border-color: var(--border);
+    }
+
+    .badge.bg-secondary {
+      background: rgba(255,255,255,0.12) !important;
+      color: var(--fg-0) !important;
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline-secondary {
+      background: rgba(255,255,255,0.03);
+      color: var(--fg-0);
+      border-color: rgba(255,255,255,0.25);
+      &:hover { box-shadow: 0 0 0 3px rgba(255,255,255,.12), 0 0 14px rgba(155,92,255,.25); }
+    }
+
+    .btn-primary {
+      border-radius: 12px;
+      border: 0;
+      color: var(--fg-0);
+      background: linear-gradient(135deg, rgba(155,92,255,.92), rgba(0,224,255,.9));
+      box-shadow: 0 4px 18px rgba(155,92,255,.35), 0 0 22px rgba(0,224,255,.25);
+    }
+    .btn-primary:hover { filter: brightness(1.06) saturate(1.05); }
+
+    .btn-outline-secondary.btn-sm { border-radius: 10px; }
+  }
+
+  .roster-footer {
+    padding: .85rem 1rem;
+    border-top: 1px solid var(--border);
+    background: linear-gradient(0deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+  }
+}
+
+/* Línea LED decorativa */
+.roster-card::after {
+  content: '';
+  display: block;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+  opacity: .7;
+}
+
+@media (max-width: 576px) {
+  .roster-card .roster-header { padding: .75rem .9rem; }
+  .roster-card .roster-footer { padding: .75rem .9rem; }
+}

@@ -8,6 +8,7 @@ import { ApiService, Player } from '../services/api.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './team-roster.component.html',
+  styleUrls: ['./team-roster.component.scss']
 })
 export class TeamRosterComponent implements OnChanges {
   @Input({ required: true }) gameId!: number;

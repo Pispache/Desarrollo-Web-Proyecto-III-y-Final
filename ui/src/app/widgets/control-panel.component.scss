@@ -1,0 +1,182 @@
+.control-panel {
+  --bg: rgba(16, 14, 32, 0.55);
+  --bg-2: rgba(16, 14, 32, 0.35);
+  --glass: rgba(255, 255, 255, 0.04);
+  --fg-0: #e7e9ff;
+  --fg-1: rgba(231, 233, 255, 0.72);
+  --border: rgba(255, 255, 255, 0.12);
+  --accent: #9b5cff;
+  --accent-2: #00e0ff;
+
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--bg), var(--bg-2));
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(255, 255, 255, 0.02);
+  color: var(--fg-0);
+  overflow: hidden;
+
+  .panel-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+
+    h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--fg-0);
+      letter-spacing: .3px;
+    }
+  }
+  /* Botones LED/gradiente */
+  .btn {
+    border-radius: 12px;
+    border: 0;
+    color: var(--fg-0);
+    transition: transform .12s ease, filter .15s ease, box-shadow .15s ease;
+    text-shadow: 0 1px 1px rgba(0,0,0,.4);
+  }
+
+  .btn:active { transform: translateY(1px) scale(.98); }
+  .btn:disabled { filter: grayscale(.1) opacity(.85); box-shadow: none !important; }
+
+  .btn-primary {
+    background: linear-gradient(135deg, rgba(155,92,255,.92), rgba(0,224,255,.9));
+    box-shadow: 0 4px 18px rgba(155,92,255,.35), 0 0 22px rgba(0,224,255,.25);
+  }
+  .btn-primary:hover { filter: brightness(1.06) saturate(1.05); }
+  .btn-primary:focus { box-shadow: 0 0 0 3px rgba(155,92,255,.35), 0 0 18px rgba(0,224,255,.35); }
+
+  .btn-success {
+    background: linear-gradient(135deg, rgba(0,200,140,.95), rgba(0,170,120,.9));
+    box-shadow: 0 4px 18px rgba(0,200,140,.35), 0 0 22px rgba(0,200,140,.25);
+  }
+  .btn-success:hover { filter: brightness(1.06) saturate(1.05); }
+  .btn-success:focus { box-shadow: 0 0 0 3px rgba(0,200,140,.35), 0 0 18px rgba(0,200,140,.35); }
+
+  .btn-danger {
+    background: linear-gradient(135deg, rgba(255,70,100,.95), rgba(200,30,60,.9));
+    box-shadow: 0 4px 18px rgba(255,70,100,.35), 0 0 22px rgba(255,70,100,.25);
+  }
+  .btn-danger:hover { filter: brightness(1.06) saturate(1.05); }
+  .btn-danger:focus { box-shadow: 0 0 0 3px rgba(255,70,100,.35), 0 0 18px rgba(255,70,100,.35); }
+
+  .btn-warning {
+    color: #1a1a1a;
+    background: linear-gradient(135deg, rgba(255,205,80,.95), rgba(255,170,30,.9));
+    box-shadow: 0 4px 18px rgba(255,205,80,.35), 0 0 22px rgba(255,170,30,.25);
+  }
+  .btn-warning:hover { filter: brightness(1.04) saturate(1.05); }
+  .btn-warning:focus { box-shadow: 0 0 0 3px rgba(255,205,80,.35), 0 0 18px rgba(255,170,30,.35); }
+
+  .btn-secondary {
+    background: linear-gradient(135deg, rgba(120,130,155,.9), rgba(85,95,125,.9));
+    box-shadow: 0 4px 18px rgba(120,130,155,.28), 0 0 22px rgba(85,95,125,.22);
+  }
+  .btn-secondary:hover { filter: brightness(1.05); }
+  .btn-secondary:focus { box-shadow: 0 0 0 3px rgba(160,170,190,.3), 0 0 18px rgba(120,130,155,.3); }
+
+  /* Outline con efecto neon al hover */
+  .btn-outline-danger:hover,
+  .btn-outline-info:hover,
+  .btn-outline-primary:hover,
+  .btn-outline-success:hover {
+    box-shadow: 0 0 0 3px rgba(255,255,255,.12), 0 0 14px rgba(155,92,255,.25);
+  }
+
+  .panel-body {
+    padding: 1.25rem;
+    color: var(--fg-0);
+  }
+
+  /* Tarjetas internas por equipo */
+  .team-card {
+    border-radius: 14px;
+    background: var(--glass);
+    border: 1px solid var(--border);
+    margin-bottom: 1rem;
+
+    .team-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: .75rem 1rem;
+      border-bottom: 1px solid var(--border);
+
+      .card-title { margin: 0; color: var(--fg-0); }
+
+      .badge { 
+        background: rgba(255,255,255,0.08);
+        color: var(--fg-0);
+        border: 1px solid var(--border);
+      }
+
+      .btn-group .btn {
+        --bs-btn-color: var(--fg-0);
+        --bs-btn-border-color: rgba(255,255,255,0.25);
+        --bs-btn-hover-bg: rgba(255,255,255,0.1);
+        --bs-btn-hover-border-color: rgba(255,255,255,0.35);
+      }
+    }
+
+    .team-body {
+      padding: 1rem;
+
+      .btn-outline-danger,
+      .btn-outline-info,
+      .btn-outline-primary,
+      .btn-outline-success {
+        background: rgba(255,255,255,0.03);
+        border-color: rgba(255,255,255,0.2);
+        color: var(--fg-0);
+      }
+
+      /* Selects con tema oscuro y texto claro */
+      .control-panel & .form-select,
+      .control-panel & .form-select-sm,
+      .form-select,
+      .form-select-sm {
+        background-color: rgba(255,255,255,0.06) !important;
+        color: var(--fg-0) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px;
+        appearance: none;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+      }
+
+      .form-select:focus,
+      .form-select-sm:focus {
+        background-color: rgba(255,255,255,0.08) !important;
+        box-shadow: 0 0 0 3px rgba(155,92,255,.25), 0 0 10px rgba(0,224,255,.2);
+        border-color: transparent !important;
+        color: var(--fg-0) !important;
+      }
+
+      .form-select:disabled,
+      .form-select-sm:disabled {
+        opacity: .75;
+      }
+
+      .form-select option,
+      .form-select-sm option {
+        background-color: #15142a;
+        color: var(--fg-0);
+      }
+    }
+  }
+}
+
+/* Pequeña línea LED bajo el título principal */
+.control-panel::after {
+  content: '';
+  display: block;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+  opacity: .7;
+}
+
+@media (max-width: 576px) {
+  .control-panel .panel-body { padding: 1rem; }
+  .control-panel .team-body { padding: .75rem; }
+}

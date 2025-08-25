@@ -1,0 +1,115 @@
+.clock-card {
+  --bg: rgba(16, 14, 32, 0.55);
+  --bg-2: rgba(16, 14, 32, 0.35);
+  --glass: rgba(255, 255, 255, 0.05);
+  --fg-0: #e7e9ff;
+  --muted: rgba(231,233,255,.72);
+  --border: rgba(255, 255, 255, 0.12);
+  --accent: #9b5cff;
+  --accent-2: #00e0ff;
+  --danger: #ff4d6d;
+  --warn: #ffd166;
+  --ok: #4ade80;
+
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--bg), var(--bg-2));
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(255,255,255,0.02);
+  color: var(--fg-0);
+  overflow: hidden;
+
+  .clock-header {
+    padding: .75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .badge {
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      padding: .35rem .6rem;
+      background: rgba(255,255,255,0.08);
+      color: var(--fg-0);
+    }
+
+    .badge.status.IN_PROGRESS { background: rgba(74, 222, 128, .18); color: var(--ok); }
+    .badge.status.SCHEDULED { background: rgba(0,224,255,.18); color: var(--accent-2); }
+    .badge.status.SUSPENDED,
+    .badge.status.CANCELLED,
+    .badge.status.FINISHED { background: rgba(255, 77, 109, .18); color: var(--danger); }
+    .badge.status.PAUSED { background: rgba(255, 209, 102, .18); color: var(--warn); }
+  }
+
+  .clock-body {
+    text-align: center;
+    padding: 1.25rem;
+
+    .time {
+      font-size: clamp(2.2rem, 6vw, 4.2rem);
+      font-weight: 800;
+      letter-spacing: 2px;
+      line-height: 1;
+      margin: .75rem 0 1rem;
+      text-shadow: 0 0 18px rgba(155,92,255,.35), 0 0 30px rgba(0,224,255,.28);
+    }
+    .time.danger {
+      color: var(--danger);
+      text-shadow: 0 0 14px rgba(255,77,109,.55), 0 0 28px rgba(255,77,109,.35);
+    }
+
+    .alert-info {
+      background: rgba(0,224,255,0.12);
+      color: var(--fg-0);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+
+    .btn { border-radius: 12px; }
+    .btn-success {
+      background: linear-gradient(135deg, rgba(0,200,140,.95), rgba(0,170,120,.9));
+      border: 0;
+      color: var(--fg-0);
+      box-shadow: 0 4px 18px rgba(0,200,140,.35), 0 0 22px rgba(0,200,140,.25);
+    }
+    .btn-warning {
+      color: #1a1a1a;
+      background: linear-gradient(135deg, rgba(255,205,80,.95), rgba(255,170,30,.9));
+      border: 0;
+      box-shadow: 0 4px 18px rgba(255,205,80,.35), 0 0 22px rgba(255,170,30,.25);
+    }
+    .btn-secondary {
+      background: linear-gradient(135deg, rgba(120,130,155,.9), rgba(85,95,125,.9));
+      border: 0;
+      color: var(--fg-0);
+      box-shadow: 0 4px 18px rgba(120,130,155,.28), 0 0 22px rgba(85,95,125,.22);
+    }
+  }
+
+  .clock-footer {
+    padding: .9rem 1rem;
+    border-top: 1px solid var(--border);
+    background: linear-gradient(0deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+
+    .form-label { color: var(--fg-0); }
+    .form-select, .form-check-input { border-radius: 12px; }
+
+    .form-select {
+      background: rgba(255,255,255,0.06);
+      color: var(--fg-0);
+      border: 1px solid var(--border);
+      &:focus { background: rgba(255,255,255,0.08); border-color: transparent; box-shadow: 0 0 0 3px rgba(155,92,255,.25); }
+      option { background: #15142a; color: var(--fg-0); }
+    }
+  }
+}
+
+/* Línea LED decorativa */
+.clock-card::after {
+  content: '';
+  display: block;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+  opacity: .7;
+}

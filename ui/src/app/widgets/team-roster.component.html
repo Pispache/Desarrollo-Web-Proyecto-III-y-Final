@@ -1,13 +1,13 @@
-<div class="card h-100">
-  <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+<div class="roster-card h-100">
+  <div class="roster-header">
     <h6 class="mb-0">
       <i class="bi bi-people-fill me-2"></i>
       {{ side === 'HOME' ? 'Local' : 'Visitante' }}
     </h6>
-    <span class="badge bg-white text-primary">{{ players.length }} jugadores</span>
+    <span class="badge">{{ players.length }} jugadores</span>
   </div>
   
-  <div class="card-body p-0">
+  <div class="roster-body">
     <!-- Formulario para agregar jugador -->
     <div *ngIf="showAddPlayerForm" class="p-3 border-bottom">
       <h6 class="mb-3">Agregar nuevo jugador</h6>
@@ -80,7 +80,7 @@
     </ng-template>
   </div>
   
-  <div class="card-footer bg-light border-top-0 text-center" *ngIf="!showAddPlayerForm">
+  <div class="roster-footer text-center" *ngIf="!showAddPlayerForm">
     <button class="btn btn-primary btn-sm w-100" (click)="toggleAddPlayerForm()">
       <i class="bi bi-plus-circle me-1"></i>Agregar Jugador
     </button>

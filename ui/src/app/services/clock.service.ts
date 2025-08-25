@@ -38,7 +38,7 @@ export class ClockService implements OnDestroy {
   private clockChanged$ = new Subject<number>();
   private expiredSubject = new Subject<number>();
   private subscriptions = new Subscription();
-  private readonly POLLING_INTERVAL = 1000; // 1 segundo
+  private readonly POLLING_INTERVAL = 500; // 0.5s para reducir desfase visible
   private readonly AUTO_ADVANCE_DELAY = 2000; // 2 segundos de espera antes de avanzar automáticamente
 
   // Evento que se emite cuando el tiempo del cuarto actual termina
@@ -118,7 +118,9 @@ export class ClockService implements OnDestroy {
           quarterMs: state.quarterMs ?? currentState.quarterMs,
           quarter: state.quarter ?? currentState.quarter,
           gameStatus: state.gameStatus ?? currentState.gameStatus,
-          lastUpdated: state.lastUpdated ?? currentState.lastUpdated,
+          // IMPORTANT: al recibir estado del servidor, sincronizamos el reloj local
+          // fijando lastUpdated al momento actual para evitar restar de más
+          lastUpdated: new Date(),
           autoAdvance: state.autoAdvance ?? currentState.autoAdvance,
           homeScore: state.homeScore ?? currentState.homeScore,
           awayScore: state.awayScore ?? currentState.awayScore
@@ -133,22 +135,53 @@ export class ClockService implements OnDestroy {
         }
       })
     );
+
+    // Tiqueo local entre polls: decrementar remainingMs cuando running=true
+    const ticker$ = interval(100);
+    this.subscriptions.add(
+      ticker$.subscribe(() => {
+        const subject = this.clockStates.get(gameId);
+        const current = subject?.value;
+        if (!subject || !current || !current.running) return;
+        const now = Date.now();
+        const elapsed = now - current.lastUpdated.getTime();
+        if (elapsed <= 0) return;
+        const remaining = Math.max(0, current.remainingMs - elapsed);
+        const updated: ClockState = {
+          ...current,
+          remainingMs: remaining,
+          lastUpdated: new Date(now)
+        };
+        subject.next(updated);
+        if (remaining <= 0) {
+          // Notificar expiración local; el avance real lo maneja el componente/servidor
+          this.expiredSubject.next(gameId);
+        }
+      })
+    );
   }
 
   /** Obtiene el estado actual del reloj desde el servidor */
   private fetchClockState(gameId: number): Observable<Partial<ClockState>> {
+    const sentAt = Date.now();
     return this.http.get<ClockStateDto>(`${this.base}/games/${gameId}/clock`).pipe(
-      map(dto => ({
-        running: dto.running,
-        remainingMs: dto.remainingMs,
-        quarterMs: dto.quarterMs,
-        quarter: dto.quarter,
-        gameStatus: dto.gameStatus,
-        lastUpdated: new Date(dto.updatedAt),
-        autoAdvance: dto.autoAdvance ?? false,
-        homeScore: dto.homeScore ?? 0,
-        awayScore: dto.awayScore ?? 0
-      })),
+      map(dto => {
+        const receivedAt = Date.now();
+        const rtt = Math.max(0, receivedAt - sentAt);
+        // Compensación usando mitad del RTT, independiente del reloj del servidor
+        const adjustedRemaining = Math.max(0, dto.remainingMs - Math.floor(rtt / 2));
+        return {
+          running: dto.running,
+          remainingMs: adjustedRemaining,
+          quarterMs: dto.quarterMs,
+          quarter: dto.quarter,
+          gameStatus: dto.gameStatus,
+          lastUpdated: new Date(receivedAt),
+          autoAdvance: dto.autoAdvance ?? false,
+          homeScore: dto.homeScore ?? 0,
+          awayScore: dto.awayScore ?? 0
+        } as Partial<ClockState>;
+      }),
       catchError(() => of({}))
     );
   }
@@ -197,15 +230,59 @@ export class ClockService implements OnDestroy {
   // === Métodos de control del reloj ===
 
   start(gameId: number): void {
+    // Optimista: reflejar de inmediato que corre
+    const subject = this.clockStates.get(gameId);
+    const now = Date.now();
+    if (subject) {
+      const cur = subject.value;
+      subject.next({
+        ...cur,
+        running: true,
+        lastUpdated: new Date(now)
+      });
+    }
+    // Notificar a los observadores inmediatamente
+    this.clockChanged$.next(gameId);
+    // Llamada real al backend
     this.executeClockAction(gameId, 'start');
   }
 
   pause(gameId: number): void {
+    // Optimista: congelar el tiempo restante y marcar no corriendo
+    const subject = this.clockStates.get(gameId);
+    const now = Date.now();
+    if (subject) {
+      const cur = subject.value;
+      const elapsed = Math.max(0, now - cur.lastUpdated.getTime());
+      const remaining = cur.running ? Math.max(0, cur.remainingMs - elapsed) : cur.remainingMs;
+      subject.next({
+        ...cur,
+        running: false,
+        remainingMs: remaining,
+        lastUpdated: new Date(now)
+      });
+    }
+    this.clockChanged$.next(gameId);
     this.executeClockAction(gameId, 'pause');
   }
 
   reset(gameId: number, quarterMs?: number): void {
     const body = quarterMs ? { quarterMs } : {};
+    // Optimista: aplicar valores localmente
+    const subject = this.clockStates.get(gameId);
+    const now = Date.now();
+    if (subject) {
+      const cur = subject.value;
+      const newQuarterMs = quarterMs ?? cur.quarterMs;
+      subject.next({
+        ...cur,
+        running: false,
+        quarterMs: newQuarterMs,
+        remainingMs: newQuarterMs,
+        lastUpdated: new Date(now)
+      });
+    }
+    this.clockChanged$.next(gameId);
     this.http.post(`${this.base}/games/${gameId}/clock/reset`, body)
       .pipe(tap(() => this.clockChanged$.next(gameId)))
       .subscribe({
