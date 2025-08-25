@@ -285,7 +285,20 @@ export class ApiService {
 
   /* ========= Resumen de faltas ========= */
   getFoulSummary(id: number): Observable<FoulSummary> {
-    return this.get<any>(`/games/${id}/fouls/summary`)
-      .pipe(map(r => this.camel<FoulSummary>(r)));
+    return this.get<FoulSummary>(`/games/${id}/foul-summary`).pipe(
+      map(r => this.camel<FoulSummary>(r))
+    );
+  }
+
+  getGameRoster(gameId: number, team: 'HOME' | 'AWAY') {
+    return this.get<Player[]>(`/games/${gameId}/roster/${team.toLowerCase()}`).pipe(
+      map(players => this.camel<Player[]>(players) || [])
+    );
+  }
+
+  getPlayerFouls(gameId: number) {
+    return this.get<Array<{playerId: number; team: string; quarter: number; foulType: string; count: number}>>(`/games/${gameId}/player-fouls`).pipe(
+      map(fouls => this.camel(fouls) || [])
+    );
   }
 }

@@ -1,11 +1,19 @@
 import { Pipe, PipeTransform } from '@angular/core';
+import { FoulType } from '../services/api.service';
 
 // Aceptamos 'HOME'|'AWAY' o string (por compatibilidad con FoulSummary del ApiService)
 type TeamKey = 'HOME' | 'AWAY';
 type MaybeTeam = TeamKey | string;
 
 export interface TeamAggLike { quarter: number; team: MaybeTeam; fouls: number; }
-export interface PlayerAggLike { quarter: number; team: MaybeTeam; playerId: number; fouls: number; }
+export interface PlayerAggLike { 
+  quarter: number; 
+  team: MaybeTeam; 
+  playerId: number; 
+  fouls: number; 
+  foulType?: FoulType;
+  count?: number;
+}
 
 // Guard utilitario
 function toTeamKey(x: MaybeTeam): TeamKey | null {
@@ -55,11 +63,31 @@ export class PlayerFoulsQPipe implements PipeTransform {
     team: TeamKey,
     playerId: number,
     quarter: number
-  ): number {
-    if (!playerAgg?.length) return 0;
-    return playerAgg
-      .filter(r => toTeamKey(r.team) === team && r.playerId === playerId && r.quarter === quarter)
-      .reduce((a, r) => a + (r.fouls ?? 0), 0);
+  ): any[] {
+    if (!playerAgg?.length) return [];
+    return playerAgg.filter(r => 
+      toTeamKey(r.team) === team && 
+      r.playerId === playerId && 
+      r.quarter === quarter
+    );
+  }
+}
+
+@Pipe({ name: 'filterFoulType', standalone: true })
+export class FilterFoulTypePipe implements PipeTransform {
+  transform(fouls: any[], type: FoulType): number {
+    if (!fouls?.length) return 0;
+    return fouls
+      .filter(f => f.foulType === type)
+      .reduce((sum, f) => sum + (f.count || 1), 0);
+  }
+}
+
+@Pipe({ name: 'totalFouls', standalone: true })
+export class TotalFoulsPipe implements PipeTransform {
+  transform(fouls: any[]): number {
+    if (!fouls?.length) return 0;
+    return fouls.reduce((sum, f) => sum + (f.count || 1), 0);
   }
 }
 
