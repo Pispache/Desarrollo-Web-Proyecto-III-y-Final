@@ -146,6 +146,60 @@ CREATE TABLE GameEvents (
   CONSTRAINT FK_GameEvents_Games FOREIGN KEY (GameId) REFERENCES Games(Id)
 );
 ```
+## Frontend
+La interfaz se compone de una vista del tablero y un panel de control operativo. El tablero muestra nombre de equipos, tanteador, cuarto y un reloj prominente. El panel de control permite sumar o restar puntos, registrar faltas, iniciar o pausar el reloj y avanzar manualmente de cuarto si fuese necesario. La comunicación con la API se realiza a través de un servicio HTTP concentrado, y el despliegue productivo lo sirve Nginx como contenido estático con un proxy inverso para las rutas /api dirigidas al contenedor de la API.
+
+-- **Servicio de datos en Angular**
+
+El servicio centraliza las peticiones a la API y maneja serialización tipada. Un ejemplo de implementación es el siguiente:
+
+```
+@Injectable({ providedIn: 'root' })
+export class ApiService {
+  private base = '/api'; // ⬅ Nginx proxy a la API
+  constructor(private http: HttpClient) {}
+  health() { return this.http.get<{status:string}>(`${this.base}/../health`); }
+  listGames() { return this.http.get<Game[]>(`${this.base}/games`); }
+  createGame(home: string, away: string) { return this.http.post<Game>(`${this.base}/games`, { home, away }); }
+  score(id: number, team: 'HOME'|'AWAY', points: number) { return this.http.post<Game>(`${this.base}/games/${id}/score`, { team, points }); }
+  foul(id: number, team: 'HOME'|'AWAY', foul: FoulType) { return this.http.post(`${this.base}/games/${id}/foul`, { team, foul }); }
+  clock(id: number, delta: number) { return this.http.post<Game>(`${this.base}/games/${id}/clock`, { delta }); }
+  undo(id: number) { return this.http.post<Game>(`${this.base}/games/${id}/undo`, {}); }
+}
+```
+La vista de tablero (Display) consume el estado del juego y lo renderiza con fuentes de alto contraste y distribución responsive. El panel de control (Control Panel) expone botones grandes y claramente diferenciados para operaciones frecuentes, usa formularios reactivos o template‑driven con [(ngModel)] para el binding y da retroalimentación visual inmediata al operador tras cada acción. La composición en Angular debe separar presentación y orquestación, colocar la lógica de negocio en servicios y mantener los componentes altamente declarativos. El contenedor de la UI compila Angular en modo producción y Nginx sirve el contenido estático, además de reenviar /api/* a la API.
+
+## Despliegue con Docker Compose
+El despliegue con Docker Compose orquesta cuatro servicios: la base de datos SQL Server, un contenedor de inicialización de la base que ejecuta scripts de creación y semilla, la API .NET que expone el puerto 8080 y la UI con Nginx publicada en el 4200. Las variables de entorno principales se declaran en un archivo .env en la raíz del proyecto y se consumen desde los servicios, incluyendo la contraseña del usuario sa, la URL de escucha de ASP.NET y el nombre de la base. Durante el levantamiento se construyen las imágenes de UI y API a partir de sus Dockerfiles, y los volúmenes de la base persisten los datos entre ejecuciones. El archivo .env esperado contiene las tres variables críticas comentadas en la configuración y debe cumplir la política de contraseñas complejas de SQL Server, que exige mayúsculas, minúsculas, dígitos y símbolos. Un ejemplo de contenido es este:
+
+```
+SA_PASSWORD=Proyect0Web2025!
+ASPNETCORE_URLS=http://0.0.0.0:8080
+DB_NAME=MarcadorDB
+```
+Durante el desarrollo es habitual levantar la API fuera de Docker con dotnet run desde la carpeta del proyecto de la API y apuntar Nginx al host del desarrollador. Para ello, en el nginx.conf de la UI el bloque del proxy /api puede reconfigurarse temporalmente para enviar el tráfico a host.docker.internal:8080 en Windows y macOS o a la IP del host en Linux. La interfaz Angular también puede ejecutarse en modo desarrollo con ng serve y comunicarse con la API local si se ajusta la variable base del servicio.
+
+## Observabilidad, registros y auditoría
+
+El registro de eventos de juego funciona como fuente de verdad histórica y permite construir un timeline auditable. Se recomienda incrementar la observabilidad con logs estructurados en la API, trazas de solicitudes y respuestas importantes, y un identificador correlativo por partido. En producción, Nginx debe registrar accesos y errores en archivos rotados, y la base utilizar integridad referencial para evitar huérfanos.
+
+## Errores comunes y solución de problemas
+
+Si Nginx no puede resolver api como upstream, es señal de que el servicio de la API no está levantado en la red de Docker o el proxy no está activado con la configuración adecuada. El error habitual “host not found in upstream 'api'” se soluciona levantando la API junto con la UI o deshabilitando temporalmente el bloque del proxy cuando se desarrolla solo la interfaz. La contraseña del usuario sa de SQL Server debe cumplir las políticas de seguridad; si la base no inicia y se registran errores de autenticación, es necesario regenerar la variable con un valor fuerte. Si falla la instalación de dependencias de Angular dentro del contenedor, suele bastar con regenerar package-lock.json y reconstruir la imagen.
+
+## Limitaciones y consideraciones de diseño
+
+El reloj del partido corre en el cliente por diseño para ofrecer latencia cero a la vista del operador; si el navegador pierde foco o se suspende, podría sufrir micro desincronizaciones que deben corregirse con un pulso de sincronización desde la API o con recalibraciones al registrar cada evento. En equipos de bajo rendimiento o con múltiples contenedores la experiencia puede degradar; es recomendable asignar memoria y CPU suficientes en Docker Desktop. La seguridad por defecto es básica y se debe fortalecer con autenticación y autorización si la aplicación se publica en redes abiertas. No se incluyen pruebas automatizadas de extremo a extremo; añadirlas incrementaría la confiabilidad del flujo de anotación.
+
+## Extensiones y mejoras futuras
+
+Una evolución natural es sustituir el polling por WebSockets o SignalR para actualizaciones en tiempo real, ofrecer un modo de espectador optimizado separado de la consola de operación, mantener un resumen por cuarto con lógica de bonus de faltas, crear exportaciones a PDF o Excel de estadísticas y agregar accesibilidad mediante atajos de teclado y controles de alto contraste. Integrar almacenamiento de configuraciones del partido, rosters y cronometría personalizable por competición también aportaría valor.
+
+
+## Mantenimiento y operación
+
+En operación se recomienda separar volúmenes de datos de SQL Server para facilitar respaldos, y versionar los scripts de inicialización. Para cambios en el modelo de datos, las migraciones de EF Core documentan la evolución del esquema. Es conveniente adoptar un control de versiones semántico para la API y etiquetar imágenes de Docker con el número de versión. El monitoreo de salud con /health habilita integraciones con orquestadores o pipelines CI para verificar despliegues.
+
 ## Requisitos previos
 
 1. Docker y Docker Compose v2  
