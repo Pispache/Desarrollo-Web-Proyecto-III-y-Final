@@ -17,7 +17,8 @@ export class SoundService {
 
   private assets: SoundTable = {
     referee_whistle: { src: 'assets/sounds/referee_whistle.mp3', volume: 1.0 },
-    buzzer_long:     { src: 'assets/sounds/long_buzzer.mp3',     volume: 1.0 },
+    // Volumen reducido para que sea menos invasivo manteniendo el mismo audio
+    buzzer_long:     { src: 'assets/sounds/long_buzzer.mp3',     volume: 0.55 },
     swish:           { src: 'assets/sounds/swish.mp3',           volume: 0.9 },
     crowd_cheer:     { src: 'assets/sounds/crowd_cheer.mp3',     volume: 0.8 },
     crowd_boo:       { src: 'assets/sounds/crowd_boo.mp3',       volume: 0.6 },
@@ -49,7 +50,7 @@ export class SoundService {
 
     // Mapeos “reales”
     if (key === 'foul')        { if (!this.playAsset('referee_whistle')) this.playSynthFoul(); return; }
-    if (key === 'quarter_end') { if (!this.playAsset('buzzer_long'))     this.playSynthBuzzer(); return; }
+    if (key === 'quarter_end') { this.playBuzzerWithFallback(); return; }
     if (key === 'game_end')    { this.playAsset('buzzer_long'); this.playAsset('crowd_cheer', 80); return; }
 
     // Encestes: beep + swish
@@ -80,6 +81,27 @@ export class SoundService {
     };
     if (delayMs > 0) setTimeout(fire, delayMs); else fire();
     return true;
+  }
+
+  /** Intenta reproducir el buzzer MP3 y, si falla, cae a síntesis */
+  private playBuzzerWithFallback() {
+    const cfg = this.assets['buzzer_long'];
+    const audio = cfg ? this.ensureAsset(cfg.src) : null;
+    if (!audio) { this.playSynthBuzzer(); return; }
+
+    const onError = () => { audio.removeEventListener('error', onError); this.playSynthBuzzer(); };
+    audio.addEventListener('error', onError, { once: true });
+
+    // Configurar y reproducir (similar a playAsset)
+    audio.currentTime = 0;
+    audio.loop = !!cfg?.loop;
+    audio.volume = (cfg?.volume ?? 1) * this.masterVolume;
+    audio.play()
+      .then(() => { /* ok */ })
+      .catch(async () => {
+        await this.unlock();
+        audio.play().catch(() => { this.playSynthBuzzer(); });
+      });
   }
 
   private ensureAsset(src: string): HTMLAudioElement | null {

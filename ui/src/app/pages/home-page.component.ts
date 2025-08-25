@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { AdminTeamRosterComponent } from '../widgets/admin-team-roster.component';
 import { ApiService, Game, GameDetail, Team } from '../services/api.service';
+import { NotificationService } from '../services/notification.service';
+import { SoundService } from '../services/sound.service';
 import { ScoreboardComponent } from '../widgets/scoreboard.component';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
 import { ClockComponent } from '../widgets/clock.component';
@@ -45,8 +47,10 @@ export class HomePageComponent {
   detail: GameDetail | null = null;
   selectedGameId: number | null = null;
 
-  constructor(private api: ApiService) {
+  constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService) {
     this.reloadAll();
+    // Asegurar que los sonidos estén precargados para reproducir en auto-advance
+    try { this.sound.preloadAll(); } catch {}
   }
 
   // Handle game status changes
@@ -269,9 +273,25 @@ export class HomePageComponent {
     const game = this.detail?.game;
     if (!game) return;
     if (game.status === 'IN_PROGRESS' && game.quarter < 4 && !this.advancing) {
+      const prevQ = game.quarter;
       this.advancing = true;
+      // No reproducimos sonido aún para evitar duplicados; lo haremos tras éxito del API,
+      // igual que el Control Panel.
       this.api.advance(game.gameId).subscribe({
-        next: () => this.view(game.gameId),
+        next: async () => {
+          // Refresca vista/marcador
+          this.view(game.gameId);
+          // Notificación y sonido
+          this.notify.showInfo('Fin de cuarto', `Se avanzó de Q${prevQ} a Q${prevQ + 1}`, 2200);
+          // Usar el mismo sonido que el botón "Siguiente cuarto" (click)
+          this.sound.play('click');
+          this.notify.triggerQuarterEndFlash?.();
+        },
+        error: (err) => {
+          console.error('Error auto-advance:', err);
+          this.notify.showError('Error', 'No se pudo avanzar de cuarto automáticamente', true);
+          this.sound.play('error');
+        },
         complete: () => (this.advancing = false),
       });
     }

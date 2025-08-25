@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { MsToClockPipe } from '../pipes/ms-to-clock.pipe';
+import { SoundService } from '../services/sound.service';
 
 export type GameStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'SUSPENDED' | 'PAUSED' | 'CANCELLED';
 
@@ -49,6 +50,8 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
   private timerId: any = null;
   // Guarda la duración elegida por el usuario para cuartos reglamentarios (no OT)
   private userQuarterMs: number | null = null;
+
+  constructor(private sound: SoundService) {}
 
   ngOnInit(): void {
     // Cargar preferencia desde localStorage si existe

@@ -160,7 +160,6 @@ export class ControlPanelComponent implements OnChanges {
         this.refresh();
         this.refreshAll();
         this.notify.showInfo('Fin de cuarto', `Se avanzó de Q${prevQ} a Q${prevQ + 1}`, 2200);
-        this.sound.play('quarter_end');
         this.notify.triggerQuarterEndFlash();
       },
       error: () => { this.notify.showError('Error', 'No se pudo avanzar de cuarto', true); this.sound.play('error'); },
@@ -180,7 +179,6 @@ export class ControlPanelComponent implements OnChanges {
         this.refresh();
         this.refreshAll();
         this.notify.showInfo('Cuarto anterior', `Se retrocedió al cuarto ${this.game.quarter - 1}`, 2200);
-        this.sound.play('quarter_end');
       },
       error: (err) => {
         console.error('Error al retroceder el cuarto:', err);
