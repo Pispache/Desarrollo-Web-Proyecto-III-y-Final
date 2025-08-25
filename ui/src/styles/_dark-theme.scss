@@ -1,36 +1,55 @@
 // Variables de tema oscuro
 :root[data-bs-theme="dark"] {
+  /* Paleta de colores específica */
+  --bg-0: #0a061f;
+  --bg-1: #130f30;
+  --bg-2: #1f1a4d;
+  --fg-0: #ffffff;
+  --muted: #b8bfff;
+  --accent: #b07aff;    /* morado neón más brillante */
+  --accent-2: #00f2ff;  /* cian neón más brillante */
+  --danger: #ff3b5c;
+  --warn: #ffcc00;
+  --ok: #00ff88;
+  
+  /* Bordes/vidrio */
+  --glass: rgba(30, 20, 60, 0.7);
+  --stroke: rgba(255, 255, 255, 0.15);
+  --shadow: 0 10px 30px rgba(0,0,0,.6), 0 5px 15px rgba(0,0,0,.3);
+  --radius: 16px;
   // Colores base
-  --bs-body-bg: #1a1a1a;
-  --bs-body-color: #e0e0e0;
-  --bs-border-color: #444;
-  --bs-secondary-bg: #2d2d2d;
+  --bs-body-bg: #0f0b24;
+  --bs-body-color: #ffffff;
+  --bs-border-color: #5a4b8d;
+  --bs-secondary-bg: #1a1540;
   
   // Tarjetas
   --bs-card-bg: #2d2d2d;
   --bs-card-border-color: #444;
   
   // Tablas
-  --bs-table-bg: #2d2d2d;
-  --bs-table-color: #e0e0e0;
-  --bs-table-border-color: #444;
-  --bs-table-striped-bg: #3a3a3a;
-  --bs-table-hover-bg: #3a3a3a;
+  --bs-table-bg: #1a1540;
+  --bs-table-color: #ffffff;
+  --bs-table-border-color: #5a4b8d;
+  --bs-table-striped-bg: #241f4d;
+  --bs-table-hover-bg: #2e2566;
   
   // Formularios
-  --bs-form-control-bg: #2d2d2d;
-  --bs-form-control-color: #e0e0e0;
-  --bs-form-control-border-color: #555;
-  --bs-form-control-focus-border-color: #0d6efd;
-  --bs-form-control-focus-bg: #3a3a3a;
+  --bs-form-control-bg: #1a1540;
+  --bs-form-control-color: #ffffff;
+  --bs-form-control-border-color: #5a4b8d;
+  --bs-form-control-focus-border-color: var(--accent);
+  --bs-form-control-focus-bg: #241f4d;
   
   // List group
-  --bs-list-group-bg: #2d2d2d;
-  --bs-list-group-color: #e0e0e0;
-  --bs-list-group-border-color: #444;
-  --bs-list-group-hover-bg: #3a3a3a;
-  --bs-list-group-action-hover-bg: #3a3a3a;
+  --bs-list-group-bg: #1a1540;
+  --bs-list-group-color: #ffffff;
+  --bs-list-group-border-color: #5a4b8d;
+  --bs-list-group-hover-bg: #2e2566;
+  --bs-list-group-action-hover-bg: #3a2d80;
   --bs-list-group-action-hover-color: #fff;
+  --bs-list-group-active-bg: var(--accent);
+  --bs-list-group-active-color: #000;
   
   // Dropdowns
   --bs-dropdown-bg: #2d2d2d;
