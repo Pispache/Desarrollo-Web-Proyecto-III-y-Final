@@ -182,6 +182,62 @@ public static class GameEndpoints
             }
         }).WithOpenApi();
 
+        g.MapPost("/games/{id:int}/previous-quarter", async (int id) =>
+        {
+            using var c = Open(cs());
+            using var tx = c.BeginTransaction();
+
+            // Obtener el estado actual del juego
+            var cur = await One<(int Quarter, string Status, int HomeScore, int AwayScore)>(
+                c, 
+                $"SELECT Quarter, Status, HomeScore, AwayScore FROM {T}Games WHERE GameId=@id;", 
+                new { id }, 
+                tx);
+                
+            if (cur == default) { tx.Rollback(); return Results.NotFound(); }
+            if (!string.Equals(cur.Status, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
+            { 
+                tx.Rollback(); 
+                return Results.BadRequest(new { error = "El juego debe estar en progreso para retroceder de cuarto." }); 
+            }
+
+            // No permitir retroceder del primer cuarto
+            if (cur.Quarter <= 1)
+            {
+                tx.Rollback();
+                return Results.BadRequest(new { error = "No se puede retroceder del primer cuarto." });
+            }
+
+            // Retroceder al cuarto anterior
+            var previousQuarter = cur.Quarter - 1;
+            
+            // Actualizar el cuarto en la base de datos
+            await Exec(c, $"UPDATE {T}Games SET Quarter = @previousQuarter WHERE GameId=@id;", new { id, previousQuarter }, tx);
+            
+            // Configurar el reloj para el cuarto anterior
+            // Para el cuarto normal, usamos 10 minutos, para tiempo extra 5 minutos
+            var quarterMs = previousQuarter <= 4 ? 600000 : 300000;
+            
+            // Actualizar el reloj del cuarto actual
+            await Exec(c, $@"
+                UPDATE c SET 
+                    QuarterMs = @quarterMs,
+                    RemainingMs = @quarterMs,
+                    Running = 0, 
+                    StartedAt = NULL, 
+                    UpdatedAt = SYSUTCDATETIME()
+                FROM {T}GameClocks c 
+                WHERE c.GameId=@id;", 
+                new { id, quarterMs }, tx);
+
+            tx.Commit();
+            return Results.Ok(new { 
+                message = $"Se ha retrocedido al cuarto {previousQuarter}",
+                quarter = previousQuarter,
+                isOvertime = previousQuarter > 4
+            });
+        }).WithOpenApi();
+
         g.MapPost("/games/{id:int}/finish", async (int id) =>
         {
             using var c = Open(cs());

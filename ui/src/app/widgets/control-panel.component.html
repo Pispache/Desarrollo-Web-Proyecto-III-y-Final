@@ -20,11 +20,23 @@
       
       <div class="col-6 col-md">
         <button 
+          (click)="previousQuarter()" 
+          [disabled]="game.status!=='IN_PROGRESS' || game.quarter <= 1"
+          class="btn btn-secondary w-100 mb-2"
+          title="Retroceder al cuarto anterior"
+        >
+          <i class="bi bi-arrow-left"></i> Cuarto Anterior
+        </button>
+      </div>
+      
+      <div class="col-6 col-md">
+        <button 
           (click)="advance()" 
           [disabled]="game.status!=='IN_PROGRESS' || game.quarter >= 4"
           class="btn btn-primary w-100 mb-2"
+          title="Avanzar al siguiente cuarto"
         >
-          Siguiente Cuarto
+          Siguiente Cuarto <i class="bi bi-arrow-right"></i>
         </button>
       </div>
       

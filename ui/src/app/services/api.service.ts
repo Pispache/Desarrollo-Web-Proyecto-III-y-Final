@@ -121,6 +121,7 @@ export class ApiService {
 
   start(id: number)   { return this.post(`/games/${id}/start`, {}); }
   advance(id: number) { return this.post(`/games/${id}/advance-quarter`, {}); }
+  previousQuarter(id: number) { return this.post(`/games/${id}/previous-quarter`, {}); }
   finish(id: number) {
     return this.post(`/games/${id}/finish`, {});
   }

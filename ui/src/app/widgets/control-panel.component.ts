@@ -104,6 +104,25 @@ export class ControlPanelComponent implements OnChanges {
 
   start()   { this.api.start(this.game.gameId).subscribe(() => this.refresh()); }
   advance() { this.api.advance(this.game.gameId).subscribe(() => { this.refresh(); this.refreshAll(); }); }
+  
+  previousQuarter() {
+    if (this.game.status !== 'IN_PROGRESS' || this.game.quarter <= 1) return;
+    
+    if (!confirm(`¿Estás seguro de que deseas retroceder al cuarto ${this.game.quarter - 1}?`)) {
+      return;
+    }
+    
+    this.api.previousQuarter(this.game.gameId).subscribe({
+      next: () => { 
+        this.refresh(); 
+        this.refreshAll(); 
+      },
+      error: (err) => {
+        console.error('Error al retroceder el cuarto:', err);
+        alert(err.error?.error || 'No se pudo retroceder al cuarto anterior.');
+      }
+    });
+  }
   finish()  { this.api.finish(this.game.gameId).subscribe(() => { this.refresh(); this.refreshAll(); }); }
 
   /**
