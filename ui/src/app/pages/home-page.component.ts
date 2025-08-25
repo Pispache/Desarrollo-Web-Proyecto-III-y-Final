@@ -132,9 +132,53 @@ export class HomePageComponent {
     );
   }
 
+  loadTeams() {
+    this.api.listTeams().subscribe(teams => {
+      this.teams = teams;
+    });
+  }
+
   reloadAll() {
-    this.api.listTeams().subscribe((t) => (this.teams = t));
     this.reloadGames();
+    this.loadTeams();
+  }
+
+  onScoreAdjust(adjustment: { homeDelta: number, awayDelta: number }) {
+    if (!this.detail?.game?.gameId) return;
+
+    const gameId = this.detail.game.gameId;
+    
+    this.api.adjustScore(gameId, adjustment.homeDelta, adjustment.awayDelta).subscribe({
+      next: () => {
+        // Update local state to reflect the change
+        if (this.detail?.game) {
+          this.detail.game.homeScore += adjustment.homeDelta;
+          this.detail.game.awayScore += adjustment.awayDelta;
+        }
+        // Also update the game in the games list
+        const gameIndex = this.games.findIndex(g => g.gameId === gameId);
+        if (gameIndex !== -1) {
+          this.games[gameIndex].homeScore += adjustment.homeDelta;
+          this.games[gameIndex].awayScore += adjustment.awayDelta;
+        }
+        
+        // Update active games if needed
+        const activeIndex = this.activeGames.findIndex(g => g.gameId === gameId);
+        if (activeIndex !== -1) {
+          this.activeGames[activeIndex] = { 
+            ...this.activeGames[activeIndex], 
+            homeScore: this.games[gameIndex].homeScore,
+            awayScore: this.games[gameIndex].awayScore
+          };
+        }
+        
+        console.log('Puntuación ajustada correctamente');
+      },
+      error: (error) => {
+        console.error('Error ajustando puntuación:', error);
+        // Aquí podrías mostrar un mensaje de error al usuario
+      }
+    });
   }
 
   reloadGames() {

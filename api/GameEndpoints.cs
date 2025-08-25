@@ -26,6 +26,22 @@ public class FoulDto
     public string? foul_type { get; set; }
 }
 
+public class FoulSummaryTeamRow 
+{ 
+    public int Quarter { get; set; } 
+    public string Team { get; set; } = ""; 
+    public int Fouls { get; set; }
+    public string? FoulType { get; set; } 
+}
+
+public class FoulSummaryPlayerRow 
+{ 
+    public int Quarter { get; set; } 
+    public string Team { get; set; } = ""; 
+    public int PlayerId { get; set; } 
+    public int Fouls { get; set; } 
+}
+
 public static class GameEndpoints
 {
     const string T = "MarcadorDB.dbo."; // prefijo schema
@@ -33,6 +49,120 @@ public static class GameEndpoints
     public static void MapGameEndpoints(this WebApplication app, Func<string> cs)
     {
         var g = app.MapGroup("/api");
+
+        // Add foul summary endpoint
+        g.MapGet("/games/{id:int}/foul-summary", async (int id) =>
+        {
+            using var c = Open(cs());
+            
+            // Get team fouls
+            var teamFouls = await c.QueryAsync<FoulSummaryTeamRow>($@"
+                SELECT 
+                    Quarter,
+                    Team,
+                    COUNT(*) as Fouls,
+                    MAX(FoulType) as FoulType
+                FROM {T}GameEvents 
+                WHERE GameId = @id 
+                AND EventType = 'FOUL'
+                GROUP BY Quarter, Team
+                ORDER BY Quarter, Team;", new { id });
+
+            // Get player fouls
+            var playerFouls = await c.QueryAsync<FoulSummaryPlayerRow>($@"
+                SELECT 
+                    Quarter,
+                    Team,
+                    PlayerId,
+                    COUNT(*) as Fouls
+                FROM {T}GameEvents 
+                WHERE GameId = @id 
+                AND EventType = 'FOUL'
+                AND PlayerId IS NOT NULL
+                GROUP BY Quarter, Team, PlayerId
+                ORDER BY Quarter, Team, PlayerId;", new { id });
+
+            return Results.Ok(new { 
+                team = teamFouls,
+                players = playerFouls 
+            });
+        }).WithOpenApi();
+
+        // Add adjust score endpoint
+        g.MapPost("/games/{id:int}/adjust-score", async (int id, [FromBody] AdjustScoreDto dto) =>
+        {
+            using var c = Open(cs());
+            
+            try
+            {
+                // Verificar si el juego existe
+                var gameExists = await c.ExecuteScalarAsync<int>(
+                    $"SELECT COUNT(1) FROM {T}Games WHERE GameId = @id", 
+                    new { id }) > 0;
+                    
+                if (!gameExists)
+                {
+                    return Results.Problem("Juego no encontrado", statusCode: 404);
+                }
+
+                // Iniciar transacción
+                using var tx = c.BeginTransaction();
+
+                try 
+                {
+                    // Obtener el cuarto actual
+                    var currentQuarter = await c.QueryFirstOrDefaultAsync<int>(
+                        $"SELECT Quarter FROM {T}Games WHERE GameId = @id", 
+                        new { id }, tx);
+
+                    // Actualizar el marcador
+                    await c.ExecuteAsync($@"
+                        UPDATE {T}Games 
+                        SET 
+                            HomeScore = HomeScore + @homeDelta,
+                            AwayScore = AwayScore + @awayDelta
+                        WHERE GameId = @id;",
+                        new { id, homeDelta = dto.HomeDelta, awayDelta = dto.AwayDelta },
+                        tx);
+
+                    // Registrar el ajuste en el historial
+                    await c.ExecuteAsync($@"
+                        INSERT INTO {T}GameEvents (
+                            GameId, 
+                            Quarter, 
+                            Team, 
+                            EventType,
+                            CreatedAt
+                        ) VALUES (
+                            @id,
+                            @quarter,
+                            'HOME', -- Usamos 'HOME' como valor por defecto para ajustes manuales
+                            'POINT_1', -- Usamos 'POINT_1' como tipo de evento para ajustes manuales
+                            SYSUTCDATETIME()
+                        );",
+                        new { 
+                            id,
+                            quarter = currentQuarter
+                        },
+                        tx);
+
+                    tx.Commit();
+                    return Results.NoContent();
+                }
+                catch (Exception ex)
+                {
+                    tx.Rollback();
+                    Console.WriteLine($"Error en adjust-score: {ex}");
+                    return Results.Problem("Error al actualizar el marcador. Por favor, intente nuevamente.", statusCode: 500);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error en la conexión: {ex}");
+                return Results.Problem("Error de conexión con la base de datos", statusCode: 500);
+            }
+        });
+
 
         // ===== Helpers mínimos =====
         static SqlConnection Open(string cs) { var c = new SqlConnection(cs); c.Open(); return c; }

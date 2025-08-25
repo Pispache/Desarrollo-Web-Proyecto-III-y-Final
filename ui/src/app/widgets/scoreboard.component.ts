@@ -13,6 +13,7 @@ interface AdjustScoreDto {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './scoreboard.component.html',
+  styleUrls: ['./scoreboard.component.scss']
 })
 export class ScoreboardComponent {
   @Input({ required: true }) game!: Game;
