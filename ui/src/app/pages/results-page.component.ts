@@ -2,7 +2,8 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule, ActivatedRoute } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 import {
   ApiService,
@@ -15,9 +16,11 @@ import {
 
 import {
   TeamFoulsPipe,
-  PlayerFoulsTotalPipe,
   IsBonusPipe,
-  PlayerFoulsQPipe
+  PlayerFoulsQPipe,
+  FilterFoulTypePipe,
+  TotalFoulsPipe,
+  PlayerAggLike
 } from './ui.pipes';
 
 type Side = 'HOME' | 'AWAY';
@@ -30,9 +33,10 @@ type Side = 'HOME' | 'AWAY';
     FormsModule,
     RouterModule,
     TeamFoulsPipe,
-    PlayerFoulsTotalPipe,
     IsBonusPipe,
     PlayerFoulsQPipe,
+    FilterFoulTypePipe,
+    TotalFoulsPipe,
   ],
   templateUrl: './results-page.component.html',
 })
@@ -48,6 +52,7 @@ export class ResultsPageComponent {
   homeRoster: Player[] = [];
   awayRoster: Player[] = [];
   foulSummary: FoulSummary | null = null;
+  playerFouls: PlayerAggLike[] = []; // Almacena las faltas de los jugadores
 
   // Jugadores fuera por 5 faltas o descalificación
   outSet = new Set<number>();
@@ -123,15 +128,28 @@ export class ResultsPageComponent {
   /** Auxiliar cuando ya hay selected.game (p.ej. entrada por ?id=...) */
   private loadAuxFor(gameId: number) {
     forkJoin({
-      home: this.api.listGamePlayers(gameId, 'HOME'),
-      away: this.api.listGamePlayers(gameId, 'AWAY'),
-      summary: this.api.getFoulSummary(gameId),
-    }).subscribe(({ home, away, summary }) => {
-      this.homeRoster = home ?? [];
-      this.awayRoster = away ?? [];
-      this.foulSummary = summary ?? { team: [], players: [] } as any;
-      this.rebuildIndexes();
-      this.computeOuts();
+      home: this.api.getGameRoster(gameId, 'HOME'),
+      away: this.api.getGameRoster(gameId, 'AWAY'),
+      fouls: this.api.getFoulSummary(gameId),
+      playerFouls: this.api.getPlayerFouls(gameId).pipe(
+        catchError(() => of([])) // En caso de error, devuelve un array vacío
+      )
+    }).subscribe({
+      next: ({ home, away, fouls, playerFouls }) => {
+        this.homeRoster = home || [];
+        this.awayRoster = away || [];
+        this.foulSummary = fouls || { team: [], players: [] };
+        this.playerFouls = Array.isArray(playerFouls) ? playerFouls : [];
+        this.rebuildIndexes();
+      },
+      error: (error) => {
+        console.error('Error al cargar datos del juego:', error);
+        // Inicializar con valores por defecto en caso de error
+        this.homeRoster = [];
+        this.awayRoster = [];
+        this.foulSummary = { team: [], players: [] };
+        this.playerFouls = [];
+      }
     });
   }
 

@@ -142,11 +142,11 @@
                   <td>{{ p.name }}</td>
 
                   <ng-container *ngFor="let q of quarters">
-                    <td style="text-align:center;">{{ playerFoulsByTypeQ('HOME', p.playerId, 'PERSONAL',        q) }}</td>
-                    <td style="text-align:center;">{{ playerFoulsByTypeQ('HOME', p.playerId, 'TECHNICAL',       q) }}</td>
-                    <td style="text-align:center;">{{ playerFoulsByTypeQ('HOME', p.playerId, 'UNSPORTSMANLIKE', q) }}</td>
-                    <td style="text-align:center;">{{ playerFoulsByTypeQ('HOME', p.playerId, 'DISQUALIFYING',   q) }}</td>
-                    <td style="text-align:center; font-weight:600;">{{ playerFoulsQuarterTotal('HOME', p.playerId, q) }}</td>
+                    <td style="text-align:center;">{{ playerFouls | playerFoulsQ:'HOME':p.playerId:q | filterFoulType:'PERSONAL' }}</td>
+                    <td style="text-align:center;">{{ playerFouls | playerFoulsQ:'HOME':p.playerId:q | filterFoulType:'TECHNICAL' }}</td>
+                    <td style="text-align:center;">{{ playerFouls | playerFoulsQ:'HOME':p.playerId:q | filterFoulType:'UNSPORTSMANLIKE' }}</td>
+                    <td style="text-align:center;">{{ playerFouls | playerFoulsQ:'HOME':p.playerId:q | filterFoulType:'DISQUALIFYING' }}</td>
+                    <td style="text-align:center; font-weight:600;">{{ playerFouls | playerFoulsQ:'HOME':p.playerId:q | totalFouls }}</td>
                   </ng-container>
 
                   <td style="text-align:center;">{{ playerFoulsTotalByType('HOME', p.playerId, 'PERSONAL') }}</td>
