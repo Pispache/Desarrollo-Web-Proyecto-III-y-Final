@@ -25,15 +25,15 @@
           <div class="card-body">
             <div class="mb-2">
               <label class="form-label">Equipo Local</label>
-              <select #homeSel class="form-select form-select-sm">
-                <option [ngValue]="0">Seleccionar equipo local…</option>
+              <select #homeSel class="form-select form-select-sm bg-dark text-light">
+                <option [ngValue]="0" class="text-muted">Seleccionar equipo local…</option>
                 <option *ngFor="let t of teams" [value]="t.teamId">{{ t.name }} ({{ t.teamId }})</option>
               </select>
             </div>
             <div class="mb-3">
               <label class="form-label">Equipo Visitante</label>
-              <select #awaySel class="form-select form-select-sm">
-                <option [ngValue]="0">Seleccionar equipo visitante…</option>
+              <select #awaySel class="form-select form-select-sm bg-dark text-light">
+                <option [ngValue]="0" class="text-muted">Seleccionar equipo visitante…</option>
                 <option *ngFor="let t of teams" [value]="t.teamId">{{ t.name }} ({{ t.teamId }})</option>
               </select>
             </div>
@@ -56,7 +56,23 @@
               <div class="col-12">
                 <label for="teamName" class="form-label">Nombre del Equipo</label>
                 <input id="teamName" type="text" class="form-control"
-                       [(ngModel)]="newTeamName" placeholder="Ingrese el nombre del equipo…">
+                     [(ngModel)]="newTeamName" 
+                     (input)="onTeamNameInput($event)"
+                     pattern="[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]+"
+                     title="Solo se permiten letras y espacios"
+                     placeholder="Ingrese el nombre del equipo…"
+                     #teamNameInput="ngModel"
+                     [ngClass]="{'is-invalid': (teamNameInput.invalid && teamNameInput.touched) || showInvalidCharWarning}">
+              
+              <!-- Mensaje de error para validación de patrón -->
+              <div *ngIf="teamNameInput.invalid && teamNameInput.touched" class="invalid-feedback">
+                Solo se permiten letras y espacios en el nombre del equipo.
+              </div>
+              
+              <!-- Mensaje de error en tiempo real -->
+              <div *ngIf="showInvalidCharWarning" class="text-warning small mt-1">
+                <i class="bi bi-exclamation-triangle-fill"></i> Solo se permiten letras y espacios. Los números y caracteres especiales no están permitidos.
+              </div>
                 <div class="form-text">Debe ser único y descriptivo.</div>
               </div>
               <div class="col-12 d-grid">

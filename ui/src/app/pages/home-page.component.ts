@@ -40,6 +40,37 @@ export class HomePageComponent {
 
   // NUEVO: nombre del equipo a crear
   newTeamName = '';
+  
+  /**
+   * Valida que solo se ingresen letras en el nombre del equipo
+   * La expresión regular /[^A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]/g elimina todo lo que NO sean:
+   * - Letras mayúsculas y minúsculas (A-Z, a-z)
+   * - Vocales con acentos (áéíóú, ÁÉÍÓÚ)
+   * - Letra ñ y ü (mayúsculas y minúsculas)
+   * - Espacios en blanco
+   */
+  onTeamNameInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const originalValue = input.value;
+    
+    // Remover caracteres no deseados usando una expresión regular
+    const cleanValue = originalValue.replace(/[^A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]/g, '');
+    
+    // Mostrar notificación si se detectaron caracteres no permitidos
+    if (originalValue !== cleanValue) {
+      this.showInvalidCharWarning = true;
+      // Ocultar el mensaje después de 3 segundos
+      setTimeout(() => this.showInvalidCharWarning = false, 3000);
+    }
+    
+    // Actualizar el valor del modelo con el texto limpio
+    if (input.value !== cleanValue) {
+      input.value = cleanValue;
+      this.newTeamName = cleanValue;
+      // Disparar evento de input para actualizar la validación
+      input.dispatchEvent(new Event('input'));
+    }
+  }
 
   // datos
   teams: Team[] = [];
@@ -49,6 +80,9 @@ export class HomePageComponent {
   selectedGameId: number | null = null;
   autoAdvanceEnabled = localStorage.getItem('clock.autoAdvance') === '1';
 
+  // Bandera para mostrar notificación de caracteres no permitidos
+  showInvalidCharWarning = false;
+  
   constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService, private clock: ClockService) {
     this.reloadAll();
     // Asegurar que los sonidos estén precargados para reproducir en auto-advance
