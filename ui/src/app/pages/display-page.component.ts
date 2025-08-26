@@ -175,7 +175,7 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
 
           // Actualizar dentro de la zona de Angular y solicitar render
           this.zone.run(() => {
-            this.clockState = state;
+            this.clockState = state; // actualiza el reloj de la ui
             this.cdr.markForCheck();
           });
 
@@ -188,7 +188,7 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
           // DISPARA SIN EXIGIR running=true
           if (was > 0 && now === 0 && !this.firedAtZero) {
             this.firedAtZero = true;
-            this.handleTimerExpiration();
+            this.handleTimerExpiration();  // avance/fin
           }
 
           this.prevRemainingMs = now;
@@ -202,7 +202,7 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
       .pipe(switchMap(() => this.api.getGame(this.gameId)))
       .subscribe({
         next: (d) => {
-          this.detail = d;
+          this.detail = d;  //ACTUALIZA datos en la UI
           this.lastUpdated = new Date();
         },
         error: (err) => console.error('Error al cargar el partido:', err)
@@ -220,7 +220,7 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     
     this.api.getGame(this.gameId).subscribe({
       next: (game) => {
-        this.detail = game;
+        this.detail = game; //actualiza UI
         this.lastUpdated = new Date();
       },
       error: (err) => console.error('Error al actualizar el juego:', err)
