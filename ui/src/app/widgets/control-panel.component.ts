@@ -99,7 +99,7 @@ export class ControlPanelComponent implements OnChanges {
     this.sound.preloadAll();
     this.sound.unlock();
   }
-
+  //refresca datos
   private refresh() { this.changed.emit(); }
   private refreshAll() { this.refreshFouls(); this.refreshFoulsByType(); }
 
@@ -294,19 +294,20 @@ export class ControlPanelComponent implements OnChanges {
       }
     });
   }
-
+  //puntos
   async score(team: 'HOME' | 'AWAY', points: 1 | 2 | 3) {
     if (this.scoring) return;
     if (this.game.status !== 'IN_PROGRESS' && !this.isSuspended) return;
-
+    //verifica estados
     this.scoring = true;
     this.sound.play('click');
     await this.sound.unlock();
-
+    //obtener id
     const playerId = team === 'HOME' ? this.selHomePlayerId : this.selAwayPlayerId;
-
+    //lama a la api para registar puntos
     this.api.score(this.game.gameId, team, points, { playerId: playerId ?? undefined }).subscribe({
       next: () => {
+        //actualiza vista
         this.refresh();
         const teamTxt = team === 'HOME' ? 'HOME' : 'AWAY';
         this.notify.showSuccess('Anotación', `${teamTxt} sumó ${points} punto${points>1?'s':''}`, 1600);
