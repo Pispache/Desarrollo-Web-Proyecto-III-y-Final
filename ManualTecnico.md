@@ -233,11 +233,14 @@ Runtime/SDK: .NET 8.x (ASP.NET Core 8)
 EF Core: 8.x 
 
 **Base de datos**
-SQL Server 2022 (imagen “2022-latest” en Docker). Tu
+SQL Server 2022 (imagen “2022-latest” en Docker). 
 
 **Frontend**
 Angular  20.2.0
 Nginx (imagen estable típica)
 ```
-
+## Autores
+Cesar Alberto Tecún Leiva 7690-22-11766
+Jose Daniel Tobar Reyes 7690-21-13125
+Bryan Manuel Pineda Orozco 7690-16-8869
 ---
