@@ -34,7 +34,6 @@ import { finalize } from 'rxjs';
 })
 export class HomePageComponent {
   // filtros / estado
-  q = '';
   teamSearch = '';
   creating = false;
   advancing = false;

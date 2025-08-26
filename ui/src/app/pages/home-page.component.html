@@ -1,22 +1,12 @@
 <div class="container-fluid py-4">
-  <!-- Topbar -->
+  <!-- Botón de actualización -->
   <div class="row mb-3">
-    <div class="col-12">
-      <div class="card shadow-sm">
-        <div class="card-body py-2">
-          <div class="row g-2 align-items-center">
-            <div class="col-md-8">
-              <div class="input-group">
-                <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
-                <input type="text" [(ngModel)]="q" placeholder="Buscar equipos o partidos…" class="form-control">
-              </div>
-            </div>
-            <div class="col-md-4">
-              <button class="btn btn-primary w-100" (click)="reloadAll()">
-                <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
-              </button>
-            </div>
-          </div>
+    <div class="col-12 d-flex justify-content-center">
+      <div class="card shadow-sm" style="width: fit-content;">
+        <div class="card-body p-1">
+          <button class="btn btn-primary" (click)="reloadAll()" style="min-width: 150px;">
+            <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+          </button>
         </div>
       </div>
     </div>
