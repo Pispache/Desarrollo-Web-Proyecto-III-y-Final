@@ -48,6 +48,7 @@ export class HomePageComponent {
   activeGames: Game[] = [];
   detail: GameDetail | null = null;
   selectedGameId: number | null = null;
+  autoAdvanceEnabled = localStorage.getItem('clock.autoAdvance') === '1';
 
   constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService, private clock: ClockService) {
     this.reloadAll();
@@ -274,30 +275,54 @@ export class HomePageComponent {
 
   // Hook desde <app-clock> cuando se agota el tiempo del cuarto
   onExpire() {
-    const game = this.detail?.game;
-    if (!game) return;
-    if (game.status === 'IN_PROGRESS' && game.quarter < 4 && !this.advancing) {
-      const prevQ = game.quarter;
+    const g = this.detail?.game;
+    if (!g || this.advancing || g.status !== 'IN_PROGRESS') return;
+
+    // Si por alguna razón llega sin auto-advance activado, no hagas nada
+    if (!this.autoAdvanceEnabled) return;
+
+    const tied = g.homeScore === g.awayScore;
+
+    const doAdvance = (label: string, fromQ: number, toQ: number) => {
       this.advancing = true;
-      // No reproducimos sonido aún para evitar duplicados; lo haremos tras éxito del API,
-      // igual que el Control Panel.
-      this.api.advance(game.gameId).subscribe({
-        next: async () => {
-          // Refresca vista/marcador
-          this.view(game.gameId);
-          // Notificación y sonido
-          this.notify.showInfo('Fin de cuarto', `Se avanzó de Q${prevQ} a Q${prevQ + 1}`, 2200);
-          // Usar el mismo sonido que el botón "Siguiente cuarto" (click)
+      this.api.advance(g.gameId).subscribe({
+        next: () => {
+          this.view(g.gameId); // refresca detalle
+          this.notify.showInfo(label, `Se avanzó a ${toQ <= 4 ? `Q${toQ}` : `T.E. ${toQ - 4}`}`, 2200);
           this.sound.play('click');
           this.notify.triggerQuarterEndFlash?.();
         },
         error: (err) => {
           console.error('Error auto-advance:', err);
-          this.notify.showError('Error', 'No se pudo avanzar de cuarto automáticamente', true);
+          this.notify.showError('Error', 'No se pudo avanzar automáticamente', true);
           this.sound.play('error');
+          this.advancing = false; // Asegurar que se pueda reintentar
         },
         complete: () => (this.advancing = false),
       });
+    };
+
+    // --- Reglas ---
+    if (g.quarter < 4) {
+      // Q1–Q3 → avanza al siguiente cuarto
+      doAdvance('Fin de cuarto', g.quarter, g.quarter + 1);
+      return;
+    }
+
+    if (g.quarter === 4) {
+      // Q4: si hay empate → crear T.E. (Q5); si no, NO avanzar
+      if (tied) {
+        doAdvance('Fin del 4º • Iniciando T.E.', 4, 5);
+      }
+      return;
+    }
+
+    if (g.quarter >= 5) {
+      // En T.E.: si sigue empatado → otro T.E.; si no, no avanzar (queda definido)
+      if (tied) {
+        doAdvance('Fin de T.E. • Nuevo T.E.', g.quarter, g.quarter + 1);
+      }
+      return;
     }
   }
 

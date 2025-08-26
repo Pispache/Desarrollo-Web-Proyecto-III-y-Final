@@ -17,6 +17,8 @@ import { forkJoin } from 'rxjs';
 export class ControlPanelComponent implements OnChanges {
   @Input({ required: true }) game!: Game;
   @Input() isSuspended: boolean = false;
+  @Input() side: 'HOME' | 'AWAY' = 'HOME';
+  @Input() showGlobalControls: boolean = true;
 
   @Output() changed = new EventEmitter<void>();
   @Output() resetRequested = new EventEmitter<void>();

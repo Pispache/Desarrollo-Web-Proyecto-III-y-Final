@@ -26,6 +26,9 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   private sub?: Subscription;
   private clockSub?: Subscription;
   private clockState: ClockState | null = null;
+  private prevRemainingMs = 0;
+  private firedAtZero = false;
+  private advancing = false; // evita dobles llamados al API
   
   // Propiedad para verificar si el juego está suspendido
   get isGameSuspended(): boolean {
@@ -168,25 +171,29 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     if (this.gameId) {
       this.clockSub = this.clock.getState(this.gameId).subscribe({
         next: (state) => {
-          if (state) {
-            // Actualizar dentro de la zona de Angular y solicitar render
-            this.zone.run(() => {
-              this.clockState = state;
-              this.cdr.markForCheck();
-            });
-            
-            // Verificar si el tiempo ha llegado a 0 y el reloj está corriendo
-            if (state.remainingMs <= 0 && state.running) {
-              this.handleTimerExpiration();
-            }
+          if (!state) return;
+
+          // Actualizar dentro de la zona de Angular y solicitar render
+          this.zone.run(() => {
+            this.clockState = state;
+            this.cdr.markForCheck();
+          });
+
+          const was = this.prevRemainingMs;
+          const now = Math.max(0, state.remainingMs || 0);
+
+          // Reinicia la guarda cuando vuelve a haber tiempo (>0)
+          if (now > 0) this.firedAtZero = false;
+
+          // DISPARA SIN EXIGIR running=true
+          if (was > 0 && now === 0 && !this.firedAtZero) {
+            this.firedAtZero = true;
+            this.handleTimerExpiration();
           }
+
+          this.prevRemainingMs = now;
         },
         error: (err) => console.error('Error en el reloj:', err)
-      });
-
-      // Manejar evento de expiración del tiempo
-      this.clock.expired.subscribe(() => {
-        this.handleTimerExpiration();
       });
     }
     
@@ -247,35 +254,81 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     });
   }
 
+  // Helpers para manejar avance y finalización con delay
+  private advanceAfter(ms: number, log: string) {
+    if (this.advancing) return;
+    this.advancing = true;
+    setTimeout(() => {
+      this.clock.advanceClock(this.gameId).subscribe({
+        next: () => { 
+          console.log(log); 
+          this.playSound('quarter-start'); 
+          this.refreshGame(); 
+        },
+        error: err => console.error('Error al avanzar', err),
+        complete: () => (this.advancing = false),
+      });
+    }, ms);
+  }
+
+  private finishAfter(ms: number) {
+    if (this.advancing) return;
+    this.advancing = true;
+    setTimeout(() => {
+      this.clock.finishClock(this.gameId).subscribe({
+        next: () => { 
+          console.log('Partido finalizado automáticamente'); 
+          this.playSound('game-end'); 
+          this.refreshGame(); 
+        },
+        error: err => console.error('Error al finalizar', err),
+        complete: () => (this.advancing = false),
+      });
+    }, ms);
+  }
+
   // Manejar la expiración del temporizador
   private handleTimerExpiration(): void {
-    if (this.detail?.game.status === 'IN_PROGRESS') {
+    const g = this.detail?.game;
+    if (!g || g.status !== 'IN_PROGRESS' || this.advancing) return;
+
+    // Asegura datos frescos (por si la última canasta llegó pegada al 0:00)
+    this.refreshGame();
+    
+    setTimeout(() => {
+      const game = this.detail?.game;
+      if (!game) return;
+
+      const tied = game.homeScore === game.awayScore;
+
       // Reproducir sonido de fin de cuarto
       this.playSound('quarter-end');
-      
-      // Avanzar automáticamente al siguiente cuarto después de un breve retraso
-      setTimeout(() => {
-        if (this.detail && this.detail.game.quarter < 4) {
-          this.clock.advanceClock(this.gameId).subscribe({
-            next: () => {
-              console.log('Cuarto avanzado automáticamente');
-              // Reproducir sonido de inicio de cuarto
-              this.playSound('quarter-start');
-            },
-            error: (error: Error) => console.error('Error al avanzar el cuarto:', error)
-          });
-        } else if (this.detail && this.detail.game.quarter >= 4) {
-          // Si es el cuarto 4, finalizar el partido
-          this.clock.finishClock(this.gameId).subscribe({
-            next: () => {
-              console.log('Partido finalizado automáticamente');
-              this.playSound('game-end');
-            },
-            error: (error: Error) => console.error('Error al finalizar el partido:', error)
-          });
+
+      // Q1–Q3: siempre avanzar
+      if (game.quarter < 4) {
+        this.advanceAfter(500, `Fin de Q${game.quarter} → Q${game.quarter + 1}`);
+        return;
+      }
+
+      // Q4: si empate → T.E. (Q5); si no → finalizar
+      if (game.quarter === 4) {
+        if (tied) {
+          this.advanceAfter(500, 'Fin del 4º • Iniciando T.E.');
+        } else {
+          this.finishAfter(500);
         }
-      }, 2000); // Esperar 2 segundos antes de avanzar
-    }
+        return;
+      }
+
+      // T.E. (Q5+): si empate → otro T.E.; si no → finalizar
+      if (tied) {
+        console.log('Empate en tiempo extra, avanzando a nuevo T.E.');
+        this.advanceAfter(500, `Fin de T.E. • Nuevo T.E. (Q${game.quarter + 1})`);
+      } else {
+        console.log('No hay empate en tiempo extra, finalizando partido');
+        this.finishAfter(500);
+      }
+    }, 150); // Pequeño delay para asegurar que los datos están actualizados
   }
 
   // Reproducir sonidos

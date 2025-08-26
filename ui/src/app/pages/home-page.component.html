@@ -1,26 +1,18 @@
 <div class="container-fluid py-4">
-  <!-- Barra superior: búsqueda / acciones -->
-  <div class="row mb-4">
+  <!-- Topbar -->
+  <div class="row mb-3">
     <div class="col-12">
-      <div class="card home-card shadow-sm">
+      <div class="card shadow-sm">
         <div class="card-body py-2">
           <div class="row g-2 align-items-center">
             <div class="col-md-8">
               <div class="input-group">
                 <span class="input-group-text bg-light"><i class="bi bi-search"></i></span>
-                <input 
-                  type="text" 
-                  [(ngModel)]="q" 
-                  placeholder="Buscar equipos o partidos…" 
-                  class="form-control"
-                >
+                <input type="text" [(ngModel)]="q" placeholder="Buscar equipos o partidos…" class="form-control">
               </div>
             </div>
             <div class="col-md-4">
-              <button 
-                class="btn btn-primary w-100" 
-                (click)="reloadAll()"
-              >
+              <button class="btn btn-primary w-100" (click)="reloadAll()">
                 <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
               </button>
             </div>
@@ -30,251 +22,258 @@
     </div>
   </div>
 
-  <!-- Sección de Gestión de Equipos -->
-
-  <!-- Sección de Juegos Activos y Programados -->
-  <div class="row mb-4" *ngIf="activeGames.length > 0">
-    <div class="col-12">
-      <div class="card shadow-sm border-0">
-        <div class="card-header bg-primary text-white">
-          <h5 class="card-title mb-0">
-            <i class="bi bi-controller me-2"></i>
-            {{ hasActiveGames() ? 'Juegos Activos' : 'Juegos Programados' }}
-          </h5>
-        </div>
-        <div class="card-body p-0">
-          <div class="list-group list-group-flush">
-            <div 
-              *ngFor="let game of activeGames" 
-              class="list-group-item list-group-item-action"
-              (click)="selectGame(game)"
-            >
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <h6 class="mb-1 fw-bold">
-                    {{ game.homeTeam }} 
-                    <span class="text-muted">vs</span> 
-                    {{ game.awayTeam }}
-                  </h6>
-                  <div class="d-flex align-items-center">
-                    <span 
-                      class="badge me-2"
-                      [ngClass]="{
-                        'bg-success': game.status === 'IN_PROGRESS',
-                        'bg-secondary': game.status === 'SCHEDULED',
-                        'bg-danger': game.status === 'FINISHED' || game.status === 'CANCELLED',
-                        'bg-warning': game.status === 'SUSPENDED'
-                      }"
-                    >
-                      {{ 
-                        game.status === 'IN_PROGRESS' ? 'EN CURSO' :
-                        game.status === 'FINISHED' ? 'FINALIZADO' :
-                        game.status === 'CANCELLED' ? 'CANCELADO' :
-                        game.status === 'SUSPENDED' ? 'SUSPENDIDO' :
-                        'PROGRAMADO'
-                      }}
-                    </span>
-                    <small class="text-muted">
-                      <span *ngIf="game.status !== 'SCHEDULED'">
-                        Q{{ game.quarter }} • 
-                      </span>
-                      <span *ngIf="game.homeScore !== undefined && game.awayScore !== undefined">
-                        {{ game.homeScore }} - {{ game.awayScore }}
-                      </span>
-                    </small>
-                  </div>
-                </div>
-                <button 
-                  class="btn btn-sm"
-                  [ngClass]="game.status === 'SCHEDULED' ? 'btn-outline-primary' : 'btn-primary'"
-                  (click)="$event.stopPropagation(); selectGame(game)"
-                >
-                  <i class="bi" [ngClass]="game.status === 'SCHEDULED' ? 'bi-gear' : 'bi-speedometer2'"></i>
-                  {{ game.status === 'SCHEDULED' ? 'Configurar' : 'Administrar' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
+  <!-- Layout -->
   <div class="row">
-    <!-- Panel de partidos y nuevo partido -->
-    <div class="col-lg-4 mb-4">
-      <div class="card home-card shadow-sm h-100">
-        <div class="card-header border-bottom position-relative">
-          <h5 class="card-title mb-0">
-            <i class="bi bi-list-ul me-2"></i>Últimos Partidos
-          </h5>
-        </div>
-        <div class="card-body p-0">
-          <div class="list-group list-group-flush">
-            <a 
-              *ngFor="let g of games | slice:0:10" 
-              [routerLink]="['/display', g.gameId]" 
-              class="list-group-item list-group-item-action"
-            >
-              <div class="d-flex justify-content-between align-items-center">
-                <div>
-                  <div class="fw-medium">{{ g.homeTeam }} vs {{ g.awayTeam }}</div>
-                  <small class="text-muted">
-                    <span class="badge bg-light text-dark me-1">Q{{ g.quarter }}</span>
-                    <span class="text-capitalize">{{ g.status.toLowerCase() }}</span>
-                  </small>
-                </div>
-                <button 
-                  class="btn btn-sm btn-outline-primary"
-                  [routerLink]="['/results']" 
-                  [queryParams]="{ id: g.gameId }"
-                  (click)="$event.stopPropagation()"
-                >
-                  <i class="bi bi-eye"></i>
-                </button>
-              </div>
-            </a>
-            <div *ngIf="games.length === 0" class="p-3 text-center text-muted">
-              No hay partidos recientes
+    <!-- ===== SIDEBAR (sticky) ===== -->
+    <div class="col-lg-4 col-xl-3 mb-4">
+      <div class="position-sticky d-flex flex-column gap-3" style="top:16px; z-index:10;">
+        <!-- 1) NUEVO PARTIDO (FIJO) -->
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nuevo Partido</h6>
+          </div>
+          <div class="card-body">
+            <div class="mb-2">
+              <label class="form-label">Equipo Local</label>
+              <select #homeSel class="form-select form-select-sm">
+                <option [ngValue]="0">Seleccionar equipo local…</option>
+                <option *ngFor="let t of teams" [value]="t.teamId">{{ t.name }} ({{ t.teamId }})</option>
+              </select>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Crear partido emparejando por IDs -->
-      <div class="card shadow-sm mt-4">
-        <div class="card-header">
-          <h5 class="card-title mb-0">
-            <i class="bi bi-plus-circle me-2"></i>Nuevo Partido
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="mb-3">
-            <label class="form-label">Equipo Local</label>
-            <select #homeSel class="form-select form-select-sm">
-              <option [ngValue]="0">Seleccionar equipo local...</option>
-              <option *ngFor="let t of teams" [value]="t.teamId">
-                {{ t.name }} ({{ t.teamId }})
-              </option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Equipo Visitante</label>
-            <select #awaySel class="form-select form-select-sm">
-              <option [ngValue]="0">Seleccionar equipo visitante...</option>
-              <option *ngFor="let t of teams" [value]="t.teamId">
-                {{ t.name }} ({{ t.teamId }})
-              </option>
-            </select>
-          </div>
-          <button
-            class="btn btn-success w-100"
-            [disabled]="creating || !homeSel.value || !awaySel.value || homeSel.value === awaySel.value"
-            (click)="createGame(+homeSel.value, +awaySel.value)">
-            <i class="bi bi-plus-circle me-1"></i>
-            {{ creating ? 'Creando...' : 'Crear Partido' }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sección de Equipos y Marcador -->
-    <div class="col-lg-8">
-      <!-- Contenido de equipos -->
-      <div class="card home-card shadow-sm mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center position-relative">
-          <h5 class="card-title mb-0">
-            <i class="bi bi-people me-2"></i>Equipos Registrados
-          </h5>
-          <div class="input-group" style="max-width: 300px;">
-            <input 
-              type="text" 
-              class="form-control form-control-sm" 
-              placeholder="Buscar equipo..."
-              [(ngModel)]="teamSearch"
-            >
-            <button class="btn btn-outline-secondary btn-sm" type="button">
-              <i class="bi bi-search"></i>
+            <div class="mb-3">
+              <label class="form-label">Equipo Visitante</label>
+              <select #awaySel class="form-select form-select-sm">
+                <option [ngValue]="0">Seleccionar equipo visitante…</option>
+                <option *ngFor="let t of teams" [value]="t.teamId">{{ t.name }} ({{ t.teamId }})</option>
+              </select>
+            </div>
+            <button
+              class="btn btn-success w-100"
+              [disabled]="creating || !homeSel.value || !awaySel.value || homeSel.value === awaySel.value"
+              (click)="createGame(+homeSel.value, +awaySel.value)">
+              <i class="bi bi-plus-circle me-1"></i>{{ creating ? 'Creando…' : 'Crear Partido' }}
             </button>
           </div>
         </div>
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-hover mb-0">
-              <thead class="table-light">
-                <tr>
-                  <th>ID</th>
-                  <th>Nombre del Equipo</th>
-                  <th>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let t of teams | filter:teamSearch:'name' | slice:0:10">
-                  <td class="text-muted">#{{ t.teamId }}</td>
-                  <td class="fw-medium">{{ t.name }}</td>
-                  <td>
-                    <button class="btn btn-sm btn-outline-primary">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button class="btn btn-sm btn-outline-danger ms-1">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </td>
-                </tr>
-                <tr *ngIf="teams.length === 0">
-                  <td colspan="3" class="text-center text-muted py-3">
-                    No hay equipos registrados
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+
+        <!-- 2) REGISTRAR EQUIPO (FIJO) -->
+        <div class="card shadow-sm">
+          <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-people me-2"></i>Registrar Nuevo Equipo</h6>
+          </div>
+          <div class="card-body">
+            <div class="row g-2">
+              <div class="col-12">
+                <label for="teamName" class="form-label">Nombre del Equipo</label>
+                <input id="teamName" type="text" class="form-control"
+                       [(ngModel)]="newTeamName" placeholder="Ingrese el nombre del equipo…">
+                <div class="form-text">Debe ser único y descriptivo.</div>
+              </div>
+              <div class="col-12 d-grid">
+                <button class="btn btn-success"
+                        [disabled]="creating || !newTeamName.trim()"
+                        (click)="createTeam()">
+                  <i class="bi bi-plus-circle me-1"></i>{{ creating ? 'Procesando…' : 'Registrar Equipo' }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Gestión de jugadores por equipo (admin) -->
-      <app-admin-team-roster class="mb-4"></app-admin-team-roster>
-
-      <!-- Crear nuevo equipo -->
-      <div class="card shadow-sm">
-        <div class="card-header">
-          <h5 class="card-title mb-0">
-            <i class="bi bi-plus-circle me-2"></i>Registrar Nuevo Equipo
-          </h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-8">
-              <label for="teamName" class="form-label">Nombre del Equipo</label>
-              <input 
-                type="text" 
-                class="form-control" 
-                id="teamName" 
-                [(ngModel)]="newTeamName" 
-                placeholder="Ingrese el nombre del equipo..."
-              >
-              <div class="form-text">El nombre debe ser único y descriptivo.</div>
-            </div>
-            <div class="col-md-4 d-flex align-items-end">
-              <button 
-                class="btn btn-success w-100"
-                [disabled]="creating || !newTeamName.trim()"
-                (click)="createTeam()">
-                <i class="bi bi-plus-circle me-1"></i>
-                {{ creating ? 'Procesando...' : 'Registrar Equipo' }}
+        <!-- 3) ESTADO (COMPACTO) -->
+        <div *ngIf="detail as d" class="card shadow-sm">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Estado del Partido</h6>
+            <span class="badge px-2 py-1"
+                  [ngClass]="{
+                    'bg-success bg-opacity-10 text-success': d.game.status === 'IN_PROGRESS',
+                    'bg-danger  bg-opacity-10 text-danger' : d.game.status === 'FINISHED' || d.game.status === 'CANCELLED',
+                    'bg-warning bg-opacity-10 text-warning': d.game.status === 'SUSPENDED',
+                    'bg-info    bg-opacity-10 text-info'   : d.game.status === 'SCHEDULED'
+                  }">
+              <i class="bi me-1"
+                 [ngClass]="{
+                   'bi-play-circle': d.game.status === 'IN_PROGRESS',
+                   'bi-flag'       : d.game.status === 'FINISHED',
+                   'bi-x-circle'   : d.game.status === 'CANCELLED',
+                   'bi-pause-circle': d.game.status === 'SUSPENDED',
+                   'bi-calendar3'  : d.game.status === 'SCHEDULED'
+                 }"></i>
+              {{
+                d.game.status === 'IN_PROGRESS' ? 'EN PROGRESO' :
+                d.game.status === 'FINISHED'    ? 'FINALIZADO'  :
+                d.game.status === 'CANCELLED'   ? 'CANCELADO'   :
+                d.game.status === 'SUSPENDED'   ? 'SUSPENDIDO'  :
+                                                  'PROGRAMADO'
+              }}
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="d-grid gap-2">
+              <button *ngIf="d.game.status === 'IN_PROGRESS'"
+                      class="btn btn-warning btn-sm"
+                      (click)="suspendGame(d.game.gameId)">
+                <i class="bi bi-pause-circle me-1"></i> Suspender
+              </button>
+              <button *ngIf="d.game.status === 'SUSPENDED'"
+                      class="btn btn-success btn-sm"
+                      (click)="resumeGame(d.game.gameId)">
+                <i class="bi bi-play-circle me-1"></i> Reanudar
+              </button>
+              <button *ngIf="d.game.status === 'SCHEDULED'"
+                      class="btn btn-success btn-sm"
+                      (click)="startGame(d.game.gameId)">
+                <i class="bi bi-play-fill me-1"></i> Iniciar
+              </button>
+              <button *ngIf="d.game.status !== 'FINISHED' && d.game.status !== 'CANCELLED'"
+                      class="btn btn-outline-danger btn-sm"
+                      (click)="cancelGame(d.game.gameId)">
+                <i class="bi bi-x-circle me-1"></i> Cancelar
               </button>
             </div>
           </div>
         </div>
+        <!-- OJO: ya no renderizamos app-control-panel en el sidebar; ahora va ancho en el main -->
       </div>
     </div>
 
-    <!-- Marcador debajo del detalle del partido -->
-    <div *ngIf="detail as d" class="col-lg-8 offset-lg-4 mb-4">
-      <div class="card home-card mb-3 border-0 shadow-sm">
+    <!-- ===== MAIN CONTENT ===== -->
+    <div class="col-lg-8 col-xl-9">
+      <!-- Juegos activos / programados -->
+      <div class="row mb-4" *ngIf="activeGames.length > 0">
+        <div class="col-12">
+          <div class="card shadow-sm border-0">
+            <div class="card-header bg-primary text-white">
+              <h5 class="card-title mb-0">
+                <i class="bi bi-controller me-2"></i>
+                {{ hasActiveGames() ? 'Juegos Activos' : 'Juegos Programados' }}
+              </h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush">
+                <div *ngFor="let game of activeGames"
+                     class="list-group-item list-group-item-action"
+                     (click)="selectGame(game)">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <h6 class="mb-1 fw-bold">
+                        {{ game.homeTeam }} <span class="text-muted">vs</span> {{ game.awayTeam }}
+                      </h6>
+                      <div class="d-flex align-items-center">
+                        <span class="badge me-2"
+                              [ngClass]="{
+                                'bg-success' : game.status === 'IN_PROGRESS',
+                                'bg-secondary': game.status === 'SCHEDULED',
+                                'bg-danger'  : game.status === 'FINISHED' || game.status === 'CANCELLED',
+                                'bg-warning' : game.status === 'SUSPENDED'
+                              }">
+                          {{
+                            game.status === 'IN_PROGRESS' ? 'EN CURSO' :
+                            game.status === 'FINISHED'    ? 'FINALIZADO' :
+                            game.status === 'CANCELLED'   ? 'CANCELADO'  :
+                            game.status === 'SUSPENDED'   ? 'SUSPENDIDO' :
+                                                             'PROGRAMADO'
+                          }}
+                        </span>
+                        <small class="text-muted">
+                          <span *ngIf="game.status !== 'SCHEDULED'">Q{{ game.quarter }} • </span>
+                          <span *ngIf="game.homeScore !== undefined && game.awayScore !== undefined">
+                            {{ game.homeScore }} - {{ game.awayScore }}
+                          </span>
+                        </small>
+                      </div>
+                    </div>
+                    <button class="btn btn-sm"
+                            [ngClass]="game.status === 'SCHEDULED' ? 'btn-outline-primary' : 'btn-primary'"
+                            (click)="$event.stopPropagation(); selectGame(game)">
+                      <i class="bi" [ngClass]="game.status === 'SCHEDULED' ? 'bi-gear' : 'bi-speedometer2'"></i>
+                      {{ game.status === 'SCHEDULED' ? 'Configurar' : 'Administrar' }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Últimos partidos y equipos -->
+      <div class="row">
+        <div class="col-12 col-xxl-6 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header">
+              <h5 class="card-title mb-0"><i class="bi bi-list-ul me-2"></i>Últimos Partidos</h5>
+            </div>
+            <div class="card-body p-0">
+              <div class="list-group list-group-flush">
+                <a *ngFor="let g of games | slice:0:10"
+                   [routerLink]="['/display', g.gameId]"
+                   class="list-group-item list-group-item-action">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                      <div class="fw-medium">{{ g.homeTeam }} vs {{ g.awayTeam }}</div>
+                      <small class="text-muted">
+                        <span class="badge bg-light text-dark me-1">Q{{ g.quarter }}</span>
+                        <span class="text-capitalize">{{ g.status.toLowerCase() }}</span>
+                      </small>
+                    </div>
+                    <button class="btn btn-sm btn-outline-primary"
+                            [routerLink]="['/results']" [queryParams]="{ id: g.gameId }"
+                            (click)="$event.stopPropagation()">
+                      <i class="bi bi-eye"></i>
+                    </button>
+                  </div>
+                </a>
+                <div *ngIf="games.length === 0" class="p-3 text-center text-muted">No hay partidos recientes</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-xxl-6 mb-4">
+          <div class="card shadow-sm h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="card-title mb-0"><i class="bi bi-people me-2"></i>Equipos Registrados</h5>
+              <div class="input-group" style="max-width:280px;">
+                <input type="text" class="form-control form-control-sm" placeholder="Buscar equipo…"
+                       [(ngModel)]="teamSearch">
+                <button class="btn btn-outline-secondary btn-sm" type="button"><i class="bi bi-search"></i></button>
+              </div>
+            </div>
+            <div class="card-body p-0">
+              <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                  <thead class="table-light">
+                    <tr><th>ID</th><th>Nombre del Equipo</th><th class="text-end">Acciones</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let t of teams | filter:teamSearch:'name' | slice:0:10">
+                      <td class="text-muted">#{{ t.teamId }}</td>
+                      <td class="fw-medium">{{ t.name }}</td>
+                      <td class="text-end">
+                        <button class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></button>
+                        <button class="btn btn-sm btn-outline-danger ms-1"><i class="bi bi-trash"></i></button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="teams.length === 0">
+                      <td colspan="3" class="text-center text-muted py-3">No hay equipos registrados</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+<!-- ===== DETALLE: MARCADOR + RELOJ (arriba) / CONTROL PANELS (abajo) ===== -->
+<div *ngIf="detail as d" class="col-12">
+  <div class="row g-3">
+    <!-- Fila 1: Marcador (izq) + Reloj (der) -->
+    <div class="col-12 col-xl-6">
+      <div class="card border-0 shadow-sm h-100">
         <div class="card-body p-2">
-          <app-scoreboard 
-            [game]="d.game" 
+          <app-scoreboard
+            [game]="d.game"
             [events]="d.events"
             [isAdmin]="true"
             (adjustScore)="onAdjustScore($event)">
@@ -283,107 +282,74 @@
       </div>
     </div>
 
-    <!-- Detalle seleccionado -->
-    <div class="mt-3" *ngIf="detail as d">
-        <!-- Game Status Display and Controls -->
-        <div class="card home-card mb-3 border-0 shadow-sm">
-          <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <h4 class="card-title mb-0">Estado del Partido</h4>
-              <span 
-                class="badge px-3 py-2"
-                [ngClass]="{
-                  'bg-success bg-opacity-10 text-success': d.game.status === 'IN_PROGRESS',
-                  'bg-danger bg-opacity-10 text-danger': d.game.status === 'FINISHED' || d.game.status === 'CANCELLED',
-                  'bg-warning bg-opacity-10 text-warning': d.game.status === 'SUSPENDED',
-                  'bg-info bg-opacity-10 text-info': d.game.status === 'SCHEDULED'
-                }"
-              >
-                <i class="bi me-1" 
-                  [ngClass]="{
-                    'bi-play-circle': d.game.status === 'IN_PROGRESS',
-                    'bi-flag': d.game.status === 'FINISHED',
-                    'bi-x-circle': d.game.status === 'CANCELLED',
-                    'bi-pause-circle': d.game.status === 'SUSPENDED',
-                    'bi-calendar3': d.game.status === 'SCHEDULED'
-                  }">
-                </i>
-                {{ 
-                  d.game.status === 'IN_PROGRESS' ? 'EN PROGRESO' :
-                  d.game.status === 'FINISHED' ? 'FINALIZADO' :
-                  d.game.status === 'CANCELLED' ? 'CANCELADO' :
-                  d.game.status === 'SUSPENDED' ? 'SUSPENDIDO' :
-                  'PROGRAMADO'
-                }}
-              </span>
-            </div>
-            <div class="d-flex flex-wrap gap-2">
-              <button 
-                *ngIf="d.game.status === 'IN_PROGRESS'" 
-                (click)="suspendGame(d.game.gameId)"
-                class="btn btn-warning btn-sm"
-              >
-                <i class="bi bi-pause-circle me-1"></i>
-                Suspender Partido
-              </button>
-              
-              <button 
-                *ngIf="d.game.status === 'SUSPENDED'" 
-                (click)="resumeGame(d.game.gameId)"
-                class="btn btn-success btn-sm"
-              >
-                <i class="bi bi-play-circle me-1"></i>
-                Reanudar Partido
-              </button>
-              
-              <button 
-                *ngIf="d.game.status !== 'FINISHED' && d.game.status !== 'CANCELLED'" 
-                (click)="cancelGame(d.game.gameId)"
-                class="btn btn-outline-danger btn-sm"
-              >
-                <i class="bi bi-x-circle me-1"></i>
-                Cancelar Partido
-              </button>
-            </div>
+    <div class="col-12 col-xl-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-stopwatch me-2"></i>Reloj del Partido</h6>
         </div>
-
-        <div class="game-layout" *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED' || d.game.status === 'SCHEDULED'">
-          <div>
-            <app-control-panel 
-              [game]="d.game" 
-              (changed)="view(d.game.gameId)" 
-              (resetRequested)="onResetRequested()"
-              [isSuspended]="d.game.status === 'SUSPENDED'">
-            </app-control-panel>
-
-            <div *ngIf="d.game.status === 'SCHEDULED'" class="mt-2">
-              <button 
-                (click)="startGame(d.game.gameId)" 
-                class="btn btn-success w-100">
-                Iniciar Juego
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <app-clock
-              *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED'"
-              [gameId]="d.game.gameId"
-              [status]="d.game.status"
-              [quarter]="d.game.quarter"
-              [showTeamFouls]="false"
-              [autoAdvance]="true"
-              (advanceQuarter)="onExpire()"
-              (resetGame)="onResetGame()">
-            </app-clock>
-          </div>
+        <div class="card-body">
+          <app-clock
+            *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED'"
+            [gameId]="d.game.gameId"
+            [status]="d.game.status"
+            [quarter]="d.game.quarter"
+            [homeScore]="d.game.homeScore"
+            [awayScore]="d.game.awayScore"
+            [showTeamFouls]="false"
+            [(autoAdvance)]="autoAdvanceEnabled"
+            (advanceQuarter)="onExpire()"
+            (resetGame)="onResetGame()">
+          </app-clock>
         </div>
-      </div>
-
-      <div class="mt-4 rosters-grid">
-        <app-team-roster [gameId]="d.game.gameId" side="HOME"></app-team-roster>
-        <app-team-roster [gameId]="d.game.gameId" side="AWAY"></app-team-roster>
       </div>
     </div>
-    
   </div>
+
+  <!-- Fila 2: Control Panels lado a lado -->
+  <div class="row g-3 mt-1">
+    <div class="col-12 col-xl-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Control Panel - LOCAL</h6>
+        </div>
+        <div class="card-body">
+          <app-control-panel
+            [game]="d.game"
+            side="HOME"
+            [isSuspended]="d.game.status === 'SUSPENDED'"
+            (changed)="view(d.game.gameId)"
+            (resetRequested)="onResetRequested()">
+          </app-control-panel>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-xl-6">
+      <div class="card shadow-sm h-100">
+        <div class="card-header">
+          <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Control Panel - VISITANTE</h6>
+        </div>
+        <div class="card-body">
+          <app-control-panel
+            [game]="d.game"
+            side="AWAY"
+            [isSuspended]="d.game.status === 'SUSPENDED'"
+            (changed)="view(d.game.gameId)"
+            (resetRequested)="onResetRequested()">
+          </app-control-panel>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fila 3: Rosters debajo -->
+  <div class="row g-3 mt-1">
+    <div class="col-md-6">
+      <app-team-roster [gameId]="d.game.gameId" side="HOME"></app-team-roster>
+    </div>
+    <div class="col-md-6">
+      <app-team-roster [gameId]="d.game.gameId" side="AWAY"></app-team-roster>
+    </div>
+  </div>
+</div>
+<!-- ===== /DETALLE ===== -->

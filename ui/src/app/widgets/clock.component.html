@@ -15,12 +15,7 @@
       {{ vmSnap.remainingMs | msToClock }}
     </div>
 
-    <!-- Mensaje de tiempo extra -->
-    <div *ngIf="quarter === 4 && status === 'IN_PROGRESS' && isGameTied() && !isOvertime()" 
-         class="alert alert-info text-center my-3 py-2">
-      <p class="fw-bold mb-0">¡Empate al final del 4to cuarto!</p>
-      <p class="mb-0 small">Presiona "Iniciar T.E." para continuar</p>
-    </div>
+    <!-- No mostramos mensaje de empate, se maneja automáticamente -->
 
     <!-- Controles principales -->
     <div class="mt-auto" *ngIf="controls">
@@ -76,9 +71,12 @@
         <div class="col-12 d-flex align-items-center justify-content-between">
           <span class="small">Avance automático</span>
           <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" role="switch"
-                   [checked]="(vm$ | async)?.autoAdvance"
-                   (change)="toggleAutoAdvance($event)">
+            <input #autoAdvanceCheckbox
+                   class="form-check-input" 
+                   type="checkbox" 
+                   role="switch"
+                   [checked]="autoAdvance"
+                   (change)="onAutoAdvanceChange(autoAdvanceCheckbox.checked)">
           </div>
         </div>
         
