@@ -1,5 +1,7 @@
+# Orquestación del stack del marcador: DB (SQL Server 2022), inicializador, API .NET 8 y UI Angular+Nginx.
 services:
   db:
+  # Imagen oficial de SQL Server 2022; requiere SA_PASSWORD fuerte en .env
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: marcador_db
     environment:
@@ -17,6 +19,7 @@ services:
     profiles: ["db", "all"]
 
   db_init:
+  # Ejecuta scripts de creación/semilla cuando db esté healthy
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: marcador_db_init
     depends_on:
@@ -32,6 +35,7 @@ services:
     profiles: ["db", "all"]
 
   api:
+   # API ASP.NET Core 8; expone 8080 hacia la red del host
     build:
       context: ./api
       dockerfile: Dockerfile
@@ -49,6 +53,7 @@ services:
     profiles: ["api", "all"]
 
   ui:
+  # UI Angular compilada servida por Nginx; expone 80 interno como 4200 en host
     build:
       context: ./ui
       dockerfile: Dockerfile

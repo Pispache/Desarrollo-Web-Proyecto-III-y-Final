@@ -1,6 +1,8 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
 
+// Punto de entrada de la API del marcador.
+// Configura DbContext, CORS (en dev), healthcheck y endpoints del dominio de juego.
 var b = WebApplication.CreateBuilder(args);
 b.Services.AddEndpointsApiExplorer();
 b.Services.AddSwaggerGen();
@@ -11,6 +13,7 @@ app.UseCors();
 
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 
+// /health: endpoint para monitoreo de despliegue y readiness del contenedor.
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
 // Connection string local a Program y pasada como delegado (soluciona CS8801)

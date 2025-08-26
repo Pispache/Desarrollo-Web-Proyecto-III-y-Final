@@ -56,6 +56,10 @@ export interface FoulSummaryTeamRow { quarter: number; team: 'HOME'|'AWAY'|strin
 export interface FoulSummaryPlayerRow { quarter: number; team: 'HOME'|'AWAY'|string; playerId: number; fouls: number; }
 export interface FoulSummary { team: FoulSummaryTeamRow[]; players: FoulSummaryPlayerRow[]; }
 
+/**
+ * Servicio que centraliza las llamadas HTTP a la API del marcador.
+ * Proporciona operaciones de lectura (listado) y de escritura (score, foul, clock, undo).
+ */
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly base = '/api';
@@ -179,7 +183,7 @@ export class ApiService {
       playerNumber: opts?.playerNumber ?? null
     });
   }
-
+  /** Registra una falta para el equipo indicado. */
   foul(
     id: number,
     team: 'HOME'|'AWAY',
@@ -200,7 +204,7 @@ export class ApiService {
     const qs = t ? `?type=${encodeURIComponent(t)}` : '';
     return this.post(`/games/${id}/foul${qs}`, body);
   }
-
+ /** Deshace el último evento registrado. */
   undo(id: number) { return this.post(`/games/${id}/undo`, {}); }
 
   adjustScore(gameId: number, homeDelta: number, awayDelta: number): Observable<void> {
