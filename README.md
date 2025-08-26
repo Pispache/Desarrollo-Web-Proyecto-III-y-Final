@@ -7,7 +7,7 @@ Esta aplicacion implementa un sistema completo de marcador de balonceso orientad
 
 ---
 ## Arquitectura General 
-La arquitectura se divide en trez piezas principales que se comunicacn a través de HTTP en un red de contenedores. La interfaz Angular consume la API REST para consultar el estado del juego actual y registar eventos. La Api persiste el estado en SQL Server , emitiendo reglas de negocio como validaciones de faltas, avance de cuarto al agotar el tiempo y la posibilidad de deshacer eventos. Un contenedor auxiliar inicializa la base con scripts de creación y datos semilla. Esta separación favorece el despliegue y el escalamienot independiente. 
+La arquitectura se divide en trez piezas principales que se comunicacn a través de HTTP en un red de contenedores. La interfaz Angular consume la API REST para consultar el estado del juego actual y registar eventos. La Api persiste el estado en SQL Server , emitiendo reglas de negocio como validaciones de faltas, avance de cuarto al agotar el tiempo y la posibilidad de deshacer eventos. Un contenedor auxiliar inicializa la base con scripts de creación y datos semilla. Esta separación favorece el despliegue y el escalonamiento independiente. 
 
 **Flujo de datos de extremo a extremo**
 El flujo inicia cuando el operador interactúa con el panel de control. Las acciones como sumar puntos, registrar faltas, iniciar o pausar el reloj se envían a la API mediante peticiones HTTP. La API válida , aplica reglas y almacena los cambios en la base. La vista pública solo renderiza el estado , mientras que el panel de control expone las acciones administrativas. 
@@ -179,6 +179,33 @@ DB_NAME=MarcadorDB
 ```
 Durante el desarrollo es habitual levantar la API fuera de Docker con dotnet run desde la carpeta del proyecto de la API y apuntar Nginx al host del desarrollador. Para ello, en el nginx.conf de la UI el bloque del proxy /api puede reconfigurarse temporalmente para enviar el tráfico a host.docker.internal:8080 en Windows y macOS o a la IP del host en Linux. La interfaz Angular también puede ejecutarse en modo desarrollo con ng serve y comunicarse con la API local si se ajusta la variable base del servicio.
 
+## Requisitos mínimos de ejecución
+A pesar del uso de docker , la host machine debe cumplir con algunos requisitos mínimos para funcionar correctamente, los cuales se describen a continuación:
+
+**Windows 10/11 (x64) con WSL2**
+```
+Docker Desktop 4.31+ con WSL2 habilitado.
+CPU: 4 núcleos (mínimo).
+RAM: 8 GB (mínimo); 16 GB recomendado porque SQL Server en contenedor es exigente.
+Disco: 10–15 GB libres para imágenes/volúmenes.
+```
+**Linux (Ubuntu 22.04+ / Debian 12+ / Fedora 39+)**
+
+```
+Docker Engine 24+ y docker compose v2 (plugin oficial).
+CPU: 4 núcleos.
+RAM: 8 GB mínimo (16 GB recomendado).
+Disco: 10–15 GB libres.
+```
+**macOS 12+ (Monterey o superior)**
+
+```
+Docker Desktop 4.31+. En Apple Silicon (M1/M2/M3), SQL Server oficial corre en x86_64; Docker usa emulación, por lo que 16 GB RAM es muy recomendable.
+CPU: Apple Silicon (M1/M2/M3) o Intel i5/i7.
+RAM: 8 GB mínimo (16 GB recomendado por SQL Server).
+Disco: 10–15 GB libres.
+```
+
 ## Observabilidad, registros y auditoría
 
 El registro de eventos de juego funciona como fuente de verdad histórica y permite construir un timeline auditable. Se recomienda incrementar la observabilidad con logs estructurados en la API, trazas de solicitudes y respuestas importantes, y un identificador correlativo por partido. En producción, Nginx debe registrar accesos y errores en archivos rotados, y la base utilizar integridad referencial para evitar huérfanos.
@@ -195,10 +222,23 @@ El reloj del partido corre en el cliente por diseño para ofrecer latencia cero 
 
 Una evolución natural es sustituir el polling por WebSockets o SignalR para actualizaciones en tiempo real, ofrecer un modo de espectador optimizado separado de la consola de operación, mantener un resumen por cuarto con lógica de bonus de faltas, crear exportaciones a PDF o Excel de estadísticas y agregar accesibilidad mediante atajos de teclado y controles de alto contraste. Integrar almacenamiento de configuraciones del partido, rosters y cronometría personalizable por competición también aportaría valor.
 
-
 ## Mantenimiento y operación
 
 En operación se recomienda separar volúmenes de datos de SQL Server para facilitar respaldos, y versionar los scripts de inicialización. Para cambios en el modelo de datos, las migraciones de EF Core documentan la evolución del esquema. Es conveniente adoptar un control de versiones semántico para la API y etiquetar imágenes de Docker con el número de versión. El monitoreo de salud con /health habilita integraciones con orquestadores o pipelines CI para verificar despliegues.
+
+Para esta versión del proyecto se utilizaron las siguientes herramimientas , las cuales se muestran a continuación:
+```
+**Backend (API)**
+Runtime/SDK: .NET 8.x (ASP.NET Core 8) 
+EF Core: 8.x 
+
+**Base de datos**
+SQL Server 2022 (imagen “2022-latest” en Docker). Tu
+
+**Frontend**
+Angular  20.2.0
+Nginx (imagen estable típica)
+```
 
 ---
 ## Instalación y ejecución
