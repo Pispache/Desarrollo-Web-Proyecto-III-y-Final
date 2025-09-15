@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { ClockService } from '../services/clock.service';
-import { MsToClockPipe } from '../pipes/ms-to-clock.pipe';
+import { SegundosRelojPipe } from '../pipes/segundos-reloj.pipe';
 import { SoundService } from '../services/sound.service';
 
 export type GameStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'SUSPENDED' | 'PAUSED' | 'CANCELLED';
@@ -14,7 +14,7 @@ interface VmSnap { running: boolean; remainingMs: number; }
 @Component({
   selector: 'app-clock',
   standalone: true,
-  imports: [CommonModule, FormsModule, MsToClockPipe],
+  imports: [CommonModule, FormsModule, SegundosRelojPipe],
   templateUrl: './clock.component.html',
   styleUrls: ['./clock.component.scss']
 })

@@ -2,7 +2,6 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { AdminTeamRosterComponent } from '../widgets/admin-team-roster.component';
 import { ApiService, Game, GameDetail, Team } from '../services/api.service';
 import { ClockService } from '../services/clock.service';
 
@@ -28,7 +27,6 @@ import { finalize } from 'rxjs';
     ControlPanelComponent,
     ClockComponent,
     TeamRosterComponent,
-    AdminTeamRosterComponent,
     FilterPipe,
   ]
 })

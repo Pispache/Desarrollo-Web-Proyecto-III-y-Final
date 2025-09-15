@@ -12,7 +12,7 @@
   <div class="clock-body d-flex flex-column">
     <!-- Tiempo principal -->
     <div class="time my-auto" [class.danger]="isLast30Seconds()">
-      {{ vmSnap.remainingMs | msToClock }}
+      {{ vmSnap.remainingMs | segundosReloj }}
     </div>
 
     <!-- No mostramos mensaje de empate, se maneja automáticamente -->
