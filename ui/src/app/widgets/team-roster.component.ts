@@ -25,11 +25,22 @@ export class TeamRosterComponent implements OnChanges {
   isLoading = false;
   error: string | null = null;
 
+  // Edición inline
+  editingPlayerId: number | null = null;
+  editModel: { name: string; number: number | null; position: string } = { name: '', number: null, position: '' };
+
   constructor(private api: ApiService) {}
 
   ngOnChanges(ch: SimpleChanges): void {
     if (!this.gameId || !this.side) return;
     this.api.listGamePlayers(this.gameId, this.side).subscribe(ps => (this.players = ps));
+  }
+
+  // ====== Validaciones ======
+  private isNumberDuplicate(num: number | null, excludeId?: number | null): boolean {
+    if (num == null) return false;
+    const n = Number(num);
+    return this.players.some(pl => pl.playerId !== (excludeId ?? null) && (pl.number as any) != null && Number(pl.number as any) === n);
   }
 
   toggleAddPlayerForm() {
@@ -43,6 +54,11 @@ export class TeamRosterComponent implements OnChanges {
   addPlayer() {
     if (!this.newPlayer.name.trim()) {
       this.error = 'El nombre es requerido';
+      return;
+    }
+    // Validar número duplicado (si se indicó)
+    if (this.newPlayer.number != null && this.isNumberDuplicate(this.newPlayer.number)) {
+      this.error = `El número ${this.newPlayer.number} ya está asignado a otro jugador de este equipo`;
       return;
     }
 
@@ -102,6 +118,52 @@ export class TeamRosterComponent implements OnChanges {
         console.error('Error al cargar jugadores:', err);
         this.error = 'Error al cargar la lista de jugadores';
       }
+    });
+  }
+
+  // ====== Edición ======
+  startEdit(p: Player) {
+    this.editingPlayerId = p.playerId;
+    this.editModel = {
+      name: p.name || '',
+      number: (p.number as any) ?? null,
+      position: (p.position as any) || ''
+    };
+    this.error = null;
+  }
+
+  cancelEdit() {
+    this.editingPlayerId = null;
+    this.error = null;
+  }
+
+  saveEdit(p: Player) {
+    if (!this.editingPlayerId) return;
+    if (!this.editModel.name.trim()) { this.error = 'El nombre es requerido'; return; }
+    // Validar número duplicado excluyendo al jugador en edición
+    if (this.editModel.number != null && this.isNumberDuplicate(this.editModel.number, this.editingPlayerId)) {
+      this.error = `El número ${this.editModel.number} ya está asignado a otro jugador de este equipo`;
+      return;
+    }
+    this.isLoading = true;
+    this.api.updatePlayer(this.editingPlayerId, {
+      name: this.editModel.name.trim(),
+      number: this.editModel.number != null ? Number(this.editModel.number) : (undefined as any),
+      position: this.editModel.position?.trim() || (undefined as any)
+    }).subscribe({
+      next: () => { this.isLoading = false; this.editingPlayerId = null; this.loadPlayers(); },
+      error: (err) => { console.error('Error actualizando jugador:', err); this.isLoading = false; this.error = 'No se pudo actualizar el jugador'; }
+    });
+  }
+
+  deletePlayer(p: Player) {
+    if (!p?.playerId) return;
+    const ok = window.confirm(`¿Eliminar al jugador ${p.name || '#'+(p.number ?? '')}?`);
+    if (!ok) return;
+    this.isLoading = true;
+    this.api.deletePlayer(p.playerId).subscribe({
+      next: () => { this.isLoading = false; this.loadPlayers(); },
+      error: (err) => { console.error('Error eliminando jugador:', err); this.isLoading = false; this.error = 'No se pudo eliminar el jugador'; }
     });
   }
 }

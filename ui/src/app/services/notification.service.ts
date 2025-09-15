@@ -76,6 +76,17 @@ export class NotificationService {
     this.showNotification('error', title, message, duration);
   }
 
+  // Confirmaciones (implementar modal real más adelante si se desea)
+  async confirm(message: string, title = 'Confirmación'): Promise<boolean> {
+    // Para mantener una API asíncrona uniforme, usamos Promise con window.confirm
+    try {
+      const ok = window.confirm(`${title}\n\n${message}`);
+      return Promise.resolve(ok);
+    } catch {
+      return Promise.resolve(false);
+    }
+  }
+
   // Efectos visuales
   private trigger(effect: VisualEffectType, color?: string, ms = 700) {
     const until = Date.now() + ms;

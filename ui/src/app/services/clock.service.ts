@@ -40,6 +40,8 @@ export class ClockService implements OnDestroy {
   private subscriptions = new Subscription();
   private readonly POLLING_INTERVAL = 500; // 0.5s para reducir desfase visible
   private readonly AUTO_ADVANCE_DELAY = 2000; // 2 segundos de espera antes de avanzar automáticamente
+  // Evitar emitir múltiples expiraciones por el mismo cruce a 0
+  private expiredFired = new Set<number>();
 
   // Evento que se emite cuando el tiempo del cuarto actual termina
   readonly expired = this.expiredSubject.asObservable();
@@ -127,12 +129,7 @@ export class ClockService implements OnDestroy {
         };
         
         this.clockStates.get(gameId)?.next(newState);
-
-        // Manejar finalización del cuarto con avance automático
-        if (state.remainingMs !== undefined && state.remainingMs <= 0 && 
-            state.running && state.autoAdvance && state.quarter !== undefined) {
-          this.handleQuarterEnd(gameId, state.quarter, state.gameStatus ?? 'IN_PROGRESS');
-        }
+        // No auto-advance aquí; se centraliza en 'expired' + UI handler
       })
     );
 
@@ -154,8 +151,14 @@ export class ClockService implements OnDestroy {
         };
         subject.next(updated);
         if (remaining <= 0) {
-          // Notificar expiración local; el avance real lo maneja el componente/servidor
-          this.expiredSubject.next(gameId);
+          // Emite solo una vez por cruce a 0
+          if (!this.expiredFired.has(gameId)) {
+            this.expiredFired.add(gameId);
+            this.expiredSubject.next(gameId);
+          }
+        } else {
+          // Si vuelve a haber tiempo restante, permitir una nueva expiración futura
+          if (this.expiredFired.has(gameId)) this.expiredFired.delete(gameId);
         }
       })
     );
@@ -262,6 +265,8 @@ export class ClockService implements OnDestroy {
         lastUpdated: new Date(now)
       });
     }
+    // permitir nueva expiración cuando se reanude
+    if (this.expiredFired.has(gameId)) this.expiredFired.delete(gameId);
     this.clockChanged$.next(gameId);
     this.executeClockAction(gameId, 'pause');
   }
@@ -282,6 +287,8 @@ export class ClockService implements OnDestroy {
         lastUpdated: new Date(now)
       });
     }
+    // reiniciar bandera de expiración
+    if (this.expiredFired.has(gameId)) this.expiredFired.delete(gameId);
     this.clockChanged$.next(gameId);
     this.http.post(`${this.base}/games/${gameId}/clock/reset`, body)
       .pipe(tap(() => this.clockChanged$.next(gameId)))

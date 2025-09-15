@@ -107,7 +107,7 @@
             <div class="col-3">
               <button 
                 (click)="subtractPoint('HOME')" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-danger w-100 d-flex flex-column align-items-center py-2"
                 title="Restar 1 punto"
               >
@@ -118,7 +118,7 @@
             <div class="col-3">
               <button 
                 (click)="score('HOME', 1)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-info w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+1</span>
@@ -128,7 +128,7 @@
             <div class="col-3">
               <button 
                 (click)="score('HOME', 2)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-primary w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+2</span>
@@ -138,7 +138,7 @@
             <div class="col-3">
               <button 
                 (click)="score('HOME', 3)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-success w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+3</span>
@@ -149,9 +149,10 @@
           
           <div class="row g-2">
             <div class="col-md-7">
+              <!-- Select jugador (HOME): deshabilitar si reloj no corre -->
               <select 
                 [(ngModel)]="selHomePlayerId" 
-                [disabled]="!homePlayers.length || game.status!=='IN_PROGRESS'"
+                [disabled]="!homePlayers.length || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="form-select form-select-sm"
               >
                 <option [ngValue]="undefined">Seleccionar jugador</option>
@@ -162,10 +163,11 @@
             </div>
             
             <div class="col-md-5">
+              <!-- Select tipo de falta (HOME): deshabilitar si reloj no corre -->
               <select 
                 [(ngModel)]="selHomeFoulType" 
                 [ngModelOptions]="{standalone:true}" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="form-select form-select-sm mb-2"
               >
                 <option [ngValue]="'PERSONAL'">Falta Personal</option>
@@ -176,7 +178,7 @@
               
               <button 
                 (click)="foul('HOME')" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-danger w-100"
               >
                 <i class="bi bi-flag-fill me-1"></i> Falta
@@ -209,7 +211,7 @@
             <div class="col-3">
               <button 
                 (click)="subtractPoint('AWAY')" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-danger w-100 d-flex flex-column align-items-center py-2"
                 title="Restar 1 punto"
               >
@@ -220,7 +222,7 @@
             <div class="col-3">
               <button 
                 (click)="score('AWAY', 1)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-info w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+1</span>
@@ -230,7 +232,7 @@
             <div class="col-3">
               <button 
                 (click)="score('AWAY', 2)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-primary w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+2</span>
@@ -240,7 +242,7 @@
             <div class="col-3">
               <button 
                 (click)="score('AWAY', 3)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-success w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+3</span>
@@ -251,9 +253,10 @@
           
           <div class="row g-2">
             <div class="col-md-7">
+              <!-- Select jugador (AWAY): deshabilitar si reloj no corre -->
               <select 
                 [(ngModel)]="selAwayPlayerId" 
-                [disabled]="!awayPlayers.length || game.status!=='IN_PROGRESS'"
+                [disabled]="!awayPlayers.length || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="form-select form-select-sm"
               >
                 <option [ngValue]="undefined">Seleccionar jugador</option>
@@ -264,10 +267,11 @@
             </div>
             
             <div class="col-md-5">
+              <!-- Select tipo de falta (AWAY): deshabilitar si reloj no corre -->
               <select 
                 [(ngModel)]="selAwayFoulType" 
                 [ngModelOptions]="{standalone:true}" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="form-select form-select-sm mb-2"
               >
                 <option [ngValue]="'PERSONAL'">Falta Personal</option>
@@ -278,7 +282,7 @@
               
               <button 
                 (click)="foul('AWAY')" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-danger w-100"
               >
                 <i class="bi bi-flag-fill me-1"></i> Falta

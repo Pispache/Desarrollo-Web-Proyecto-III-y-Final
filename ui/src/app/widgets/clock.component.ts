@@ -5,6 +5,7 @@ import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { ClockService } from '../services/clock.service';
 import { SegundosRelojPipe } from '../pipes/segundos-reloj.pipe';
 import { SoundService } from '../services/sound.service';
+import { readLocal, readLocalBool, readLocalNumber, writeLocal } from '../utils/storage.utils';
 
 export type GameStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'FINISHED' | 'SUSPENDED' | 'PAUSED' | 'CANCELLED';
 
@@ -45,11 +46,7 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
       ...this.vmSubject.value, 
       autoAdvance: this._autoAdvance 
     });
-    try { 
-      localStorage.setItem('clock.autoAdvance', this._autoAdvance ? '1' : '0'); 
-    } catch (e) {
-      console.warn('No se pudo guardar la preferencia de avance automático:', e);
-    }
+    writeLocal('clock.autoAdvance', this._autoAdvance ? '1' : '0');
   }
   @Output() advanceQuarter = new EventEmitter<void>();
   @Output() resetGame = new EventEmitter<void>();
@@ -66,50 +63,36 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
 
   vmSnap: VmSnap = { running: false, remainingMs: 0 };
   busy = false;
-  private timerId: any = null;
   private serviceSub?: Subscription;
+  private expiredSub?: Subscription;
   private useServiceClock = false;
   // Guarda la duración elegida por el usuario para cuartos reglamentarios (no OT)
   private userQuarterMs: number | null = null;
-  private prevRemainingMs = 0;
-  private firedAtZero = false;
 
   constructor(private sound: SoundService, private clockSvc: ClockService) {}
 
   ngOnInit(): void {
-    // Cargar preferencia desde localStorage si existe
-    try {
-      const raw = localStorage.getItem('clock.userQuarterMs');
-      if (raw) {
-        const val = Number(raw);
-        if (!Number.isNaN(val) && val >= 1000) {
-          this.userQuarterMs = val;
-          // Aplicar al estado actual si no es tiempo extra
-          if (!this.isOvertime()) {
-            this.vmSubject.next({ ...this.vmSubject.value, quarterMs: val });
-            if (!this.vmSnap.running) this.vmSnap.remainingMs = val;
-  }
-        }
+    // Cargar preferencias desde storage seguro
+    const savedMs = readLocalNumber('clock.userQuarterMs');
+    if (savedMs != null && savedMs >= 1000) {
+      this.userQuarterMs = savedMs;
+      if (!this.isOvertime()) {
+        this.vmSubject.next({ ...this.vmSubject.value, quarterMs: savedMs });
+        if (!this.vmSnap.running) this.vmSnap.remainingMs = savedMs;
       }
-          // Cargar preferencia de avance automático
-      const rawAuto = localStorage.getItem('clock.autoAdvance');
-      if (rawAuto !== null) {
-        const auto = rawAuto === '1' || rawAuto === 'true';
-        this._autoAdvance = auto;
-        this.vmSubject.next({ ...this.vmSubject.value, autoAdvance: auto });
-        this.autoAdvanceChange.emit(auto);
-      }
-    } catch (e) {
-      // Ignorar errores de acceso a storage
-      console.warn('No se pudo cargar preferencia de duración:', e);
+    }
+    const savedAuto = readLocalBool('clock.autoAdvance');
+    if (savedAuto !== null) {
+      this._autoAdvance = savedAuto;
+      this.vmSubject.next({ ...this.vmSubject.value, autoAdvance: savedAuto });
+      this.autoAdvanceChange.emit(savedAuto);
     }
 
     // Si tenemos gameId, usar el reloj del servicio como fuente de verdad
     const id = this.gameId != null ? Number(this.gameId) : NaN;
     if (!Number.isNaN(id)) {
       this.useServiceClock = true;
-      // Cancelar cualquier temporizador local
-      this.clearTimer();
+      // No usamos temporizador local cuando hay gameId
       // Suscribirse al estado compartido
       this.serviceSub = this.clockSvc.getState(id).subscribe(state => {
         // Refleja duración (desde backend) y snapshot del reloj
@@ -121,29 +104,15 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
           running: state.running,
           remainingMs: Math.max(0, state.remainingMs || 0)
         };
+      });
 
-        // === AUTO-ADVANCE en modo servicio ===
-        const was = this.prevRemainingMs;
-        const now = this.vmSnap.remainingMs;
-
-        // Reinicia la guarda cuando el tiempo vuelve a correr
-        if (now > 0) this.firedAtZero = false;
-
-        // Si venimos de >0 a 0 y está habilitado, emite
-        if (
-          this.autoAdvance &&
-          this.status === 'IN_PROGRESS' &&
-          !this.isOvertime() &&
-          was > 0 &&
-          now === 0 &&
-          !this.firedAtZero
-        ) {
-          this.firedAtZero = true;
-          // pequeño delay para evitar carreras con el backend
-          setTimeout(() => this.advanceQuarter.emit(), 150);
+      // Escuchar expiración desde el servicio para auto-advance centralizado
+      this.expiredSub = this.clockSvc.expired.subscribe(expiredId => {
+        if (expiredId !== id) return;
+        // Emitir expiración también en tiempo extra; las reglas se aplican en HomePage.onExpire
+        if (this.autoAdvance && this.status === 'IN_PROGRESS') {
+          this.advanceQuarter.emit();
         }
-
-        this.prevRemainingMs = now;
       });
     }
   }
@@ -155,8 +124,8 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
     }
   }
   ngOnDestroy(): void {
-    this.clearTimer();
     this.serviceSub?.unsubscribe();
+    this.expiredSub?.unsubscribe();
   }
 
   // ===== Helpers del template =====
@@ -182,12 +151,8 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
   // ===== Controles del reloj (no hacen advance de cuarto por su cuenta) =====
   toggle() {
     if (this.status === 'FINISHED' || this.status === 'CANCELLED') return;
-    if (this.vmSnap.remainingMs <= 0) this.vmSnap.remainingMs = this.vmSubject.value.quarterMs;
+    // El estado visual se reflejará desde el servicio
     this.vmSnap.running = !this.vmSnap.running;
-    // En modo servicio, no usamos temporizador local
-    if (!this.useServiceClock) {
-      this.vmSnap.running ? this.startTimer() : this.clearTimer();
-    }
 
     // Propagar al backend para que el Display se sincronice
     const id = this.gameId != null ? Number(this.gameId) : NaN;
@@ -206,8 +171,6 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
 
   resetQuarter() {
     this.vmSnap.running = false;
-    this.firedAtZero = false;
-    this.clearTimer();
     this.vmSnap.remainingMs = this.vmSubject.value.quarterMs;
     this.sound.play('buzzer_long');
 
@@ -229,8 +192,8 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
     this.userQuarterMs = qms; // recordar preferencia del usuario
     this.vmSubject.next({ ...this.vmSubject.value, quarterMs: qms });
     if (!this.vmSnap.running) this.vmSnap.remainingMs = qms;
-    // Persistir en localStorage
-    try { localStorage.setItem('clock.userQuarterMs', String(qms)); } catch {}
+    // Persistir en storage seguro
+    writeLocal('clock.userQuarterMs', String(qms));
 
     // Si hay gameId, propagar la duración al backend para sincronizar Display
     const id = this.gameId != null ? Number(this.gameId) : NaN;
@@ -263,53 +226,6 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
           // this.clockSvc.setAutoAdvance(id, isChecked).subscribe();
         }
       }
-      
-      // Si se activó el auto-advance y el tiempo ya terminó, avanzar al siguiente cuarto
-      if (isChecked && this.vmSnap.remainingMs <= 0 && !this.isOvertime()) {
-        this.advanceQuarter.emit();
-      }
-    }
-  }
-
-  // ===== Motor simple del timer =====
-  private startTimer() {
-    this.clearTimer();
-    
-    // If remaining time is 0, set it to the full quarter duration
-    if (this.vmSnap.remainingMs <= 0) {
-      this.vmSnap.remainingMs = this.vmSubject.value.quarterMs;
-    }
-    
-    const startTime = performance.now();
-    const targetTime = startTime + this.vmSnap.remainingMs;
-    
-    const update = () => {
-      const now = performance.now();
-      this.vmSnap.remainingMs = Math.max(0, targetTime - now);
-      
-      if (this.vmSnap.remainingMs <= 0) {
-        // Stop and pause
-        this.vmSnap.running = false;
-        this.clearTimer();
-
-        // If auto-advance is enabled and no OT, notify parent to advance quarter.
-        if (this.autoAdvance && !this.isOvertime()) {
-          this.firedAtZero = true; // evita duplicar si luego llega un tick del servicio
-          this.advanceQuarter.emit();
-        }
-      } else {
-        // Schedule next update
-        this.timerId = setTimeout(() => requestAnimationFrame(update), 50);
-      }
-    };
-    
-    // Start the update loop
-    this.timerId = setTimeout(() => requestAnimationFrame(update), 50);
-  }
-  private clearTimer() {
-    if (this.timerId) { 
-      clearTimeout(this.timerId); 
-      this.timerId = null; 
     }
   }
 

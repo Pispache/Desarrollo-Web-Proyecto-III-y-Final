@@ -8,6 +8,10 @@
   </div>
   
   <div class="roster-body">
+    <!-- Errores para edición inline (cuando no está el formulario de alta) -->
+    <div *ngIf="!showAddPlayerForm && error" class="alert alert-danger py-2 mx-3 mt-3">
+      <small>{{ error }}</small>
+    </div>
     <!-- Formulario para agregar jugador -->
     <div *ngIf="showAddPlayerForm" class="p-3 border-bottom">
       <h6 class="mb-3">Agregar nuevo jugador</h6>
@@ -59,15 +63,81 @@
     <!-- Lista de jugadores -->
     <div *ngIf="players.length > 0; else empty" class="list-group list-group-flush">
       <div *ngFor="let p of players" class="list-group-item py-2">
-        <div class="d-flex align-items-center">
-          <span class="badge bg-secondary me-2">#{{ p.number || '—' }}</span>
+        <div class="d-flex align-items-center w-100">
+          <!-- Número (badge o input si edita) -->
+          <ng-container *ngIf="editingPlayerId !== p.playerId; else editNumber">
+            <span class="badge bg-secondary me-2">#{{ p.number || '—' }}</span>
+          </ng-container>
+          <ng-template #editNumber>
+            <input type="number"
+                   class="form-control form-control-sm me-2"
+                   style="width: 72px;"
+                   [(ngModel)]="editModel.number"
+                   [disabled]="isLoading"
+                   min="0" max="99">
+          </ng-template>
+
+          <!-- Datos de jugador -->
           <div class="flex-grow-1">
-            <div class="fw-medium">{{ p.name || 'Sin nombre' }}</div>
-            <small *ngIf="p.position" class="text-muted">{{ p.position }}</small>
+            <ng-container *ngIf="editingPlayerId !== p.playerId; else editFields">
+              <div class="fw-medium">{{ p.name || 'Sin nombre' }}</div>
+              <small *ngIf="p.position" class="text-muted">{{ p.position }}</small>
+            </ng-container>
+            <ng-template #editFields>
+              <div class="row g-2">
+                <div class="col-sm-6">
+                  <input type="text"
+                         class="form-control form-control-sm"
+                         [(ngModel)]="editModel.name"
+                         [disabled]="isLoading"
+                         placeholder="Nombre">
+                </div>
+                <div class="col-sm-6">
+                  <input type="text"
+                         class="form-control form-control-sm"
+                         [(ngModel)]="editModel.position"
+                         [disabled]="isLoading"
+                         placeholder="Posición">
+                </div>
+              </div>
+            </ng-template>
           </div>
-          <button class="btn btn-sm btn-outline-secondary" (click)="$event.stopPropagation()">
-            <i class="bi bi-pencil-square"></i>
-          </button>
+
+          <!-- Acciones -->
+          <div class="ms-2 d-flex gap-1">
+            <!-- Editar -->
+            <button *ngIf="editingPlayerId !== p.playerId"
+                    class="btn btn-sm btn-outline-secondary"
+                    [disabled]="isLoading"
+                    (click)="startEdit(p)">
+              <i class="bi bi-pencil-square me-1"></i>
+              Editar
+            </button>
+
+            <!-- Guardar / Cancelar -->
+            <ng-container *ngIf="editingPlayerId === p.playerId">
+              <button class="btn btn-sm btn-success"
+                      [disabled]="isLoading"
+                      (click)="saveEdit(p)">
+                <i class="bi bi-check2 me-1"></i>
+                Guardar
+              </button>
+              <button class="btn btn-sm btn-outline-secondary"
+                      [disabled]="isLoading"
+                      (click)="cancelEdit()">
+                <i class="bi bi-x-lg me-1"></i>
+                Cancelar
+              </button>
+            </ng-container>
+
+            <!-- Eliminar -->
+            <button class="btn btn-sm btn-outline-danger"
+                    [disabled]="isLoading || editingPlayerId === p.playerId"
+                    (click)="deletePlayer(p)">
+              <i class="bi bi-trash me-1"></i>
+              Eliminar
+            </button>
+          </div>
         </div>
       </div>
     </div>

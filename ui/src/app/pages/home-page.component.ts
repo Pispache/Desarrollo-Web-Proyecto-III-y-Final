@@ -94,17 +94,18 @@ export class HomePageComponent {
       if (this.detail) {
         this.view(this.detail.game.gameId);
       }
-      alert(successMessage);
+      this.notify.showSuccess('Éxito', successMessage);
     }).catch(error => {
       console.error('Error en handleStatusChange:', error);
       const errorMessage = error?.error?.error || 'Ocurrió un error al actualizar el estado del partido.';
-      alert(`Error: ${errorMessage}`);
+      this.notify.showError('Error', errorMessage, true);
     });
   }
 
   // Game status control methods
-  finishGame(gameId: number) {
-    if (confirm('¿Está seguro que desea marcar este partido como finalizado?')) {
+  async finishGame(gameId: number) {
+    const ok = await this.notify.confirm('¿Está seguro que desea marcar este partido como finalizado?', 'Confirmar');
+    if (ok) {
       this.handleStatusChange(
         this.api.finish(gameId).toPromise(),
         'Partido finalizado correctamente.'
@@ -112,8 +113,9 @@ export class HomePageComponent {
     }
   }
 
-  suspendGame(gameId: number) {
-    if (confirm('¿Está seguro que desea suspender este partido? Podrá reanudarlo más tarde.')) {
+  async suspendGame(gameId: number) {
+    const ok = await this.notify.confirm('¿Está seguro que desea suspender este partido? Podrá reanudarlo más tarde.', 'Confirmar');
+    if (ok) {
       this.handleStatusChange(
         this.api.suspendGame(gameId).toPromise(),
         'Partido suspendido correctamente.'
@@ -121,45 +123,48 @@ export class HomePageComponent {
     }
   }
 
-  resumeGame(gameId: number) {
+  async resumeGame(gameId: number) {
     this.handleStatusChange(
       this.api.resumeGame(gameId).toPromise(),
       'Partido reanudado correctamente.'
     );
   }
 
-  cancelGame(gameId: number) {
-    if (confirm('¿Está seguro que desea cancelar este partido? Esta acción no se puede deshacer.')) {
+  async cancelGame(gameId: number) {
+    const ok = await this.notify.confirm('¿Está seguro que desea cancelar este partido? Esta acción no se puede deshacer.', 'Confirmar');
+    if (ok) {
       this.api.cancelGame(gameId).subscribe({
         next: () => {
           this.reloadGames();
           if (this.detail?.game.gameId === gameId) {
             this.view(gameId);
           }
-          alert('Partido cancelado correctamente.');
+          this.notify.showSuccess('Éxito', 'Partido cancelado correctamente.');
         },
         error: (error) => {
           console.error('Error al cancelar el partido:', error);
           const errorMessage = error?.error?.error || 'No se pudo cancelar el partido. Intente nuevamente.';
-          alert(`Error: ${errorMessage}`);
+          this.notify.showError('Error', errorMessage, true);
         }
       });
     }
   }
 
   // Iniciar un partido programado
-  startGame(gameId: number) {
-    if (confirm('¿Está seguro que desea iniciar este partido?')) {
+  async startGame(gameId: number) {
+    const ok = await this.notify.confirm('¿Está seguro que desea iniciar este partido?', 'Confirmar');
+    if (ok) {
       this.api.start(gameId).subscribe({
         next: () => {
           this.reloadGames();
           this.view(gameId);
           // Iniciar el reloj backend y notificar a los suscriptores (Display)
           this.clock.start(gameId);
+          this.notify.showSuccess('Éxito', 'Partido iniciado');
         },
         error: (err: any) => {
           console.error('Error al iniciar el partido:', err);
-          alert('No se pudo iniciar el partido. Intente nuevamente.');
+          this.notify.showError('Error', 'No se pudo iniciar el partido. Intente nuevamente.', true);
         }
       });
     }
@@ -237,6 +242,7 @@ export class HomePageComponent {
     this.api.getGame(id).subscribe({
       next: (d) => {
         this.detail = d;
+        // Scoreboard/ControlPanel gestionan el estado del reloj de forma autónoma
         // Asegurarse de que el partido esté en la lista de juegos activos
         if (!this.activeGames.some(g => g.gameId === id)) {
           this.reloadGames();
@@ -286,11 +292,11 @@ export class HomePageComponent {
   }
 
   // Maneja el evento de reinicio del juego
-  onResetGame() {
+  async onResetGame() {
     const game = this.detail?.game;
     if (!game) return;
-
-    if (confirm('¿Está seguro que desea reiniciar el juego? Se restablecerán los puntajes, faltas y el reloj.')) {
+    const ok = await this.notify.confirm('¿Está seguro que desea reiniciar el juego? Se restablecerán los puntajes, faltas y el reloj.', 'Confirmar');
+    if (ok) {
       this.api.resetGame(game.gameId).subscribe({
         next: () => {
           // Recargar los datos del juego después del reinicio
@@ -298,8 +304,12 @@ export class HomePageComponent {
           if (this.detail) {
             this.view(this.detail.game.gameId);
           }
+          this.notify.showSuccess('Éxito', 'Juego reiniciado');
         },
-        error: (err) => console.error('Error al reiniciar el juego:', err)
+        error: (err) => {
+          console.error('Error al reiniciar el juego:', err);
+          this.notify.showError('Error', 'No se pudo reiniciar el juego', true);
+        }
       });
     }
   }
@@ -361,16 +371,35 @@ export class HomePageComponent {
   onAdjustScore(adjustment: { homeDelta: number; awayDelta: number }) {
     const gameId = this.detail?.game?.gameId;
     if (!gameId) return;
+    // Validación UI ya se realiza en Scoreboard; aquí simplemente aplicamos el ajuste
     
     this.api.adjustScore(gameId, adjustment.homeDelta, adjustment.awayDelta).subscribe({
       next: () => {
         // Actualizar la vista con los nuevos puntajes
         this.view(gameId);
+
+        // Agregar eventos sintéticos para reflejar el ajuste manual en la UI inmediatamente
+        if (this.detail) {
+          const nowIso = new Date().toISOString();
+          const q = this.detail.game.quarter;
+          if (adjustment.homeDelta) {
+            this.detail.events = [
+              { eventId: 0, gameId, quarter: q, team: 'HOME', eventType: 'ADJUST_SCORE', createdAt: nowIso } as any,
+              ...this.detail.events
+            ];
+          }
+          if (adjustment.awayDelta) {
+            this.detail.events = [
+              { eventId: 0, gameId, quarter: q, team: 'AWAY', eventType: 'ADJUST_SCORE', createdAt: nowIso } as any,
+              ...this.detail.events
+            ];
+          }
+        }
       },
       error: (err: any) => {
         console.error('Error ajustando puntuación', err);
-        // Opcional: Mostrar mensaje de error al usuario
-        alert('No se pudo ajustar la puntuación. Intente nuevamente.');
+        // Mostrar mensaje de error centralizado
+        this.notify.showError('Error', 'No se pudo ajustar la puntuación. Intente nuevamente.', true);
       }
     });
   }
@@ -400,4 +429,5 @@ export class HomePageComponent {
       this.reloadGames();
     }
   }
+
 }
