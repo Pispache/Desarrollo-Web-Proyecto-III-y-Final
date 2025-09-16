@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { ApiService, Game, GameDetail, Team } from '../services/api.service';
 import { ClockService } from '../services/clock.service';
 
@@ -15,6 +15,7 @@ import { ClockComponent } from '../widgets/clock.component';
 import { TeamRosterComponent } from '../widgets/team-roster.component';
 import { FilterPipe } from '../pipes/filter.pipe';
 import { finalize } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 
 @Component({
   selector: 'app-home-page',
@@ -91,8 +92,10 @@ export class HomePageComponent {
 
   // Bandera para mostrar notificación de caracteres no permitidos
   showInvalidCharWarning = false;
+  // Observable de autenticación para el template (getter para evitar usar this.auth antes de constructor)
+  get authed$() { return this.auth.authed$; }
   
-  constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService, private clock: ClockService, private themeSvc: ThemeService) {
+  constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService, private clock: ClockService, private themeSvc: ThemeService, private auth: AuthService, private router: Router) {
     this.reloadAll();
     // Asegurar que los sonidos estén precargados para reproducir en auto-advance
     try { this.sound.preloadAll(); } catch {}
@@ -100,6 +103,13 @@ export class HomePageComponent {
     this.theme = this.themeSvc.getTheme();
     this.themeSvc.applyTheme(this.theme);
   }
+
+  logout() {
+    this.auth.logout();
+    this.router.navigateByUrl('/login');
+  }
+
+  isAuthed(): boolean { return this.auth.isAuthenticated(); }
 
   // Handle game status changes
   private handleStatusChange(operation: Promise<any>, successMessage: string) {

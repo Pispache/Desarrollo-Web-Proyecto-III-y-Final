@@ -13,6 +13,7 @@ import { ApiService, Player } from '../services/api.service';
 export class TeamRosterComponent implements OnChanges {
   @Input({ required: true }) gameId!: number;
   @Input({ required: true }) side!: 'HOME' | 'AWAY';
+  @Input() canEdit: boolean = false;
 
   players: Player[] = [];
 
@@ -44,6 +45,7 @@ export class TeamRosterComponent implements OnChanges {
   }
 
   toggleAddPlayerForm() {
+    if (!this.canEdit) return;
     this.showAddPlayerForm = !this.showAddPlayerForm;
     this.error = null;
     if (this.showAddPlayerForm) {
@@ -52,6 +54,7 @@ export class TeamRosterComponent implements OnChanges {
   }
 
   addPlayer() {
+    if (!this.canEdit) return;
     if (!this.newPlayer.name.trim()) {
       this.error = 'El nombre es requerido';
       return;
@@ -123,6 +126,7 @@ export class TeamRosterComponent implements OnChanges {
 
   // ====== Edición ======
   startEdit(p: Player) {
+    if (!this.canEdit) return;
     this.editingPlayerId = p.playerId;
     this.editModel = {
       name: p.name || '',
@@ -138,6 +142,7 @@ export class TeamRosterComponent implements OnChanges {
   }
 
   saveEdit(p: Player) {
+    if (!this.canEdit) return;
     if (!this.editingPlayerId) return;
     if (!this.editModel.name.trim()) { this.error = 'El nombre es requerido'; return; }
     // Validar número duplicado excluyendo al jugador en edición
@@ -157,6 +162,7 @@ export class TeamRosterComponent implements OnChanges {
   }
 
   deletePlayer(p: Player) {
+    if (!this.canEdit) return;
     if (!p?.playerId) return;
     const ok = window.confirm(`¿Eliminar al jugador ${p.name || '#'+(p.number ?? '')}?`);
     if (!ok) return;

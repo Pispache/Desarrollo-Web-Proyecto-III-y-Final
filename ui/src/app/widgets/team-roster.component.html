@@ -26,7 +26,8 @@
           <input type="text" class="form-control form-control-sm" 
                  [(ngModel)]="newPlayer.name" 
                  name="playerName" 
-                 required>
+                 required
+                 [disabled]="!canEdit || isLoading">
         </div>
         
         <div class="row g-2 mb-2">
@@ -36,24 +37,26 @@
                    [(ngModel)]="newPlayer.number" 
                    name="playerNumber"
                    min="0"
-                   max="99">
+                   max="99"
+                   [disabled]="!canEdit || isLoading">
           </div>
           <div class="col-6">
             <label class="form-label small mb-1">Posición</label>
             <input type="text" class="form-control form-control-sm" 
                    [(ngModel)]="newPlayer.position" 
-                   name="playerPosition">
+                   name="playerPosition"
+                   [disabled]="!canEdit || isLoading">
           </div>
         </div>
         
         <div class="d-flex gap-2">
-          <button type="submit" class="btn btn-primary btn-sm flex-grow-1" [disabled]="isLoading">
+          <button type="submit" class="btn btn-primary btn-sm flex-grow-1" [disabled]="!canEdit || isLoading">
             <span *ngIf="!isLoading">Guardar</span>
             <span *ngIf="isLoading" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
           </button>
           <button type="button" class="btn btn-outline-secondary btn-sm" 
                   (click)="toggleAddPlayerForm()"
-                  [disabled]="isLoading">
+                  [disabled]="!canEdit || isLoading">
             Cancelar
           </button>
         </div>
@@ -73,7 +76,7 @@
                    class="form-control form-control-sm me-2"
                    style="width: 72px;"
                    [(ngModel)]="editModel.number"
-                   [disabled]="isLoading"
+                   [disabled]="!canEdit || isLoading"
                    min="0" max="99">
           </ng-template>
 
@@ -89,14 +92,14 @@
                   <input type="text"
                          class="form-control form-control-sm"
                          [(ngModel)]="editModel.name"
-                         [disabled]="isLoading"
+                         [disabled]="!canEdit || isLoading"
                          placeholder="Nombre">
                 </div>
                 <div class="col-sm-6">
                   <input type="text"
                          class="form-control form-control-sm"
                          [(ngModel)]="editModel.position"
-                         [disabled]="isLoading"
+                         [disabled]="!canEdit || isLoading"
                          placeholder="Posición">
                 </div>
               </div>
@@ -108,7 +111,7 @@
             <!-- Editar -->
             <button *ngIf="editingPlayerId !== p.playerId"
                     class="btn btn-sm btn-outline-secondary"
-                    [disabled]="isLoading"
+                    [disabled]="!canEdit || isLoading"
                     (click)="startEdit(p)">
               <i class="bi bi-pencil-square me-1"></i>
               Editar
@@ -117,13 +120,13 @@
             <!-- Guardar / Cancelar -->
             <ng-container *ngIf="editingPlayerId === p.playerId">
               <button class="btn btn-sm btn-success"
-                      [disabled]="isLoading"
+                      [disabled]="!canEdit || isLoading"
                       (click)="saveEdit(p)">
                 <i class="bi bi-check2 me-1"></i>
                 Guardar
               </button>
               <button class="btn btn-sm btn-outline-secondary"
-                      [disabled]="isLoading"
+                      [disabled]="!canEdit || isLoading"
                       (click)="cancelEdit()">
                 <i class="bi bi-x-lg me-1"></i>
                 Cancelar
@@ -132,7 +135,7 @@
 
             <!-- Eliminar -->
             <button class="btn btn-sm btn-outline-danger"
-                    [disabled]="isLoading || editingPlayerId === p.playerId"
+                    [disabled]="!canEdit || isLoading || editingPlayerId === p.playerId"
                     (click)="deletePlayer(p)">
               <i class="bi bi-trash me-1"></i>
               Eliminar
@@ -151,7 +154,7 @@
   </div>
   
   <div class="roster-footer text-center" *ngIf="!showAddPlayerForm">
-    <button class="btn btn-primary btn-sm w-100" (click)="toggleAddPlayerForm()">
+    <button class="btn btn-primary btn-sm w-100" (click)="toggleAddPlayerForm()" [disabled]="!canEdit">
       <i class="bi bi-plus-circle me-1"></i>Agregar Jugador
     </button>
   </div>

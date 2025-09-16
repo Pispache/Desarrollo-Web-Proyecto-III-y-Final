@@ -1,4 +1,18 @@
 <div class="container-fluid py-4">
+  <!-- Aviso cuando no hay sesión -->
+  <div class="row mb-3" *ngIf="!isAuthed()">
+    <div class="col-12">
+      <div class="alert alert-info d-flex justify-content-between align-items-center">
+        <div>
+          <i class="bi bi-info-circle me-2"></i>
+          Acciones administrativas ocultas. Inicia sesión para crear partidos, registrar equipos y administrar el marcador.
+        </div>
+        <a class="btn btn-sm btn-primary" routerLink="/login">
+          <i class="bi bi-box-arrow-in-right me-1"></i> Ir a Iniciar sesión
+        </a>
+      </div>
+    </div>
+  </div>
   <!-- Acciones principales: Actualizar + Tema -->
   <div class="row mb-3">
     <div class="col-12 d-flex justify-content-center gap-2">
@@ -14,6 +28,14 @@
           <app-theme-toggle size="sm"></app-theme-toggle>
         </div>
       </div>
+      <!-- Cerrar sesión -->
+      <div class="card shadow-sm" style="width: fit-content;" *ngIf="isAuthed()">
+        <div class="card-body p-1">
+          <button class="btn btn-outline-danger" (click)="logout()" style="min-width: 150px;">
+            <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -23,7 +45,7 @@
     <div class="col-lg-4 col-xl-3 mb-4">
       <div class="position-sticky d-flex flex-column gap-3" style="top:16px; z-index:10;">
         <!-- 1) NUEVO PARTIDO (FIJO) -->
-        <div class="card shadow-sm">
+        <div class="card shadow-sm" *ngIf="isAuthed()">
           <div class="card-header header-contrast-high">
             <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nuevo Partido</h6>
           </div>
@@ -52,7 +74,7 @@
         </div>
 
         <!-- 2) REGISTRAR EQUIPO (FIJO) -->
-        <div class="card shadow-sm">
+        <div class="card shadow-sm" *ngIf="isAuthed()">
           <div class="card-header header-contrast-high">
             <h6 class="mb-0"><i class="bi bi-people me-2"></i>Registrar Nuevo Equipo</h6>
           </div>
@@ -123,21 +145,25 @@
             <div class="d-grid gap-2">
               <button *ngIf="d.game.status === 'IN_PROGRESS'"
                       class="btn btn-warning btn-sm"
+                      [disabled]="!isAuthed()"
                       (click)="suspendGame(d.game.gameId)">
                 <i class="bi bi-pause-circle me-1"></i> Suspender
               </button>
               <button *ngIf="d.game.status === 'SUSPENDED'"
                       class="btn btn-success btn-sm"
+                      [disabled]="!isAuthed()"
                       (click)="resumeGame(d.game.gameId)">
                 <i class="bi bi-play-circle me-1"></i> Reanudar
               </button>
               <button *ngIf="d.game.status === 'SCHEDULED'"
                       class="btn btn-success btn-sm"
+                      [disabled]="!isAuthed()"
                       (click)="startGame(d.game.gameId)">
                 <i class="bi bi-play-fill me-1"></i> Iniciar
               </button>
               <button *ngIf="d.game.status !== 'FINISHED' && d.game.status !== 'CANCELLED'"
                       class="btn btn-outline-danger btn-sm"
+                      [disabled]="!isAuthed()"
                       (click)="cancelGame(d.game.gameId)">
                 <i class="bi bi-x-circle me-1"></i> Cancelar
               </button>
@@ -194,7 +220,7 @@
                         </small>
                       </div>
                     </div>
-                    <button class="btn btn-sm"
+                    <button class="btn btn-sm" *ngIf="isAuthed()"
                             [ngClass]="game.status === 'SCHEDULED' ? 'btn-outline-primary' : 'btn-primary'"
                             (click)="$event.stopPropagation(); selectGame(game)">
                       <i class="bi" [ngClass]="game.status === 'SCHEDULED' ? 'bi-gear' : 'bi-speedometer2'"></i>
@@ -218,7 +244,10 @@
             <div class="card-body p-0">
               <div class="list-group list-group-flush">
                 <a *ngFor="let g of games | slice:0:10"
-                   [routerLink]="['/display', g.gameId]"
+                   [routerLink]="isAuthed() ? ['/display', g.gameId] : null"
+                   (click)="!isAuthed() ? $event.preventDefault() : null"
+                   [attr.aria-disabled]="!isAuthed()"
+                   [class.disabled]="!isAuthed()"
                    class="list-group-item list-group-item-action">
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
@@ -229,7 +258,8 @@
                       </small>
                     </div>
                     <button class="btn btn-sm btn-outline-primary"
-                            [routerLink]="['/results']" [queryParams]="{ id: g.gameId }"
+                            [disabled]="!isAuthed()"
+                            [routerLink]="isAuthed() ? ['/results'] : null" [queryParams]="{ id: g.gameId }"
                             (click)="$event.stopPropagation()">
                       <i class="bi bi-eye"></i>
                     </button>
@@ -278,7 +308,7 @@
 
 <!-- ===== DETALLE: MARCADOR + RELOJ (arriba) / CONTROL PANELS (abajo) ===== -->
 <div *ngIf="detail as d" class="col-12">
-  <div class="row g-3">
+  <div class="row g-3" *ngIf="isAuthed()">
     <!-- Fila 1: Marcador (izq) + Reloj (der) -->
     <div class="col-12 col-xl-6">
       <div class="card border-0 shadow-sm h-100">
@@ -286,7 +316,7 @@
           <app-scoreboard
             [game]="d.game"
             [events]="d.events"
-            [isAdmin]="true"
+            [isAdmin]="isAuthed()"
             (adjustScore)="onAdjustScore($event)">
           </app-scoreboard>
         </div>
@@ -307,6 +337,7 @@
             [homeScore]="d.game.homeScore"
             [awayScore]="d.game.awayScore"
             [showTeamFouls]="false"
+            [canEdit]="isAuthed()"
             [(autoAdvance)]="autoAdvanceEnabled"
             (advanceQuarter)="onExpire()"
             (resetGame)="onResetGame()">
@@ -328,6 +359,7 @@
             [game]="d.game"
             side="HOME"
             [isSuspended]="d.game.status === 'SUSPENDED'"
+            [canEdit]="isAuthed()"
             (changed)="view(d.game.gameId)"
             (resetRequested)="onResetRequested()">
           </app-control-panel>
@@ -345,6 +377,7 @@
             [game]="d.game"
             side="AWAY"
             [isSuspended]="d.game.status === 'SUSPENDED'"
+            [canEdit]="isAuthed()"
             (changed)="view(d.game.gameId)"
             (resetRequested)="onResetRequested()">
           </app-control-panel>
@@ -356,10 +389,10 @@
   <!-- Fila 3: Rosters debajo -->
   <div class="row g-3 mt-1">
     <div class="col-md-6">
-      <app-team-roster [gameId]="d.game.gameId" side="HOME"></app-team-roster>
+      <app-team-roster [gameId]="d.game.gameId" side="HOME" [canEdit]="isAuthed()"></app-team-roster>
     </div>
     <div class="col-md-6">
-      <app-team-roster [gameId]="d.game.gameId" side="AWAY"></app-team-roster>
+      <app-team-roster [gameId]="d.game.gameId" side="AWAY" [canEdit]="isAuthed()"></app-team-roster>
     </div>
   </div>
 </div>

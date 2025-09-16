@@ -45,6 +45,12 @@ services:
     environment:
       - ASPNETCORE_URLS=${ASPNETCORE_URLS}
       - DB_CONNECTION_STRING=Server=db,1435;Database=${DB_NAME};User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - JWT_EXPIRES_MINUTES=${JWT_EXPIRES_MINUTES}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     ports:
       - "8080:8080"
     profiles: ["api", "all"]

@@ -24,7 +24,7 @@
         <button class="btn btn-sm"
                 [class.btn-success]="!vmSnap.running"
                 [class.btn-warning]="vmSnap.running"
-                [disabled]="busy || !gameId || status === 'FINISHED'"
+                [disabled]="!canEdit || busy || !gameId || status === 'FINISHED'"
                 (click)="toggle()">
           <i class="bi" [class.bi-play-fill]="!vmSnap.running" [class.bi-pause-fill]="vmSnap.running"></i>
           {{ vmSnap.running ? ' Pausar' : ' Iniciar' }}
@@ -32,7 +32,7 @@
         
         <!-- Botón de Reiniciar -->
         <button class="btn btn-sm btn-secondary"
-                [disabled]="busy || !gameId"
+                [disabled]="!canEdit || busy || !gameId"
                 (click)="resetQuarter()">
           <i class="bi bi-arrow-clockwise"></i>
           Reiniciar
@@ -52,7 +52,8 @@
           <div *ngIf="(vm$ | async) as vm; else loadingDuration">
             <select class="form-select form-select-sm"
                     [value]="vm.quarterMs"
-                    (change)="setDuration($event)">
+                    (change)="setDuration($event)"
+                    [disabled]="!canEdit">
               <option value="10000">10 segundos (pruebas)</option>
               <option value="300000">5 minutos</option>
               <option value="480000">8 minutos</option>
@@ -76,7 +77,8 @@
                    type="checkbox" 
                    role="switch"
                    [checked]="autoAdvance"
-                   (change)="onAutoAdvanceChange(autoAdvanceCheckbox.checked)">
+                   (change)="onAutoAdvanceChange(autoAdvanceCheckbox.checked)"
+                   [disabled]="!canEdit">
           </div>
         </div>
         

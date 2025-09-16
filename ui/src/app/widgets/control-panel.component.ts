@@ -19,6 +19,7 @@ export class ControlPanelComponent implements OnChanges, OnDestroy {
   @Input() isSuspended: boolean = false;
   @Input() side: 'HOME' | 'AWAY' = 'HOME';
   @Input() showGlobalControls: boolean = true;
+  @Input() canEdit: boolean = false;
 
   @Output() changed = new EventEmitter<void>();
   @Output() resetRequested = new EventEmitter<void>();

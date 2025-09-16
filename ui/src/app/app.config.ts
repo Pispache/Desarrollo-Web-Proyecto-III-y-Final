@@ -5,7 +5,8 @@ import { routes } from './app.routes';
 import { provideClientHydration } from '@angular/platform-browser';
 
 // HTTP para el  ApiService
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { tokenInterceptor } from './services/token-interceptor';
 
 // Animaciones 
 import { provideAnimations } from '@angular/platform-browser/animations';
@@ -17,7 +18,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideClientHydration(),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([tokenInterceptor])),
     provideAnimations(),
     importProvidersFrom(FormsModule),
   ],

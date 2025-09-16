@@ -35,6 +35,7 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
   @Input() teamFoulsAway: number = 0;
   @Input() bonusHome: boolean = false;
   @Input() bonusAway: boolean = false;
+  @Input() canEdit: boolean = false;
   @Output() autoAdvanceChange = new EventEmitter<boolean>();
   
   private _autoAdvance = false;
