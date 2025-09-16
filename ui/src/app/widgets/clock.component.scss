@@ -1,18 +1,25 @@
+/*
+  Clock Styles
+  Tokens usados: --color-surface, --color-text, --color-border,
+                 --color-danger, --color-warning, --color-success
+  Fuente de tokens: ui/src/styles/_theme.scss
+  Nota: ajusta estos tokens para cambiar fondo, colores de estado y bordes.
+*/
 .clock-card {
   --bg: rgba(16, 14, 32, 0.55);
   --bg-2: rgba(16, 14, 32, 0.35);
   --glass: rgba(255, 255, 255, 0.05);
-  --fg-0: #e7e9ff;
+  --fg-0: var(--color-text, #e7e9ff);
   --muted: rgba(231,233,255,.72);
-  --border: rgba(255, 255, 255, 0.12);
+  --border: var(--color-border, rgba(255, 255, 255, 0.12));
   --accent: #9b5cff;
   --accent-2: #00e0ff;
-  --danger: #ff4d6d;
-  --warn: #ffd166;
-  --ok: #4ade80;
+  --danger: var(--color-danger, #ff4d6d);
+  --warn: var(--color-warning, #ffd166);
+  --ok: var(--color-success, #4ade80);
 
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--bg), var(--bg-2));
+  background: var(--color-surface, linear-gradient(135deg, var(--bg), var(--bg-2)));
   border: 1px solid var(--border);
   box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(255,255,255,0.02);
   color: var(--fg-0);
@@ -60,7 +67,7 @@
     }
 
     .alert-info {
-      background: rgba(0,224,255,0.12);
+      background: color-mix(in oklab, var(--color-info, #00bcd4) 15%, transparent);
       color: var(--fg-0);
       border: 1px solid var(--border);
       border-radius: 12px;

@@ -1,15 +1,23 @@
+/*
+  Team Roster Styles
+  Tokens usados: --color-surface, --color-text, --color-border, --color-primary
+  Fuente de tokens: ui/src/styles/_theme.scss
+  Nota: ajusta estos tokens para cambiar fondo, texto, bordes y botón primario.
+*/
 .roster-card {
   --bg: rgba(16, 14, 32, 0.55);
   --bg-2: rgba(16, 14, 32, 0.35);
   --glass: rgba(255, 255, 255, 0.04);
-  --fg-0: #e7e9ff;
+  /* Usar design tokens globales como base */
+  --fg-0: var(--color-text, #e7e9ff);
   --fg-1: rgba(231, 233, 255, 0.72);
-  --border: rgba(255, 255, 255, 0.12);
+  --border: var(--color-border, rgba(255, 255, 255, 0.12));
   --accent: #9b5cff;
   --accent-2: #00e0ff;
 
   border-radius: 16px;
-  background: linear-gradient(135deg, var(--bg), var(--bg-2));
+  /* Superficie y bordes desde tokens */
+  background: var(--color-surface, linear-gradient(135deg, var(--bg), var(--bg-2)));
   border: 1px solid var(--border);
   box-shadow: 0 10px 35px rgba(0, 0, 0, 0.45), inset 0 0 40px rgba(255, 255, 255, 0.02);
   color: var(--fg-0);
@@ -59,8 +67,8 @@
     .list-group { background: transparent; }
     .list-group-item {
       background: rgba(255,255,255,0.03);
-      color: var(--fg-0);
-      border-color: var(--border);
+      color: var(--color-text, var(--fg-0));
+      border-color: var(--color-border, var(--border));
     }
 
     .badge.bg-secondary {
@@ -79,8 +87,8 @@
     .btn-primary {
       border-radius: 12px;
       border: 0;
-      color: var(--fg-0);
-      background: linear-gradient(135deg, rgba(155,92,255,.92), rgba(0,224,255,.9));
+      color: var(--color-text, var(--fg-0));
+      background: linear-gradient(135deg, var(--color-primary, rgba(155,92,255,.92)), rgba(0,224,255,.9));
       box-shadow: 0 4px 18px rgba(155,92,255,.35), 0 0 22px rgba(0,224,255,.25);
     }
     .btn-primary:hover { filter: brightness(1.06) saturate(1.05); }

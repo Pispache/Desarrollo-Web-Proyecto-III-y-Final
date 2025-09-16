@@ -1,12 +1,17 @@
 <div class="container-fluid py-4">
-  <!-- Botón de actualización -->
+  <!-- Acciones principales: Actualizar + Tema -->
   <div class="row mb-3">
-    <div class="col-12 d-flex justify-content-center">
+    <div class="col-12 d-flex justify-content-center gap-2">
       <div class="card shadow-sm" style="width: fit-content;">
         <div class="card-body p-1">
           <button class="btn btn-primary" (click)="reloadAll()" style="min-width: 150px;">
             <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
           </button>
+        </div>
+      </div>
+      <div class="card shadow-sm" style="width: fit-content;">
+        <div class="card-body p-1">
+          <app-theme-toggle size="sm"></app-theme-toggle>
         </div>
       </div>
     </div>
@@ -19,20 +24,20 @@
       <div class="position-sticky d-flex flex-column gap-3" style="top:16px; z-index:10;">
         <!-- 1) NUEVO PARTIDO (FIJO) -->
         <div class="card shadow-sm">
-          <div class="card-header">
+          <div class="card-header header-contrast-high">
             <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nuevo Partido</h6>
           </div>
           <div class="card-body">
             <div class="mb-2">
               <label class="form-label">Equipo Local</label>
-              <select #homeSel class="form-select form-select-sm bg-dark text-light">
+              <select #homeSel class="form-select form-select-sm">
                 <option [ngValue]="0" class="text-muted">Seleccionar equipo local…</option>
                 <option *ngFor="let t of teams" [value]="t.teamId">{{ t.name }} ({{ t.teamId }})</option>
               </select>
             </div>
             <div class="mb-3">
               <label class="form-label">Equipo Visitante</label>
-              <select #awaySel class="form-select form-select-sm bg-dark text-light">
+              <select #awaySel class="form-select form-select-sm">
                 <option [ngValue]="0" class="text-muted">Seleccionar equipo visitante…</option>
                 <option *ngFor="let t of teams" [value]="t.teamId">{{ t.name }} ({{ t.teamId }})</option>
               </select>
@@ -48,7 +53,7 @@
 
         <!-- 2) REGISTRAR EQUIPO (FIJO) -->
         <div class="card shadow-sm">
-          <div class="card-header">
+          <div class="card-header header-contrast-high">
             <h6 class="mb-0"><i class="bi bi-people me-2"></i>Registrar Nuevo Equipo</h6>
           </div>
           <div class="card-body">
@@ -88,7 +93,7 @@
 
         <!-- 3) ESTADO (COMPACTO) -->
         <div *ngIf="detail as d" class="card shadow-sm">
-          <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="card-header header-contrast-high d-flex justify-content-between align-items-center">
             <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Estado del Partido</h6>
             <span class="badge px-2 py-1"
                   [ngClass]="{
@@ -148,8 +153,8 @@
       <!-- Juegos activos / programados -->
       <div class="row mb-4" *ngIf="activeGames.length > 0">
         <div class="col-12">
-          <div class="card shadow-sm border-0">
-            <div class="card-header bg-primary text-white">
+            <div class="card shadow-sm border-0">
+            <div class="card-header header-contrast-high">
               <h5 class="card-title mb-0">
                 <i class="bi bi-controller me-2"></i>
                 {{ hasActiveGames() ? 'Juegos Activos' : 'Juegos Programados' }}
@@ -207,7 +212,7 @@
       <div class="row">
         <div class="col-12 col-xxl-6 mb-4">
           <div class="card shadow-sm h-100">
-            <div class="card-header">
+            <div class="card-header header-contrast-high">
               <h5 class="card-title mb-0"><i class="bi bi-list-ul me-2"></i>Últimos Partidos</h5>
             </div>
             <div class="card-body p-0">
@@ -238,7 +243,7 @@
 
         <div class="col-12 col-xxl-6 mb-4">
           <div class="card shadow-sm h-100">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header header-contrast-high d-flex justify-content-between align-items-center">
               <h5 class="card-title mb-0"><i class="bi bi-people me-2"></i>Equipos Registrados</h5>
               <div class="input-group" style="max-width:280px;">
                 <input type="text" class="form-control form-control-sm" placeholder="Buscar equipo…"
@@ -249,7 +254,7 @@
             <div class="card-body p-0">
               <div class="table-responsive">
                 <table class="table table-hover mb-0">
-                  <thead class="table-light">
+                  <thead>
                     <tr><th>ID</th><th>Nombre del Equipo</th><th class="text-end">Acciones</th></tr>
                   </thead>
                   <tbody>
@@ -315,7 +320,7 @@
   <div class="row g-3 mt-1">
     <div class="col-12 col-xl-6">
       <div class="card shadow-sm h-100">
-        <div class="card-header">
+        <div class="card-header header-contrast-high">
           <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Control Panel - LOCAL</h6>
         </div>
         <div class="card-body">
@@ -332,7 +337,7 @@
 
     <div class="col-12 col-xl-6">
       <div class="card shadow-sm h-100">
-        <div class="card-header">
+        <div class="card-header header-contrast-high">
           <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Control Panel - VISITANTE</h6>
         </div>
         <div class="card-body">

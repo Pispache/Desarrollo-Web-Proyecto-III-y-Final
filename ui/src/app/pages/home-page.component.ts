@@ -9,6 +9,8 @@ import { NotificationService } from '../services/notification.service';
 import { SoundService } from '../services/sound.service';
 import { ScoreboardComponent } from '../widgets/scoreboard.component';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
+import { ThemeToggleComponent } from '../widgets/theme-toggle.component';
+import { ThemeService, AppTheme } from '../services/theme.service';
 import { ClockComponent } from '../widgets/clock.component';
 import { TeamRosterComponent } from '../widgets/team-roster.component';
 import { FilterPipe } from '../pipes/filter.pipe';
@@ -28,6 +30,7 @@ import { finalize } from 'rxjs';
     ClockComponent,
     TeamRosterComponent,
     FilterPipe,
+    ThemeToggleComponent
   ]
 })
 export class HomePageComponent {
@@ -38,6 +41,8 @@ export class HomePageComponent {
 
   // NUEVO: nombre del equipo a crear
   newTeamName = '';
+  // Tema actual de la UI
+  theme: AppTheme = 'dark';
   
   /**
    * Valida que solo se ingresen letras en el nombre del equipo
@@ -60,7 +65,7 @@ export class HomePageComponent {
       // Ocultar el mensaje después de 3 segundos
       setTimeout(() => this.showInvalidCharWarning = false, 3000);
     }
-    
+
     // Actualizar el valor del modelo con el texto limpio
     if (input.value !== cleanValue) {
       input.value = cleanValue;
@@ -68,6 +73,12 @@ export class HomePageComponent {
       // Disparar evento de input para actualizar la validación
       input.dispatchEvent(new Event('input'));
     }
+  }
+
+  // Toggle de tema oscuro/claro
+  toggleTheme() {
+    this.theme = this.theme === 'dark' ? 'light' as AppTheme : 'dark' as AppTheme;
+    this.themeSvc.setTheme(this.theme);
   }
 
   // datos
@@ -81,10 +92,13 @@ export class HomePageComponent {
   // Bandera para mostrar notificación de caracteres no permitidos
   showInvalidCharWarning = false;
   
-  constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService, private clock: ClockService) {
+  constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService, private clock: ClockService, private themeSvc: ThemeService) {
     this.reloadAll();
     // Asegurar que los sonidos estén precargados para reproducir en auto-advance
     try { this.sound.preloadAll(); } catch {}
+    // Aplicar tema al iniciar
+    this.theme = this.themeSvc.getTheme();
+    this.themeSvc.applyTheme(this.theme);
   }
 
   // Handle game status changes

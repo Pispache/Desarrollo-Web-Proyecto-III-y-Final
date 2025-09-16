@@ -1,4 +1,5 @@
 import { Component, OnDestroy, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
+
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { interval, Subscription, switchMap, merge, of } from 'rxjs';
@@ -7,13 +8,15 @@ import { map, catchError } from 'rxjs/operators';
 import { ApiService, GameDetail, GameStatus } from '../services/api.service';
 import { ClockService, ClockState } from '../services/clock.service';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
+import { ThemeToggleComponent } from '../widgets/theme-toggle.component';
+import { ThemeService, AppTheme } from '../services/theme.service';
 
 type GameEvent = GameDetail['events'][number];
 
 @Component({
   selector: 'app-display-page',
   standalone: true,
-  imports: [CommonModule, ControlPanelComponent],
+  imports: [CommonModule, ControlPanelComponent, ThemeToggleComponent],
   templateUrl: './display-page.component.html',
   styleUrls: ['./display-page.component.scss']
 })
@@ -21,7 +24,9 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   detail?: GameDetail;
   lastUpdated: Date = new Date();
   isAdmin: boolean = false; // Cambiar a true para habilitar el panel de control
-  
+  // Tema actual de la UI
+  theme: AppTheme = 'dark';
+
   private gameId!: number;
   private sub?: Subscription;
   private clockSub?: Subscription;
@@ -29,7 +34,7 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   private prevRemainingMs = 0;
   private firedAtZero = false;
   private advancing = false; // evita dobles llamados al API
-  
+
   // Propiedad para verificar si el juego está suspendido
   get isGameSuspended(): boolean {
     return this.detail?.game.status === 'SUSPENDED';
@@ -63,7 +68,8 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     private api: ApiService,
     private clock: ClockService,
     private cdr: ChangeDetectorRef,
-    private zone: NgZone
+    private zone: NgZone,
+    private themeSvc: ThemeService
   ) {}
 
   // Métodos para el panel de control
@@ -165,6 +171,10 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
+    // Aplicar tema al iniciar
+    this.theme = this.themeSvc.getTheme();
+    this.themeSvc.applyTheme(this.theme);
+
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
     
     // Suscribirse a los cambios del reloj
@@ -442,4 +452,9 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     return event.eventType;
   }
 
+  // Cambia entre tema claro y oscuro
+  toggleTheme(): void {
+    this.theme = this.theme === 'light' ? 'dark' : 'light';
+    this.themeSvc.setTheme(this.theme);
+  }
 }

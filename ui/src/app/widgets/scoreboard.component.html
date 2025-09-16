@@ -6,7 +6,7 @@
     <button 
       *ngIf="isAdmin"
       (click)="openAdjustModal()"
-      class="btn btn-primary btn-sm"
+      class="btn btn-primary btn-sm adjust-btn"
       [disabled]="!clockRunning"
       [title]="!clockRunning ? 'Inicia el reloj para ajustar la puntuación' : 'Ajustar Puntuación'"
     >
