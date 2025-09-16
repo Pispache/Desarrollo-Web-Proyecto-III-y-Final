@@ -1,4 +1,5 @@
-import { Injectable } from '@angular/core';
+import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';
 
 export type NotificationType = 'success' | 'info' | 'warning' | 'error';
@@ -27,6 +28,8 @@ export class NotificationService {
   private effects$ = new BehaviorSubject<VisualEffect | null>(null);
   private idSeq = 0;
 
+  constructor(@Inject(PLATFORM_ID) private platformId: Object) {}
+
   // Observables
   getNotifications(): Observable<Notification[]> { return this.notifications$.asObservable(); }
   getVisualEffects(): Observable<VisualEffect | null> { return this.effects$.asObservable(); }
@@ -41,12 +44,13 @@ export class NotificationService {
 
     if (!n.sticky) {
       const duration = n.duration ?? 2000;
-      window.setTimeout(() => this.removeNotification(n.id), duration);
+      // Use global timer to avoid referencing window during SSR
+      setTimeout(() => this.removeNotification(n.id), duration);
     }
   }
 
   removeNotification(id: string) {
-    const list = this.notifications$.value.filter(n => n.id !== id);
+    const list = this.notifications$.value.filter((n: Notification) => n.id !== id);
     this.notifications$.next(list);
   }
 
@@ -78,7 +82,10 @@ export class NotificationService {
 
   // Confirmaciones (implementar modal real más adelante si se desea)
   async confirm(message: string, title = 'Confirmación'): Promise<boolean> {
-    // Para mantener una API asíncrona uniforme, usamos Promise con window.confirm
+    // Evitar uso de window en SSR
+    if (!isPlatformBrowser(this.platformId)) {
+      return Promise.resolve(false);
+    }
     try {
       const ok = window.confirm(`${title}\n\n${message}`);
       return Promise.resolve(ok);
@@ -91,7 +98,8 @@ export class NotificationService {
   private trigger(effect: VisualEffectType, color?: string, ms = 700) {
     const until = Date.now() + ms;
     this.effects$.next({ type: effect, color, until });
-    window.setTimeout(() => {
+    // Use global timer to avoid referencing window during SSR
+    setTimeout(() => {
       if (this.effects$.value && this.effects$.value.until && Date.now() >= this.effects$.value.until) {
         this.effects$.next(null);
       }

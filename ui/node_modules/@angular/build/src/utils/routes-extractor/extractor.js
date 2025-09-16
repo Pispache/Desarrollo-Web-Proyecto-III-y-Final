@@ -64,7 +64,7 @@ export async function* extractRoutes(bootstrapAppFnOrModule, document) {
     try {
         let applicationRef;
         if (isBootstrapFn(bootstrapAppFnOrModule)) {
-            applicationRef = await bootstrapAppFnOrModule();
+            applicationRef = await bootstrapAppFnOrModule({ platformRef });
         }
         else {
             const moduleRef = await platformRef.bootstrapModule(bootstrapAppFnOrModule);

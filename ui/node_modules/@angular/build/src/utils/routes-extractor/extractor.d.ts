@@ -6,10 +6,11 @@
  * found in the LICENSE file at https://angular.dev/license
  */
 import { ApplicationRef, Type } from '@angular/core';
+import { BootstrapContext } from '@angular/platform-browser';
 interface RouterResult {
     route: string;
     success: boolean;
     redirect: boolean;
 }
-export declare function extractRoutes(bootstrapAppFnOrModule: (() => Promise<ApplicationRef>) | Type<unknown>, document: string): AsyncIterableIterator<RouterResult>;
+export declare function extractRoutes(bootstrapAppFnOrModule: ((context: BootstrapContext) => Promise<ApplicationRef>) | Type<unknown>, document: string): AsyncIterableIterator<RouterResult>;
 export {};

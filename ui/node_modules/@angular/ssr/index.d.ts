@@ -1,4 +1,5 @@
 import { ApplicationRef } from '@angular/core';
+import { BootstrapContext } from '@angular/platform-browser';
 import { StaticProvider } from '@angular/core';
 import { Type } from '@angular/core';
 
@@ -25,7 +26,7 @@ export declare class CommonEngine {
 
 export declare interface CommonEngineOptions {
     /** A method that when invoked returns a promise that returns an `ApplicationRef` instance once resolved or an NgModule. */
-    bootstrap?: Type<{}> | (() => Promise<ApplicationRef>);
+    bootstrap?: Type<{}> | ((context: BootstrapContext) => Promise<ApplicationRef>);
     /** A set of platform level providers for all requests. */
     providers?: StaticProvider[];
     /** Enable request performance profiling data collection and printing the results in the server console. */
@@ -34,7 +35,7 @@ export declare interface CommonEngineOptions {
 
 export declare interface CommonEngineRenderOptions {
     /** A method that when invoked returns a promise that returns an `ApplicationRef` instance once resolved or an NgModule. */
-    bootstrap?: Type<{}> | (() => Promise<ApplicationRef>);
+    bootstrap?: Type<{}> | ((context: BootstrapContext) => Promise<ApplicationRef>);
     /** A set of platform level providers for the current request. */
     providers?: StaticProvider[];
     url?: string;

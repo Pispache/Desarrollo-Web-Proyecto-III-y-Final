@@ -55,8 +55,15 @@ services:
       - JWT_EXPIRES_MINUTES=${JWT_EXPIRES_MINUTES}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
+      # Opcional: seeding de múltiples usuarios. Formato: user:pass[:role];user2:pass2[:role2]
+      # Si ADMIN_USERS está definido, tendrá prioridad sobre ADMIN_USERNAME/ADMIN_PASSWORD en el seeder.
+      - ADMIN_USERS=${ADMIN_USERS}
+      # Opción sencilla: archivo JSON montado dentro del contenedor
+      - ADMIN_USERS_FILE=/app/users.json
     ports:
       - "8080:8080"
+    volumes:
+      - ./users.json:/app/users.json:ro
     profiles: ["api", "all"]
 
   ui:

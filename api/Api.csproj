@@ -4,6 +4,9 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Set assembly InformationalVersion so AssemblyInfo includes the desired attribute -->
+    <Version>1.0.0</Version>
+    <InformationalVersion>1.0.0+5a0a3c52bdc5de445e5e7796f04f939449c52d7e</InformationalVersion>
   </PropertyGroup>
 
   <ItemGroup>

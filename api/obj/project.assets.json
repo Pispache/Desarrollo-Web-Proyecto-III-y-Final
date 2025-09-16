@@ -60,6 +60,25 @@
           }
         }
       },
+      "Microsoft.AspNetCore.Authentication.JwtBearer/8.0.18": {
+        "type": "package",
+        "dependencies": {
+          "Microsoft.IdentityModel.Protocols.OpenIdConnect": "7.1.2"
+        },
+        "compile": {
+          "lib/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll": {
+            "related": ".xml"
+          }
+        },
+        "runtime": {
+          "lib/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll": {
+            "related": ".xml"
+          }
+        },
+        "frameworkReferences": [
+          "Microsoft.AspNetCore.App"
+        ]
+      },
       "Microsoft.AspNetCore.OpenApi/8.0.18": {
         "type": "package",
         "dependencies": {
@@ -820,6 +839,21 @@
         "lib/netstandard2.0/Dapper.dll",
         "lib/netstandard2.0/Dapper.xml",
         "readme.md"
+      ]
+    },
+    "Microsoft.AspNetCore.Authentication.JwtBearer/8.0.18": {
+      "sha512": "Ty49uva5oIFa7nOkeL+6TGRU7DQohBaEGs+QcGoGSXq4d7MZnNueLte0HFa9WHvjZUDfJSQ1PVmWkFeIYS1w4Q==",
+      "type": "package",
+      "path": "microsoft.aspnetcore.authentication.jwtbearer/8.0.18",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll",
+        "lib/net8.0/Microsoft.AspNetCore.Authentication.JwtBearer.xml",
+        "microsoft.aspnetcore.authentication.jwtbearer.8.0.18.nupkg.sha512",
+        "microsoft.aspnetcore.authentication.jwtbearer.nuspec"
       ]
     },
     "Microsoft.AspNetCore.OpenApi/8.0.18": {
@@ -2164,25 +2198,26 @@
   "projectFileDependencyGroups": {
     "net8.0": [
       "Dapper >= 2.1.66",
+      "Microsoft.AspNetCore.Authentication.JwtBearer >= 8.0.18",
       "Microsoft.AspNetCore.OpenApi >= 8.0.18",
       "Microsoft.Data.SqlClient >= 6.0.2",
       "Swashbuckle.AspNetCore >= 6.6.2"
     ]
   },
   "packageFolders": {
-    "C:\\Users\\cesar\\.nuget\\packages\\": {}
+    "C:\\Users\\josed\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\cesar\\OneDrive\\Documentos\\GitHub\\Marcador-de-baloncesto\\api\\Api.csproj",
+      "projectUniqueName": "C:\\Users\\josed\\OneDrive\\Documentos\\UMG\\Octavo Semestre\\Desarrollo Web\\Marcador-de-baloncesto\\api\\Api.csproj",
       "projectName": "Api",
-      "projectPath": "C:\\Users\\cesar\\OneDrive\\Documentos\\GitHub\\Marcador-de-baloncesto\\api\\Api.csproj",
-      "packagesPath": "C:\\Users\\cesar\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\cesar\\OneDrive\\Documentos\\GitHub\\Marcador-de-baloncesto\\api\\obj\\",
+      "projectPath": "C:\\Users\\josed\\OneDrive\\Documentos\\UMG\\Octavo Semestre\\Desarrollo Web\\Marcador-de-baloncesto\\api\\Api.csproj",
+      "packagesPath": "C:\\Users\\josed\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\josed\\OneDrive\\Documentos\\UMG\\Octavo Semestre\\Desarrollo Web\\Marcador-de-baloncesto\\api\\obj\\",
       "projectStyle": "PackageReference",
       "configFilePaths": [
-        "C:\\Users\\cesar\\AppData\\Roaming\\NuGet\\NuGet.Config"
+        "C:\\Users\\josed\\AppData\\Roaming\\NuGet\\NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -2205,7 +2240,8 @@
         "enableAudit": "true",
         "auditLevel": "low",
         "auditMode": "direct"
-      }
+      },
+      "SdkAnalysisLevel": "9.0.300"
     },
     "frameworks": {
       "net8.0": {
@@ -2214,6 +2250,10 @@
           "Dapper": {
             "target": "Package",
             "version": "[2.1.66, )"
+          },
+          "Microsoft.AspNetCore.Authentication.JwtBearer": {
+            "target": "Package",
+            "version": "[8.0.18, )"
           },
           "Microsoft.AspNetCore.OpenApi": {
             "target": "Package",
@@ -2239,6 +2279,24 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
+        "downloadDependencies": [
+          {
+            "name": "Microsoft.AspNetCore.App.Ref",
+            "version": "[8.0.19, 8.0.19]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Host.win-x64",
+            "version": "[8.0.19, 8.0.19]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Ref",
+            "version": "[8.0.19, 8.0.19]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Ref",
+            "version": "[8.0.19, 8.0.19]"
+          }
+        ],
         "frameworkReferences": {
           "Microsoft.AspNetCore.App": {
             "privateAssets": "none"
@@ -2247,7 +2305,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.412/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.304/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

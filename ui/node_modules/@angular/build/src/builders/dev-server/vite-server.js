@@ -242,7 +242,7 @@ async function* serveWithVite(serverOptions, builderName, builderAction, context
                 ? browserOptions.polyfills
                 : [browserOptions.polyfills];
             // Setup server and start listening
-            const serverConfiguration = await setupServer(serverOptions, generatedFiles, assetFiles, browserOptions.preserveSymlinks, externalMetadata, !!browserOptions.ssr, prebundleTransformer, target, (0, internal_1.isZonelessApp)(polyfills), browserOptions.loader, extensions?.middleware, transformers?.indexHtml, thirdPartySourcemaps);
+            const serverConfiguration = await setupServer(serverOptions, generatedFiles, assetFiles, browserOptions.preserveSymlinks, externalMetadata, !!browserOptions.ssr, prebundleTransformer, target, (0, internal_1.isZonelessApp)(polyfills), browserOptions.loader, extensions?.middleware, transformers?.indexHtml, thirdPartySourcemaps, !!browserOptions.aot);
             server = await createServer(serverConfiguration);
             await server.listen();
             if (browserOptions.ssr && serverOptions.prebundle !== false) {
@@ -372,7 +372,7 @@ function analyzeResultFiles(normalizePath, htmlIndexPath, resultFiles, generated
         }
     }
 }
-async function setupServer(serverOptions, outputFiles, assets, preserveSymlinks, externalMetadata, ssr, prebundleTransformer, target, zoneless, prebundleLoaderExtensions, extensionMiddleware, indexHtmlTransformer, thirdPartySourcemaps = false) {
+async function setupServer(serverOptions, outputFiles, assets, preserveSymlinks, externalMetadata, ssr, prebundleTransformer, target, zoneless, prebundleLoaderExtensions, extensionMiddleware, indexHtmlTransformer, thirdPartySourcemaps = false, aot = false) {
     const proxy = await (0, utils_1.loadProxyConfiguration)(serverOptions.workspaceRoot, serverOptions.proxyConfig);
     // dynamically import Vite for ESM compatibility
     const { normalizePath } = await (0, load_esm_1.loadEsmModule)('vite');
@@ -448,6 +448,7 @@ async function setupServer(serverOptions, outputFiles, assets, preserveSymlinks,
                 // Include all implict dependencies from the external packages internal option
                 include: externalMetadata.implicitServer,
                 ssr: true,
+                aot,
                 prebundleTransformer,
                 zoneless,
                 target,
@@ -484,6 +485,7 @@ async function setupServer(serverOptions, outputFiles, assets, preserveSymlinks,
             zoneless,
             loader: prebundleLoaderExtensions,
             thirdPartySourcemaps,
+            aot,
         }),
     };
     if (serverOptions.ssl) {
@@ -504,7 +506,7 @@ async function setupServer(serverOptions, outputFiles, assets, preserveSymlinks,
     }
     return configuration;
 }
-function getDepOptimizationConfig({ disabled, exclude, include, target, zoneless, prebundleTransformer, ssr, loader, thirdPartySourcemaps, }) {
+function getDepOptimizationConfig({ disabled, exclude, include, target, zoneless, prebundleTransformer, ssr, loader, thirdPartySourcemaps, aot, }) {
     const plugins = [
         {
             name: `angular-vite-optimize-deps${ssr ? '-ssr' : ''}${thirdPartySourcemaps ? '-vendor-sourcemap' : ''}`,
@@ -532,6 +534,9 @@ function getDepOptimizationConfig({ disabled, exclude, include, target, zoneless
             supported: (0, internal_1.getFeatureSupport)(target, zoneless),
             plugins,
             loader,
+            define: {
+                'ngJitMode': aot ? 'false' : 'true',
+            },
             resolveExtensions: ['.mjs', '.js', '.cjs'],
         },
     };
