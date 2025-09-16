@@ -7,12 +7,13 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${SA_PASSWORD}
+      - MSSQL_TCP_PORT=1435
     ports:
-      - "1433:1433"
+      - "1435:1435"
     volumes:
       - ./db:/db
     healthcheck:
-      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost,1433", "-C", "-U", "sa", "-P", "${SA_PASSWORD}", "-Q", "SELECT 1"]
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost,1435", "-C", "-U", "sa", "-P", "${SA_PASSWORD}", "-Q", "SELECT 1"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -47,7 +48,13 @@ services:
         condition: service_completed_successfully
     environment:
       - ASPNETCORE_URLS=${ASPNETCORE_URLS}
-      - DB_CONNECTION_STRING=Server=db,1433;Database=${DB_NAME};User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+      - DB_CONNECTION_STRING=Server=db,1435;Database=${DB_NAME};User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - JWT_EXPIRES_MINUTES=${JWT_EXPIRES_MINUTES}
+      - ADMIN_USERNAME=${ADMIN_USERNAME}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     ports:
       - "8080:8080"
     profiles: ["api", "all"]

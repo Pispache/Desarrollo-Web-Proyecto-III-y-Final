@@ -1,0 +1,19 @@
+<div class="login-wrapper">
+  <h2>Iniciar sesión</h2>
+
+  <form (ngSubmit)="submit()" #f="ngForm" autocomplete="on">
+    <div class="form-group">
+      <label>Usuario</label>
+      <input type="text" name="username" [(ngModel)]="username" required autofocus />
+    </div>
+
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" name="password" [(ngModel)]="password" required />
+    </div>
+
+    <button type="submit" [disabled]="loading">{{ loading ? 'Entrando...' : 'Entrar' }}</button>
+
+    <div class="error" *ngIf="error">{{ error }}</div>
+  </form>
+</div>

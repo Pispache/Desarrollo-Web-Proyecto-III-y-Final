@@ -86,7 +86,7 @@ public static class GameEndpoints
                 team = teamFouls,
                 players = playerFouls 
             });
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         // Add adjust score endpoint
         g.MapPost("/games/{id:int}/adjust-score", async (int id, [FromBody] AdjustScoreDto dto) =>
@@ -161,7 +161,7 @@ public static class GameEndpoints
                 Console.WriteLine($"Error en la conexión: {ex}");
                 return Results.Problem("Error de conexión con la base de datos", statusCode: 500);
             }
-        });
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
 
         // ===== Helpers mínimos =====
@@ -185,7 +185,7 @@ public static class GameEndpoints
             using var c = Open(cs());
             var rows = await c.QueryAsync($"SELECT TOP 50 * FROM {T}Games ORDER BY GameId DESC;");
             return Results.Ok(rows);
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         g.MapPost("/games", async ([FromBody] CreateGameDto body) =>
         {
@@ -208,7 +208,7 @@ public static class GameEndpoints
 
             tx.Commit();
             return Results.Created($"/api/games/{id}", new { gameId = id, home, away });
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         g.MapGet("/games/{id:int}", async (int id) =>
         {
@@ -217,7 +217,7 @@ public static class GameEndpoints
             if (game is null) return Results.NotFound();
             var events = await c.QueryAsync($"SELECT TOP 100 * FROM {T}GameEvents WHERE GameId=@id ORDER BY EventId DESC;", new { id });
             return Results.Ok(new { game, events });
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         g.MapPost("/games/{id:int}/start", async (int id) =>
         {
@@ -230,7 +230,7 @@ public static class GameEndpoints
             await Exec(c, $"UPDATE {T}GameClocks SET Running=1, StartedAt=SYSUTCDATETIME(), UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit();
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         g.MapPost("/games/{id:int}/advance-quarter", async (int id) =>
         {
@@ -310,7 +310,7 @@ public static class GameEndpoints
                     isOvertime = false
                 });
             }
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         g.MapPost("/games/{id:int}/previous-quarter", async (int id) =>
         {
@@ -377,7 +377,7 @@ public static class GameEndpoints
             await Exec(c, $"UPDATE {T}GameClocks SET Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit(); 
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         g.MapPost("/games/{id:int}/cancel", async (int id) =>
         {
@@ -428,7 +428,7 @@ public static class GameEndpoints
                 
             tx.Commit();
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
         
         // ===== Score / Foul / Undo =====
         g.MapPost("/games/{id:int}/score", async (int id, [FromBody] ScoreDto dto) =>
@@ -717,7 +717,7 @@ public static class GameEndpoints
             }, tx);
 
             tx.Commit(); return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         // ===== Overtime =====
         g.MapPost("/games/{gameId}/overtime", async (int gameId) =>

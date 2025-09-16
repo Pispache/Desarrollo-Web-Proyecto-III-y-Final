@@ -1,5 +1,8 @@
 using Dapper;
 using Microsoft.Data.SqlClient;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 // Punto de entrada de la API del marcador.
 // Configura DbContext, CORS (en dev), healthcheck y endpoints del dominio de juego.
@@ -7,6 +10,30 @@ var b = WebApplication.CreateBuilder(args);
 b.Services.AddEndpointsApiExplorer();
 b.Services.AddSwaggerGen();
 b.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+
+// JWT Authentication
+var jwtSecret = b.Configuration["JWT_SECRET"];
+if (!string.IsNullOrWhiteSpace(jwtSecret))
+{
+    b.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = b.Configuration["JWT_ISSUER"] ?? "MarcadorApi",
+                ValidAudience = b.Configuration["JWT_AUDIENCE"] ?? "MarcadorUi",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
+            };
+        });
+    b.Services.AddAuthorization(options =>
+    {
+        options.AddPolicy("ADMIN", p => p.RequireRole("ADMIN"));
+    });
+}
 
 var app = b.Build();
 app.UseCors();
@@ -22,23 +49,21 @@ string GetCs() =>
     ?? app.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("No hay cadena de conexión.");
 
+// Auth endpoints (login)
+app.MapAuthEndpoints(GetCs);
+
+// Enable auth middleware only if configured
+if (!string.IsNullOrWhiteSpace(jwtSecret))
+{
+    app.UseAuthentication();
+    app.UseAuthorization();
+}
+
+// Seed admin user (if env vars provided)
+await Bootstrap.SeedAdminAsync(app, GetCs);
+
 app.MapGameEndpoints(GetCs);
 app.MapClockEndpoints(GetCs);
 
 app.Run();
-
-public enum FoulType
-{
-    PERSONAL,
-    TECHNICAL,
-    UNSPORTSMANLIKE,
-    DISQUALIFYING
-}
-// DTOs (manténlo aquí o muévelo a Dtos.cs)
-record CreateGameDto(string? Home, string? Away);
-record TeamCreateDto(string Name);
-record PairDto(int HomeTeamId, int AwayTeamId);
-record CreatePlayerDto(string Name, byte? Number, string? Position);
-record UpdatePlayerDto(byte? Number, string? Name, string? Position, bool? Active);
-record ClockResetDto(int? QuarterMs);
 

@@ -43,11 +43,94 @@ $pagination-hover-border-color: $dark-border;
 /* Importar el resto de Bootstrap */
 @import 'bootstrap/scss/bootstrap';
 
+/* Importar design tokens (variables CSS globales) */
+@import './styles/_theme';
+
 /* Importar el tema oscuro personalizado */
 @import './styles/dark-theme';
 
 /* Fuente LED Digital */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
+
+/* =====================================================
+   Transiciones globales para cambios de tema
+   - Controladas por el token: --transition-theme (ver _theme.scss)
+   - Evita código duplicado en componentes.
+   - Para desactivar: establece --transition-theme: 0ms en _theme.scss
+   ===================================================== */
+:root, body, .card, .list-group-item, .table, .btn, .badge,
+.modal-content, .form-control, .form-select, .input-group-text {
+  transition: background-color var(--transition-theme),
+              color var(--transition-theme),
+              border-color var(--transition-theme),
+              box-shadow var(--transition-theme);
+}
+
+/* =====================================================
+   Formularios globales (modo claro/oscuro)
+   - Se aplican en toda la app para inputs y selects
+   ===================================================== */
+/* Modo claro */
+:root[data-theme="light"] .form-control,
+:root[data-theme="light"] .form-select {
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border: 1px solid var(--input-border) !important;
+}
+:root[data-theme="light"] .form-control::placeholder {
+  color: var(--input-placeholder) !important;
+}
+:root[data-theme="light"] .form-select option,
+:root[data-theme="light"] .form-select optgroup {
+  background: var(--select-option-bg) !important;
+  color: var(--select-option-text) !important;
+}
+:root[data-theme="light"] .form-select:focus,
+:root[data-theme="light"] .form-control:focus {
+  border-color: transparent !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary, #0d6efd) 25%, transparent) !important;
+}
+:root[data-theme="light"] .form-control:disabled,
+:root[data-theme="light"] .form-select:disabled {
+  background: #f5f6fa !important;
+  color: rgba(0,0,0,0.55) !important;
+}
+:root[data-theme="light"] .input-group-text {
+  background: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--input-border);
+}
+
+/* Modo oscuro */
+:root:not([data-theme="light"]) .form-control,
+:root:not([data-theme="light"]) .form-select {
+  background: var(--input-bg) !important;
+  color: var(--input-text) !important;
+  border: 1px solid var(--input-border) !important;
+}
+:root:not([data-theme="light"]) .form-control::placeholder {
+  color: var(--input-placeholder) !important;
+}
+:root:not([data-theme="light"]) .form-select option,
+:root:not([data-theme="light"]) .form-select optgroup {
+  background: var(--select-option-bg) !important;
+  color: var(--select-option-text) !important;
+}
+:root:not([data-theme="light"]) .form-select:focus,
+:root:not([data-theme="light"]) .form-control:focus {
+  border-color: transparent !important;
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-primary, #0d6efd) 25%, transparent) !important;
+}
+:root:not([data-theme="light"]) .form-control:disabled,
+:root:not([data-theme="light"]) .form-select:disabled {
+  background: rgba(255,255,255,0.04) !important;
+  color: rgba(231,233,255,0.65) !important;
+}
+:root:not([data-theme="light"]) .input-group-text {
+  background: var(--input-bg);
+  color: var(--input-text);
+  border-color: var(--input-border);
+}
 
 :root {
   --led-bg: #1a1a1a;

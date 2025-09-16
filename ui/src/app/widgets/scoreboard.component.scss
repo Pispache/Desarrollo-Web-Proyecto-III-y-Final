@@ -1,3 +1,9 @@
+/*
+  Scoreboard Styles
+  Tokens usados: --color-primary, --radius-sm, --shadow-sm, --shadow-md, --color-text
+  Fuente de tokens: ui/src/styles/_theme.scss
+  Nota: para cambiar colores o radios de botones (p.ej. .adjust-btn), ajusta los tokens.
+*/
 // Glass/LED styling inside scoreboard
 :host {
   --fg-0: var(--fg-0, #e7e9ff);
@@ -47,6 +53,28 @@
   font-family: 'Orbitron', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
   letter-spacing: 1px;
   text-shadow: 0 0 6px rgba(155,92,255,.8), 0 0 14px rgba(0,224,255,.35);
+}
+
+/* Botón de Ajustar Puntuación con design tokens */
+.adjust-btn {
+  background: linear-gradient(135deg, var(--color-primary), #6ea8fe);
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  padding: .4rem .8rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform .08s ease, box-shadow .12s ease, opacity .12s ease;
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+  }
+
+  &:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
 }
 
 // Estilos para el modal de ajuste de puntuación

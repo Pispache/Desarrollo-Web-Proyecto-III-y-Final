@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ApiService, Game, Player, FoulSummary, FoulType } from '../services/api.service';
@@ -14,9 +14,12 @@ import { forkJoin } from 'rxjs';
   templateUrl: './control-panel.component.html',
   styleUrls: ['./control-panel.component.scss']
 })
-export class ControlPanelComponent implements OnChanges {
+export class ControlPanelComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) game!: Game;
   @Input() isSuspended: boolean = false;
+  @Input() side: 'HOME' | 'AWAY' = 'HOME';
+  @Input() showGlobalControls: boolean = true;
+  @Input() canEdit: boolean = false;
 
   @Output() changed = new EventEmitter<void>();
   @Output() resetRequested = new EventEmitter<void>();
@@ -66,6 +69,10 @@ export class ControlPanelComponent implements OnChanges {
     setTimeout(m[t], ms);
   }
 
+  ngOnDestroy(): void {
+    this.clockSub?.unsubscribe?.();
+  }
+
   constructor(
     private api: ApiService,
     private notify: NotificationService,
@@ -77,6 +84,10 @@ export class ControlPanelComponent implements OnChanges {
     return this.game?.status === 'IN_PROGRESS' || this.game?.status === 'SCHEDULED' || this.isSuspended;
   }
 
+  // Estado del reloj para validar si se permiten anotaciones/faltas
+  clockRunning = false;
+  private clockSub?: any;
+
   ngOnChanges(_: SimpleChanges): void {
     if (!this.game) return;
 
@@ -84,6 +95,12 @@ export class ControlPanelComponent implements OnChanges {
     this.selAwayPlayerId = undefined;
     this.selHomeFoulType = 'PERSONAL';
     this.selAwayFoulType = 'PERSONAL';
+
+    // Suscribirse al estado del reloj para habilitar/deshabilitar acciones según running
+    this.clockSub?.unsubscribe?.();
+    this.clockSub = this.clock.getState(this.game.gameId).subscribe(s => {
+      this.clockRunning = !!s.running;
+    });
 
     forkJoin({
       home: this.api.listGamePlayers(this.game.gameId, 'HOME'),
@@ -97,7 +114,7 @@ export class ControlPanelComponent implements OnChanges {
     this.sound.preloadAll();
     this.sound.unlock();
   }
-
+  //refresca datos
   private refresh() { this.changed.emit(); }
   private refreshAll() { this.refreshFouls(); this.refreshFoulsByType(); }
 
@@ -292,19 +309,24 @@ export class ControlPanelComponent implements OnChanges {
       }
     });
   }
-
+  //puntos
   async score(team: 'HOME' | 'AWAY', points: 1 | 2 | 3) {
     if (this.scoring) return;
-    if (this.game.status !== 'IN_PROGRESS' && !this.isSuspended) return;
-
+    // Requiere juego en progreso y reloj corriendo
+    if (this.game.status !== 'IN_PROGRESS' || !this.clockRunning) {
+      this.notify.showWarning('No permitido', 'Debes iniciar el reloj para registrar anotaciones.', 1800);
+      return;
+    }
+    //verifica estados
     this.scoring = true;
     this.sound.play('click');
     await this.sound.unlock();
-
+    //obtener id
     const playerId = team === 'HOME' ? this.selHomePlayerId : this.selAwayPlayerId;
-
+    //lama a la api para registar puntos
     this.api.score(this.game.gameId, team, points, { playerId: playerId ?? undefined }).subscribe({
       next: () => {
+        //actualiza vista
         this.refresh();
         const teamTxt = team === 'HOME' ? 'HOME' : 'AWAY';
         this.notify.showSuccess('Anotación', `${teamTxt} sumó ${points} punto${points>1?'s':''}`, 1600);
@@ -318,7 +340,10 @@ export class ControlPanelComponent implements OnChanges {
 
   async subtractPoint(team: 'HOME' | 'AWAY') {
     if (this.subtracting) return;
-    if (this.game?.status !== 'IN_PROGRESS' && !this.isSuspended) return;
+    if (this.game?.status !== 'IN_PROGRESS' || !this.clockRunning) {
+      this.notify.showWarning('No permitido', 'Debes iniciar el reloj para restar puntos.', 1800);
+      return;
+    }
 
     const currentScore = team === 'HOME' ? this.game.homeScore : this.game.awayScore;
     if (currentScore <= 0) {
@@ -354,7 +379,10 @@ export class ControlPanelComponent implements OnChanges {
 
   async foul(team:'HOME'|'AWAY') {
     if (this.fouling) return;
-    if (this.game?.status !== 'IN_PROGRESS') return;
+    if (this.game?.status !== 'IN_PROGRESS' || !this.clockRunning) {
+      this.notify.showWarning('No permitido', 'Debes iniciar el reloj para registrar faltas.', 1800);
+      return;
+    }
 
     this.fouling = true;
     this.sound.play('click');

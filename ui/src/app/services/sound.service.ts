@@ -1,20 +1,47 @@
 import { Injectable } from '@angular/core';
 
+/**
+ * @summary Claves válidas para efectos de sonido del marcador.
+ */
 export type SoundKey =
   | 'click' | 'start' | 'quarter_end' | 'game_end' | 'undo'
   | 'score1' | 'score2' | 'score3' | 'foul' | 'error'
   | 'referee_whistle' | 'buzzer_long' | 'swish' | 'crowd_cheer' | 'crowd_boo';
 
+/**
+ * @summary Configuración de un recurso de audio.
+ * @property src Ruta del archivo de audio.
+ * @property volume Volumen relativo (0..1).
+ * @property [loop] Reproducción en bucle.
+ */
 type SoundCfg = { src: string; volume: number; loop?: boolean };
+
+/**
+ * @summary Tabla de sonidos disponibles indexados por clave.
+ */
 type SoundTable = Partial<Record<SoundKey, SoundCfg>>;
 
+/**
+ * @summary Servicio centralizado para reproducir efectos de sonido.
+ * @remarks
+ * Estrategia dual:
+ * 1) **Assets HTML5 Audio** (MP3/OGG) cacheados por ruta.
+ * 2) **Síntesis WebAudio** como *fallback* (latencia ~0) cuando hay bloqueo de auto-play.
+ * 
+ * Llama a `unlock()` tras una interacción de usuario (click/tap) para habilitar audio en móviles.
+ */
 @Injectable({ providedIn: 'root' })
 export class SoundService {
-  // Deja síntesis como principal (latencia 0); si quieres forzar archivos, llama playAsset(...)
+  /** @summary Habilita o deshabilita globalmente el audio. */
   private enabled = true;
+
+  /** @summary Volumen maestro global (0..1). */
   private masterVolume = 1.0;
+
+  /** @summary Indica si el contexto de audio ya fue desbloqueado por interacción del usuario. */
   private unlocked = false;
 
+  /** @summary Catálogo de recursos de audio por clave. */
   private assets: SoundTable = {
     referee_whistle: { src: 'assets/sounds/referee_whistle.mp3', volume: 1.0 },
     // Volumen reducido para que sea menos invasivo manteniendo el mismo audio
@@ -24,13 +51,35 @@ export class SoundService {
     crowd_boo:       { src: 'assets/sounds/crowd_boo.mp3',       volume: 0.6 },
   };
 
+  /** @summary Caché de elementos HTML5 `<audio>` por ruta. */
   private html5Cache = new Map<string, HTMLAudioElement>();
+
+  /** @summary Contexto WebAudio para síntesis. */
   private ctx: AudioContext | null = null;
 
+  /**
+   * @summary Activa o desactiva el audio global.
+   * @param v `true` para habilitar; `false` para silenciar todo.
+   */
   setEnabled(v: boolean) { this.enabled = v; }
+
+  /**
+   * @summary Ajusta el volumen maestro (se limita a [0..1]).
+   * @param v Valor de volumen.
+   */
   setMasterVolume(v: number) { this.masterVolume = Math.max(0, Math.min(1, v)); }
+
+  /**
+   * @summary Precarga todos los assets definidos en `assets`.
+   * @remarks Útil al iniciar pantalla para evitar latencia en la primera reproducción.
+   */
   preloadAll() { Object.values(this.assets).forEach(cfg => cfg && this.ensureAsset(cfg.src)); }
 
+  /**
+   * @summary Intenta desbloquear la reproducción de audio (requerido en móviles).
+   * @remarks Llamar en respuesta a un gesto del usuario (click/tap). Inicializa o reanuda
+   * `AudioContext` y reproduce un audio silencioso para habilitar auto-play.
+   */
   async unlock() {
     if (this.unlocked) return;
     this.unlocked = true;
@@ -45,6 +94,10 @@ export class SoundService {
     } catch { this.unlocked = false; }
   }
 
+  /**
+   * @summary Reproduce un sonido por clave, con *fallback* a síntesis cuando aplique.
+   * @param key Clave del sonido a reproducir.
+   */
   play(key: SoundKey): void {
     if (!this.enabled) return;
 
@@ -64,9 +117,19 @@ export class SoundService {
     if (!this.playAsset(key)) this.playSynthFallback(key);
   }
 
+  /**
+   * @summary Detiene todo audio en curso y reinicia su posición a 0.
+   */
   stopAll() { this.html5Cache.forEach(a => { a.pause(); a.currentTime = 0; }); }
 
   // ---------- Archivos ----------
+
+  /**
+   * @summary Intenta reproducir un asset HTML5 Audio.
+   * @param keyOrAlias Clave del sonido en la tabla de assets.
+   * @param [delayMs=0] Retraso opcional en milisegundos.
+   * @returns `true` si se inició la reproducción; `false` si no existe o falla.
+   */
   private playAsset(keyOrAlias: SoundKey, delayMs = 0): boolean {
     const cfg = this.assets[keyOrAlias];
     if (!cfg) return false;
@@ -83,7 +146,9 @@ export class SoundService {
     return true;
   }
 
-  /** Intenta reproducir el buzzer MP3 y, si falla, cae a síntesis */
+  /**
+   * @summary Reproduce el buzzer desde asset; cae a síntesis si falla la carga o reproducción.
+   */
   private playBuzzerWithFallback() {
     const cfg = this.assets['buzzer_long'];
     const audio = cfg ? this.ensureAsset(cfg.src) : null;
@@ -104,6 +169,11 @@ export class SoundService {
       });
   }
 
+  /**
+   * @summary Obtiene (o crea y cachea) un elemento `<audio>` para una ruta dada.
+   * @param src Ruta del archivo de audio.
+   * @returns Instancia de `HTMLAudioElement` o `null` si falla la creación.
+   */
   private ensureAsset(src: string): HTMLAudioElement | null {
     const cached = this.html5Cache.get(src);
     if (cached) return cached;
@@ -115,6 +185,11 @@ export class SoundService {
   }
 
   // ---------- Síntesis (latencia ~0) ----------
+
+  /**
+   * @summary Garantiza un `AudioContext` para síntesis WebAudio.
+   * @returns Contexto activo o `null` si no es posible crearlo.
+   */
   private ensureCtx(): AudioContext | null {
     if (this.ctx) return this.ctx;
     try {
@@ -124,6 +199,14 @@ export class SoundService {
     return this.ctx;
   }
 
+  /**
+   * @summary Genera un tono simple.
+   * @param ctx Contexto WebAudio.
+   * @param freq Frecuencia en Hz.
+   * @param ms Duración en milisegundos.
+   * @param gain Ganancia (volumen relativo).
+   * @param [type='sine'] Tipo de oscilador.
+   */
   private beep(ctx: AudioContext, freq: number, ms: number, gain: number, type: OscillatorType = 'sine') {
     const o = ctx.createOscillator();
     const g = ctx.createGain();
@@ -136,6 +219,15 @@ export class SoundService {
     o.start(now); o.stop(now + dur + 0.02);
   }
 
+  /**
+   * @summary Barrido lineal de frecuencia (chirp).
+   * @param ctx Contexto WebAudio.
+   * @param startHz Frecuencia inicial.
+   * @param endHz Frecuencia final.
+   * @param ms Duración en milisegundos.
+   * @param gain Ganancia (volumen relativo).
+   * @param type Tipo de oscilador.
+   */
   private chirp(ctx: AudioContext, startHz: number, endHz: number, ms: number, gain: number, type: OscillatorType) {
     const o = ctx.createOscillator(); const g = ctx.createGain();
     o.type = type;
@@ -149,6 +241,12 @@ export class SoundService {
     o.start(now); o.stop(now + dur + 0.02);
   }
 
+  /**
+   * @summary Ejecuta una secuencia de notas simples.
+   * @param ctx Contexto WebAudio.
+   * @param notes Lista de notas `{ f: Hz, d: ms, g: ganancia }`.
+   * @param type Tipo de oscilador.
+   */
   private sequence(ctx: AudioContext, notes: Array<{ f: number; d: number; g: number }>, type: OscillatorType) {
     let t = ctx.currentTime;
     for (const n of notes) {
@@ -163,6 +261,10 @@ export class SoundService {
     }
   }
 
+  /**
+   * @summary Efectos de anotación (1, 2 o 3 puntos) mediante síntesis.
+   * @param key Clave de anotación: `score1` | `score2` | `score3`.
+   */
   private playSynthScore(key: SoundKey) {
     const ctx = this.ensureCtx(); if (!ctx) return;
     const v = this.masterVolume;
@@ -178,6 +280,9 @@ export class SoundService {
     ], 'sine');
   }
 
+  /**
+   * @summary Buzzer sintetizado con vibrato (fallback de `buzzer_long`).
+   */
   private playSynthBuzzer() {
     const ctx = this.ensureCtx(); if (!ctx) return;
     // cuadrada con vibrato rápido ~ buzzer
@@ -194,7 +299,15 @@ export class SoundService {
     o.start(now); lfo.start(now); o.stop(now + dur + 0.02); lfo.stop(now + dur + 0.02);
   }
 
+  /**
+   * @summary Sonido de falta como barrido descendente.
+   */
   private playSynthFoul() { const ctx = this.ensureCtx(); if (!ctx) return; this.chirp(ctx, 2200, 1200, 280, this.masterVolume * 0.9, 'sine'); }
+
+  /**
+   * @summary Fallback sintetizado para claves no mapeadas a asset.
+   * @param key Clave de sonido solicitada.
+   */
   private playSynthFallback(key: SoundKey) {
     const ctx = this.ensureCtx(); if (!ctx) return;
     const v = this.masterVolume;

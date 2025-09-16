@@ -1,0 +1,120 @@
+/*
+  ======================================================
+  Design Tokens (CSS Variables)
+  Ubicación: ui/src/styles/_theme.scss
+
+  ¿Qué es esto?
+  - Conjunto centralizado de variables de diseño (colores, radios,
+    sombras, espacios y transiciones) para toda la aplicación.
+
+  ¿Cómo se usa?
+  - En los .scss de componentes, usa var(--color-…)
+    Ej.: background: var(--color-surface);
+
+  ¿Cómo personalizo?
+  - Cambia los valores de estas variables aquí y toda la app se
+    actualizará de forma consistente.
+
+  Tips para programadores:
+  - Puedes añadir nuevos tokens siguiendo el prefijo --color-*,
+    --shadow-*, --radius-*, --space-*.
+  - Controla la animación del cambio de tema con --transition-theme.
+  ======================================================
+*/
+
+:root {
+  /* ===== Paleta base (Tema oscuro por defecto) ===== */
+  --color-bg: #0f1115;
+  --color-surface: #171c26;
+  /* Superficie para encabezados (un tono más marcado que la superficie base) */
+  --color-surface-header: #131826;
+  --color-border: rgba(255,255,255,0.08);
+  --color-text: #e5e9f0;
+  --color-muted: #a3afc4;
+  /* Texto por defecto en encabezados; se puede sobreescribir por sección */
+  --color-text-on-header: var(--color-text);
+
+  --color-primary: #0d6efd;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger:  #ef4444;
+  --color-info:    #00bcd4;
+
+  /* ===== Estados ===== */
+  --color-disabled: rgba(255,255,255,0.5);
+
+  /* ===== Formularios (tema oscuro por defecto) ===== */
+  --input-bg: rgba(255,255,255,0.06);
+  --input-text: var(--color-text);
+  --input-border: rgba(255,255,255,0.12);
+  --input-placeholder: rgba(231,233,255,0.6);
+  --select-option-bg: #15142a;
+  --select-option-text: var(--color-text);
+
+  /* ===== Layout tokens ===== */
+  --radius: 10px;
+  --radius-sm: 8px;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.25);
+
+  /* ===== Espacios ===== */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+
+  /* ===== Transiciones globales ===== */
+  /* Controla la suavidad al alternar tema u otros cambios de color */
+  --transition-theme: 200ms ease-in-out;
+  /* Desactiva transición estableciendo --transition-theme: 0ms; */
+
+  /* ===== Intensidad de overlays/contrastes (tunable) ===== */
+  /* Controla la intensidad (porcentaje) de mezcla en hover/listas/tablas */
+  --mix-list-hover: 12%;
+  --mix-table-head: 4%;
+  --mix-table-row-hover: 3%;
+}
+
+/*
+  ======================================================
+  Tema Claro (opcional)
+  - Se activa estableciendo: document.documentElement
+    .setAttribute('data-theme', 'light')
+  - Para volver a oscuro: removeAttribute('data-theme')
+  ======================================================
+*/
+:root[data-theme="light"] {
+  --color-bg: #f6f7fb;
+  --color-surface: #ffffff;
+  /* Encabezados ligeramente diferenciados del fondo claro */
+  --color-surface-header: #f0f2f8;
+  --color-border: rgba(0,0,0,.08);
+  --color-text: #0f172a;
+  --color-muted: #64748b;
+  /* En claro, por defecto el texto del header sigue el texto general */
+  --color-text-on-header: var(--color-text);
+
+  /* ===== Formularios (tema claro) ===== */
+  --input-bg: #ffffff;
+  --input-text: var(--color-text);
+  --input-border: var(--color-border, rgba(0,0,0,0.12));
+  --input-placeholder: rgba(0,0,0,0.45);
+  --select-option-bg: #ffffff;
+  --select-option-text: var(--color-text);
+}
+
+/*
+  ======================================================
+  Bootstrap Mapping
+  - Estas variables alinean utilidades/clases de Bootstrap con
+    la paleta definida arriba.
+  - Si no deseas influir Bootstrap, comenta esta sección.
+  ======================================================
+*/
+:root {
+  --bs-primary: var(--color-primary);
+  --bs-success: var(--color-success);
+  --bs-warning: var(--color-warning);
+  --bs-danger:  var(--color-danger);
+  --bs-info:    var(--color-info);
+}

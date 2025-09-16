@@ -1,14 +1,16 @@
 /* LED / Glassmorphism styling for public display */
 :host {
   display: block;
+  /* Override de página: texto de encabezados en blanco en DISPLAY */
+  --color-text-on-header: #ffffff;
 }
 
 /* Root background */
 .container-fluid {
   background: radial-gradient(1200px 700px at 50% -10%, rgba(155,92,255,0.08), transparent 60%),
               radial-gradient(900px 600px at 90% 10%, rgba(0,224,255,0.06), transparent 60%),
-              #0e0f1a;
-  color: #e7e9ff;
+              var(--color-bg, #0e0f1a);
+  color: var(--color-text, #e7e9ff);
 }
 
 /* LED Display Wrapper */
@@ -19,8 +21,8 @@
 /* LED Container - glass frame */
 .led-container {
   border-radius: 18px;
-  background: linear-gradient(145deg, rgba(10,10,18,0.88), rgba(12,14,30,0.72));
-  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--color-surface, linear-gradient(145deg, rgba(10,10,18,0.88), rgba(12,14,30,0.72)));
+  border: 1px solid var(--color-border, rgba(255,255,255,0.12));
   box-shadow: 0 20px 50px rgba(0,0,0,0.55), inset 0 0 50px rgba(255,255,255,0.03);
   overflow: hidden;
   position: relative;
@@ -41,15 +43,19 @@
   border-radius: 18px;
 }
 
-/* Header */
+/* Header
+   Nota: el color de fondo del encabezado proviene del token
+   --color-surface-header definido en ui/src/styles/_theme.scss.
+   Ajusta ese token para cambiar el tono en claro/oscuro de forma global. */
 .led-header {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: .75rem;
   align-items: center;
   padding: .75rem 1rem;
-  border-bottom: 1px solid rgba(255,255,255,0.12);
-  background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0));
+  border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.12));
+  /* Usa superficie específica de encabezado para uniformar con Home */
+  background: color-mix(in oklab, var(--color-surface-header, rgba(255,255,255,0.06)) 100%, transparent);
 }
 .led-league {
   font-weight: 700;
@@ -60,12 +66,12 @@
   border-radius: 999px;
   padding: .35rem .7rem;
   font-weight: 600;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--color-border, rgba(255,255,255,0.12));
   background: rgba(255,255,255,0.06);
 }
-.led-status-in-progress { color: #4ade80; background: rgba(74,222,128,.15); }
-.led-status-suspended { color: #ffd166; background: rgba(255,209,102,.15); }
-.led-status-finished { color: #ff4d6d; background: rgba(255,77,109,.15); }
+.led-status-in-progress { color: var(--color-success, #4ade80); background: color-mix(in oklab, var(--color-success, #4ade80) 15%, transparent); }
+.led-status-suspended { color: var(--color-warning, #ffd166); background: color-mix(in oklab, var(--color-warning, #ffd166) 15%, transparent); }
+.led-status-finished { color: var(--color-danger, #ff4d6d); background: color-mix(in oklab, var(--color-danger, #ff4d6d) 15%, transparent); }
 
 /* Period / Time */
 .led-period {
@@ -87,11 +93,11 @@
   font-weight: 900;
   letter-spacing: 2px;
   line-height: 1;
-  color: #e7e9ff;
+  color: var(--color-text, #e7e9ff);
   text-shadow: 0 0 22px rgba(155,92,255,.35), 0 0 32px rgba(0,224,255,.25);
 }
 .led-time-warning {
-  color: #ff4d6d;
+  color: var(--color-danger, #ff4d6d);
   text-shadow: 0 0 18px rgba(255,77,109,.55), 0 0 30px rgba(255,77,109,.35);
 }
 
@@ -113,13 +119,13 @@
 .led-team-name {
   font-weight: 700;
   letter-spacing: 1px;
-  color: #cfd6ff;
+  color: color-mix(in oklab, var(--color-text, #e7e9ff) 85%, #fff);
 }
 .led-score {
   font-size: clamp(2.4rem, 9vw, 6rem);
   font-weight: 900;
   line-height: 1;
-  color: #e7e9ff;
+  color: var(--color-text, #e7e9ff);
   text-shadow: 0 0 18px rgba(155,92,255,.35), 0 0 26px rgba(0,224,255,.28);
 }
 .led-fouls {
@@ -131,9 +137,9 @@
   margin-left: .5rem;
   padding: .1rem .4rem;
   border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,77,109,.15);
-  color: #ff8fa3;
+  border: 1px solid var(--color-border, rgba(255,255,255,0.12));
+  background: color-mix(in oklab, var(--color-danger, #ff4d6d) 15%, transparent);
+  color: color-mix(in oklab, var(--color-danger, #ff4d6d) 65%, #fff);
 }
 
 .led-vs {
@@ -158,7 +164,7 @@
 
 /* Footer */
 .led-footer {
-  border-top: 1px solid rgba(255,255,255,0.12);
+  border-top: 1px solid var(--color-border, rgba(255,255,255,0.12));
   padding: .6rem 1rem 1rem;
 }
 .led-suspended {
@@ -176,16 +182,16 @@
 .admin-panel {
   margin-top: 1rem;
   border-radius: 16px;
-  background: linear-gradient(135deg, rgba(16,14,32,0.55), rgba(16,14,32,0.35));
-  border: 1px solid rgba(255,255,255,0.12);
+  background: var(--color-surface, linear-gradient(135deg, rgba(16,14,32,0.55), rgba(16,14,32,0.35)));
+  border: 1px solid var(--color-border, rgba(255,255,255,0.12));
   box-shadow: inset 0 0 40px rgba(255,255,255,0.02);
   padding: 1rem;
 }
 
 /* Scrollbar (moved from inline styles) */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #1f2937; }
-::-webkit-scrollbar-thumb { background: #f59e0b; border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--color-surface, #1f2937); }
+::-webkit-scrollbar-thumb { background: var(--color-warning, #f59e0b); border-radius: 3px; }
 
 /* Glass Header (replaces header.bg-black) */
 .glass-header {
@@ -194,25 +200,25 @@
   z-index: 20;
   backdrop-filter: saturate(120%) blur(8px);
   background: linear-gradient(180deg, rgba(10,10,18,0.85), rgba(10,10,18,0.55));
-  border-bottom: 1px solid rgba(255,255,255,0.12);
+  border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.12));
 }
 .glass-header .container { padding-top: .4rem; padding-bottom: .4rem; }
 .glass-title {
-  color: #ffd166;
+  color: var(--color-warning, #ffd166);
   font-weight: 800;
   letter-spacing: 1px;
 }
 .glass-status {
   border-radius: 999px;
   padding: .25rem .6rem;
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 1px solid var(--color-border, rgba(255,255,255,0.12));
   background: rgba(255,255,255,0.06);
-  color: #e7e9ff;
+  color: var(--color-text, #e7e9ff);
 }
-.glass-status.in-progress { color: #4ade80; background: rgba(74,222,128,.15); }
-.glass-status.suspended { color: #ffd166; background: rgba(255,209,102,.15); }
-.glass-status.finished, .glass-status.cancelled { color: #ff4d6d; background: rgba(255,77,109,.15); }
-.glass-status.scheduled { color: #00e0ff; background: rgba(0,224,255,.15); }
+.glass-status.in-progress { color: var(--color-success, #4ade80); background: color-mix(in oklab, var(--color-success, #4ade80) 15%, transparent); }
+.glass-status.suspended { color: var(--color-warning, #ffd166); background: color-mix(in oklab, var(--color-warning, #ffd166) 15%, transparent); }
+.glass-status.finished, .glass-status.cancelled { color: var(--color-danger, #ff4d6d); background: color-mix(in oklab, var(--color-danger, #ff4d6d) 15%, transparent); }
+.glass-status.scheduled { color: var(--color-info, #00e0ff); background: color-mix(in oklab, var(--color-info, #00bcd4) 15%, transparent); }
 
 /* LED pulsing loader */
 .led-loader {

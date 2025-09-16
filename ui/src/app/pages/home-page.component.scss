@@ -1,21 +1,35 @@
-/* ====== HOME PAGE THEME (morado/azul gamer) ====== */
+/*
+  HOME PAGE THEME (morado/azul)
+  Tokens usados globalmente: --color-bg, --color-surface, --color-text, --color-border,
+                             --color-primary, --color-success, --color-warning, --color-danger
+  Fuente de tokens: ui/src/styles/_theme.scss
+  Nota: esta hoja aplica tokens a tarjetas/listas/tablas para soportar claro/oscuro.
+*/
 :host {
   /* Paleta */
   --bg-0: #0b0a1a;
   --bg-1: #17142e;
   --bg-2: #24194b;
-  --fg-0: #e7e9ff;
-  --muted: #9aa0bd;
+  /* Mapear a design tokens globales, con fallback al esquema actual */
+  --fg-0: var(--color-text, #e7e9ff);
+  --muted: var(--color-muted, #9aa0bd);
   --accent: #9b5cff;    /* morado neón */
   --accent-2: #00e0ff;  /* cian neón */
   --danger: #ff4d6d;
   --warn: #ffd166;
   --ok: #4ade80;
   --glass: rgba(20, 18, 43, 0.6);
-  --stroke: rgba(255, 255, 255, 0.08);
+  --stroke: var(--color-border, rgba(255, 255, 255, 0.08));
   --shadow: 0 10px 30px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
   --radius: 16px;
   display: block;
+}
+
+/* Overrides locales de formularios eliminados: se aplican globalmente en styles.scss */
+
+/* En tema oscuro, por defecto los encabezados en HOME usan texto blanco */
+:host-context(:root:not([data-theme="light"])) {
+  --color-text-on-header: #ffffff;
 }
 
 /* Fondo degradado con halo morado/azul */
@@ -42,21 +56,37 @@
     pointer-events: none;
     z-index: -1;
   }
+
+  /* Asegura que títulos hereden el color del header */
+  .card-header h1, .card-header h2, .card-header h3,
+  .card-header h4, .card-header h5, .card-header h6,
+  .card-header .card-title {
+    color: inherit !important;
+  }
+}
+
+/* Utilidad: forzar texto blanco en encabezados SOLO en tema oscuro */
+:host-context(:root:not([data-theme="light"])) .header-contrast-high {
+  --color-text-on-header: #ffffff;
 }
 
 /* Cards con glassmorphism */
 .card {
-  background: var(--glass);
-  border: 1px solid var(--stroke);
+  /* Superficie acorde a tokens; se mantiene el efecto glass si existe */
+  background: var(--color-surface, var(--glass));
+  border: 1px solid var(--color-border, var(--stroke));
   border-radius: var(--radius);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   box-shadow: var(--shadow);
 
-  .card-header {
-    border-bottom: 1px solid var(--stroke);
-    background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
-    color: var(--fg-0);
+  /* Aumentar especificidad para ganar a Bootstrap y estilos globales */
+  > .card-header {
+    border-bottom: 1px solid var(--color-border, var(--stroke));
+    /* Usa superficie específica de encabezado para mejor contraste por tema */
+    background: color-mix(in oklab, var(--color-surface-header, rgba(255,255,255,0.02)) 100%, transparent) !important;
+    /* El color de texto del encabezado es configurable vía token */
+    color: var(--color-text-on-header, var(--color-text, var(--fg-0))) !important;
     position: relative;
 
     /* Línea brillante inferior */
@@ -75,20 +105,20 @@
 
 /* List items */
 .list-group-item {
-  background: rgba(0,0,0,0.15);
-  color: var(--fg-0) !important;
-  border-color: var(--stroke);
+  background: color-mix(in oklab, var(--color-surface, #171c26) 92%, transparent);
+  color: var(--color-text, var(--fg-0)) !important;
+  border-color: var(--color-border, var(--stroke));
   transition: all 0.2s ease;
   cursor: pointer;
 
   &:hover, &.active {
-    background: rgba(255, 255, 255, 0.1) !important;
-    color: #ffffff !important;
+    background: color-mix(in oklab, var(--color-primary, #0d6efd) 12%, var(--color-surface, #171c26)) !important;
+    color: var(--color-text, #ffffff) !important;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
     
     * {
-      color: #ffffff !important;
+      color: var(--color-text, #ffffff) !important;
     }
   }
   
@@ -100,15 +130,22 @@
 
 /* Tabla */
 .table {
-  color: var(--fg-0);
+  color: var(--color-text, var(--fg-0));
 
   thead {
-    background: rgba(255,255,255,0.04);
-    th { border-color: var(--stroke); color: var(--muted); }
+    /* Usa las variables de Bootstrap para que los th hereden el fondo */
+    --bs-table-bg: var(--color-surface-header, #f0f2f8);
+    --bs-table-color: var(--color-text, var(--fg-0));
+    th { border-color: var(--color-border, var(--stroke)); color: var(--muted); }
+  }
+  /* Fallback por si algún estilo de Bootstrap pisa el thead directamente */
+  thead > tr > th {
+    background-color: var(--bs-table-bg) !important;
+    color: var(--bs-table-color) !important;
   }
   tbody tr {
-    td { border-color: var(--stroke); }
-    &:hover { background: rgba(255,255,255,0.03); }
+    td { border-color: var(--color-border, var(--stroke)); }
+    &:hover { background: color-mix(in oklab, var(--color-text, #e5e9f0) 3%, transparent); }
   }
 }
 
@@ -132,7 +169,7 @@
 
 /* Botón primario */
 .btn-primary {
-  --g1: var(--accent);
+  --g1: var(--color-primary, var(--accent));
   --g2: var(--accent-2);
   background: linear-gradient(135deg, var(--g1), var(--g2));
   border: none;
@@ -178,22 +215,22 @@
 }
 
 .bg-success { 
-  background: rgba(74, 222, 128, .18) !important; 
+  background: color-mix(in oklab, var(--color-success, #22c55e) 18%, transparent) !important; 
   color: var(--ok) !important; 
 }
 
 .bg-danger { 
-  background: rgba(255, 77, 109, .18) !important; 
+  background: color-mix(in oklab, var(--color-danger,  #ef4444) 18%, transparent) !important; 
   color: var(--danger) !important; 
 }
 
 .bg-warning { 
-  background: rgba(255, 209, 102, .18) !important; 
+  background: color-mix(in oklab, var(--color-warning, #f59e0b) 18%, transparent) !important; 
   color: var(--warn) !important; 
 }
 
 .bg-secondary { 
-  background: rgba(154,160,189,.20) !important; 
+  background: color-mix(in oklab, var(--color-text, #e5e9f0) 20%, transparent) !important; 
   color: var(--muted) !important; 
 }
 

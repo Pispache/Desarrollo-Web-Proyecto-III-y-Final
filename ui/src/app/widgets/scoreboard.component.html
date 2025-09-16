@@ -3,13 +3,16 @@
     <h5 class="card-title mb-0">
       <i class="bi bi-scoreboard me-2"></i>Marcador
     </h5>
-    <button 
-      *ngIf="isAdmin"
-      (click)="openAdjustModal()"
-      class="btn btn-primary btn-sm"
-    >
-      <i class="bi bi-sliders me-1"></i>Ajustar Puntuación
-    </button>
+    <div *ngIf="isAdmin">
+      <button 
+        (click)="openAdjustModal()"
+        class="btn btn-primary btn-sm adjust-btn"
+        [disabled]="!clockRunning"
+        [title]="!clockRunning ? 'Inicia el reloj para ajustar la puntuación' : 'Ajustar Puntuación'"
+      >
+        <i class="bi bi-sliders me-1"></i>Ajustar Puntuación
+      </button>
+    </div>
   </div>
 
   <div class="scoreboard-body">
@@ -87,10 +90,10 @@
                       </span>
                     </span>
 
-                    <!-- Otros eventos -->
+                    <!-- Otros eventos (incluye ajustes manuales mapeados a etiqueta amigable) -->
                     <span *ngSwitchDefault>
                       <i class="bi bi-info-circle-fill text-info me-1"></i>
-                      {{ e.eventType }}
+                      {{ getEventLabel(e) }}
                       <span *ngIf="e.playerNumber != null" class="text-muted ms-1">
                         #{{ e.playerNumber }}
                       </span>
@@ -109,13 +112,13 @@
         </ng-template>
       </div>
     </div>
-</div>
+  </div>
 
-<!-- Placeholder to restore modal back when closing -->
-<div #modalHost></div>
+  <!-- Placeholder to restore modal back when closing -->
+  <div #modalHost></div>
 
-<!-- Modal de ajuste de puntuación -->
-<div *ngIf="showAdjustModal" #adjustModalRef class="modal" tabindex="-1">
+  <!-- Modal de ajuste de puntuación -->
+  <div *ngIf="isAdmin && showAdjustModal" #adjustModalRef class="modal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header bg-dark text-white">
@@ -135,8 +138,13 @@
                 [(ngModel)]="adjustForm.homeDelta" 
                 class="form-control text-end"
                 placeholder="+/- puntos"
+                [min]="-game.homeScore"
+                title="El resultado no puede ser negativo"
               >
               <span class="input-group-text">Nuevo: {{ game.homeScore + (adjustForm.homeDelta || 0) }}</span>
+            </div>
+            <div *ngIf="(game.homeScore + (adjustForm.homeDelta || 0)) < 0" class="form-text text-danger">
+              El puntaje no puede ser negativo.
             </div>
           </div>
           
@@ -149,8 +157,13 @@
                 [(ngModel)]="adjustForm.awayDelta" 
                 class="form-control text-end"
                 placeholder="+/- puntos"
+                [min]="-game.awayScore"
+                title="El resultado no puede ser negativo"
               >
               <span class="input-group-text">Nuevo: {{ game.awayScore + (adjustForm.awayDelta || 0) }}</span>
+            </div>
+            <div *ngIf="(game.awayScore + (adjustForm.awayDelta || 0)) < 0" class="form-text text-danger">
+              El puntaje no puede ser negativo.
             </div>
           </div>
           
@@ -172,6 +185,7 @@
             type="button" 
             class="btn btn-primary"
             (click)="saveAdjust()"
+            [disabled]="(game.homeScore + (adjustForm.homeDelta || 0)) < 0 || (game.awayScore + (adjustForm.awayDelta || 0)) < 0"
           >
             <i class="bi bi-check-circle me-1"></i>Guardar Cambios
           </button>

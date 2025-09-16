@@ -1,17 +1,17 @@
 <div class="control-panel">
   <!-- Header -->
   <div class="panel-header">
-    <h3 class="text-lg font-semibold">Controles del Partido</h3>
+    <h3 class="text-lg font-semibold">{{ side === 'HOME' ? 'Local' : 'Visitante' }}</h3>
   </div>
   
   <!-- Main Controls -->
   <div class="panel-body">
     <!-- Game Controls -->
-    <div class="row g-2 mb-3">
+    <div class="row g-2 mb-3" *ngIf="showGlobalControls">
       <div class="col-6 col-md">
         <button 
           (click)="start()" 
-          [disabled]="game.status!=='SCHEDULED'"
+          [disabled]="!canEdit || game.status!=='SCHEDULED'"
           class="btn btn-success w-100 mb-2"
         >
           Iniciar
@@ -21,7 +21,7 @@
       <div class="col-6 col-md">
         <button 
           (click)="previousQuarter()" 
-          [disabled]="game.status!=='IN_PROGRESS' || game.quarter <= 1"
+          [disabled]="!canEdit || game.status!=='IN_PROGRESS' || game.quarter <= 1"
           class="btn btn-secondary w-100 mb-2"
           title="Retroceder al cuarto anterior"
         >
@@ -32,7 +32,7 @@
       <div class="col-6 col-md">
         <button 
           (click)="advance()" 
-          [disabled]="game.status!=='IN_PROGRESS' || game.quarter >= 4"
+          [disabled]="!canEdit || game.status!=='IN_PROGRESS' || game.quarter >= 4"
           class="btn btn-primary w-100 mb-2"
           title="Avanzar al siguiente cuarto"
         >
@@ -43,7 +43,7 @@
       <div class="col-6 col-md">
         <button 
           (click)="startOvertime()" 
-          [disabled]="game.status!=='IN_PROGRESS' || game.homeScore !== game.awayScore"
+          [disabled]="!canEdit || game.status!=='IN_PROGRESS' || game.homeScore !== game.awayScore"
           class="btn btn-warning w-100 mb-2"
           *ngIf="game.quarter >= 4 && game.homeScore === game.awayScore"
         >
@@ -54,7 +54,7 @@
       <div class="col-6 col-md">
         <button 
           (click)="finish()" 
-          [disabled]="game.status!=='IN_PROGRESS'"
+          [disabled]="!canEdit || game.status!=='IN_PROGRESS'"
           class="btn btn-danger w-100 mb-2"
         >
           Finalizar
@@ -64,7 +64,7 @@
       <div class="col-6 col-md">
         <button 
           (click)="undo()" 
-          [disabled]="!game || game.status==='SCHEDULED'"
+          [disabled]="!canEdit || !game || game.status==='SCHEDULED'"
           class="btn btn-warning w-100 mb-2 text-white"
         >
           Deshacer
@@ -74,7 +74,7 @@
       <div class="col-12 col-md">
         <button 
           (click)="resetAll()"
-          [disabled]="!game || game.status==='SCHEDULED'"
+          [disabled]="!canEdit || !game || game.status==='SCHEDULED'"
           class="btn btn-secondary w-100 mb-2"
         >
           Reiniciar Todo
@@ -85,7 +85,7 @@
     <!-- Controles de Equipo -->
     <div class="mb-4">
       <!-- Equipo Local -->
-      <div class="team-card mb-4">
+      <div class="team-card mb-4" *ngIf="side === 'HOME'">
         <div class="team-header">
           <h5 class="card-title mb-0">Equipo Local</h5>
           <div class="d-flex align-items-center">
@@ -107,7 +107,7 @@
             <div class="col-3">
               <button 
                 (click)="subtractPoint('HOME')" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="!canEdit || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-danger w-100 d-flex flex-column align-items-center py-2"
                 title="Restar 1 punto"
               >
@@ -118,7 +118,7 @@
             <div class="col-3">
               <button 
                 (click)="score('HOME', 1)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="!canEdit || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-info w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+1</span>
@@ -128,7 +128,7 @@
             <div class="col-3">
               <button 
                 (click)="score('HOME', 2)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="!canEdit || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-primary w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+2</span>
@@ -138,7 +138,7 @@
             <div class="col-3">
               <button 
                 (click)="score('HOME', 3)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="!canEdit || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-success w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+3</span>
@@ -149,9 +149,10 @@
           
           <div class="row g-2">
             <div class="col-md-7">
+              <!-- Select jugador (HOME): deshabilitar si reloj no corre -->
               <select 
                 [(ngModel)]="selHomePlayerId" 
-                [disabled]="!homePlayers.length || game.status!=='IN_PROGRESS'"
+                [disabled]="!canEdit || !homePlayers.length || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="form-select form-select-sm"
               >
                 <option [ngValue]="undefined">Seleccionar jugador</option>
@@ -162,10 +163,11 @@
             </div>
             
             <div class="col-md-5">
+              <!-- Select tipo de falta (HOME): deshabilitar si reloj no corre -->
               <select 
                 [(ngModel)]="selHomeFoulType" 
                 [ngModelOptions]="{standalone:true}" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="!canEdit || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="form-select form-select-sm mb-2"
               >
                 <option [ngValue]="'PERSONAL'">Falta Personal</option>
@@ -176,7 +178,7 @@
               
               <button 
                 (click)="foul('HOME')" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="!canEdit || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-danger w-100"
               >
                 <i class="bi bi-flag-fill me-1"></i> Falta
@@ -187,7 +189,7 @@
       </div>
 
       <!-- Equipo Visitante -->
-      <div class="team-card">
+      <div class="team-card" *ngIf="side === 'AWAY'">
         <div class="team-header">
           <h5 class="card-title mb-0">Equipo Visitante</h5>
           <div class="d-flex align-items-center">
@@ -209,7 +211,7 @@
             <div class="col-3">
               <button 
                 (click)="subtractPoint('AWAY')" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-danger w-100 d-flex flex-column align-items-center py-2"
                 title="Restar 1 punto"
               >
@@ -220,7 +222,7 @@
             <div class="col-3">
               <button 
                 (click)="score('AWAY', 1)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-info w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+1</span>
@@ -230,7 +232,7 @@
             <div class="col-3">
               <button 
                 (click)="score('AWAY', 2)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-primary w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+2</span>
@@ -240,7 +242,7 @@
             <div class="col-3">
               <button 
                 (click)="score('AWAY', 3)" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-outline-success w-100 d-flex flex-column align-items-center py-2"
               >
                 <span class="fs-4 fw-bold">+3</span>
@@ -251,9 +253,10 @@
           
           <div class="row g-2">
             <div class="col-md-7">
+              <!-- Select jugador (AWAY): deshabilitar si reloj no corre -->
               <select 
                 [(ngModel)]="selAwayPlayerId" 
-                [disabled]="!awayPlayers.length || game.status!=='IN_PROGRESS'"
+                [disabled]="!canEdit || !awayPlayers.length || game.status!=='IN_PROGRESS' || !clockRunning"
                 class="form-select form-select-sm"
               >
                 <option [ngValue]="undefined">Seleccionar jugador</option>
@@ -264,10 +267,11 @@
             </div>
             
             <div class="col-md-5">
+              <!-- Select tipo de falta (AWAY): deshabilitar si reloj no corre -->
               <select 
                 [(ngModel)]="selAwayFoulType" 
                 [ngModelOptions]="{standalone:true}" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="form-select form-select-sm mb-2"
               >
                 <option [ngValue]="'PERSONAL'">Falta Personal</option>
@@ -278,7 +282,7 @@
               
               <button 
                 (click)="foul('AWAY')" 
-                [disabled]="game.status!=='IN_PROGRESS'"
+                [disabled]="game.status!=='IN_PROGRESS' || !clockRunning"
                 class="btn btn-danger w-100"
               >
                 <i class="bi bi-flag-fill me-1"></i> Falta
