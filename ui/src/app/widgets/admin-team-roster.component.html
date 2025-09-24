@@ -38,6 +38,9 @@
               <th style="width: 3rem;">#</th>
               <th>Nombre</th>
               <th style="width: 8rem;">Posición</th>
+              <th style="width: 7rem;">Estatura</th>
+              <th style="width: 6rem;">Edad</th>
+              <th style="width: 10rem;">Nacionalidad</th>
               <th style="width: 6rem;">Acciones</th>
             </tr>
           </thead>
@@ -46,6 +49,9 @@
               <td>{{ p.number ?? '—' }}</td>
               <td>{{ p.name }}</td>
               <td>{{ p.position || '-' }}</td>
+              <td>{{ p.heightCm ? (p.heightCm + ' cm') : '—' }}</td>
+              <td>{{ p.age ?? '—' }}</td>
+              <td>{{ p.nationality || '—' }}</td>
               <td>
                 <button class="btn btn-sm btn-outline-danger" (click)="deletePlayer(p)">
                   <i class="bi bi-trash"></i> Eliminar
@@ -96,6 +102,38 @@
               class="form-control" 
               [(ngModel)]="pPosition" 
               placeholder="Ej: Base, Alero..."
+              [disabled]="saving"
+            >
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Estatura (cm)</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="pHeightCm"
+              placeholder="Ej: 185"
+              min="100" max="260"
+              [disabled]="saving"
+            >
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Edad</label>
+            <input
+              type="number"
+              class="form-control"
+              [(ngModel)]="pAge"
+              placeholder="Ej: 22"
+              min="8" max="70"
+              [disabled]="saving"
+            >
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Nacionalidad</label>
+            <input
+              type="text"
+              class="form-control"
+              [(ngModel)]="pNationality"
+              placeholder="Ej: Guatemala"
               [disabled]="saving"
             >
           </div>

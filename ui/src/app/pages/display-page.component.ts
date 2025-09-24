@@ -26,6 +26,13 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   isAdmin: boolean = false; // Cambiar a true para habilitar el panel de control
   // Tema actual de la UI
   theme: AppTheme = 'dark';
+  // URLs de logos
+  homeLogoUrl: string | null = null;
+  awayLogoUrl: string | null = null;
+  // Base de la API para servir archivos estáticos en dev
+  private readonly apiBase = (location.port === '4200')
+    ? `${location.protocol}//${location.hostname}:8080`
+    : '';
 
   private gameId!: number;
   private sub?: Subscription;
@@ -38,6 +45,41 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   // Propiedad para verificar si el juego está suspendido
   get isGameSuspended(): boolean {
     return this.detail?.game.status === 'SUSPENDED';
+  }
+
+  // Resuelve URL absoluta de un logo (acepta absoluta/data URI o relativa a la API)
+  private getLogoUrl(logoUrl?: string | null): string | null {
+    if (!logoUrl) return null;
+    const url = logoUrl.trim();
+    if (!url) return null;
+    if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url;
+    const prefix = this.apiBase || '';
+    const sep = url.startsWith('/') ? '' : '/';
+    return `${prefix}${sep}${url}`;
+  }
+
+  // Carga las URLs de los logos para el equipo local y visitante
+  private loadTeamLogos(): void {
+    const g = this.detail?.game;
+    if (!g) { this.homeLogoUrl = this.awayLogoUrl = null; return; }
+    const { homeTeamId, awayTeamId } = g;
+
+    // Inicializa como null por si no hay ID o no hay logo
+    this.homeLogoUrl = null;
+    this.awayLogoUrl = null;
+
+    if (homeTeamId) {
+      this.api.getTeam(homeTeamId).subscribe({
+        next: t => this.homeLogoUrl = this.getLogoUrl(t.logoUrl),
+        error: () => this.homeLogoUrl = null
+      });
+    }
+    if (awayTeamId) {
+      this.api.getTeam(awayTeamId).subscribe({
+        next: t => this.awayLogoUrl = this.getLogoUrl(t.logoUrl),
+        error: () => this.awayLogoUrl = null
+      });
+    }
   }
 
   // Verifica si el tiempo restante es bajo (menos de 1 minuto)
@@ -214,6 +256,7 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
         next: (d) => {
           this.detail = d;  //ACTUALIZA datos en la UI
           this.lastUpdated = new Date();
+          this.loadTeamLogos();
         },
         error: (err) => console.error('Error al cargar el partido:', err)
       });
@@ -232,6 +275,7 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
       next: (game) => {
         this.detail = game; //actualiza UI
         this.lastUpdated = new Date();
+        this.loadTeamLogos();
       },
       error: (err) => console.error('Error al actualizar el juego:', err)
     });

@@ -87,12 +87,14 @@ export class HomePageComponent implements OnInit, OnDestroy {
     const city = (this.editCity || '').trim();
     if (!name) { this.notify.showWarning('Validación', 'El nombre es obligatorio'); return; }
     this.saving = true;
-    this.api.updateTeam(t.teamId, { name, city: city || undefined }).subscribe({
+    // Importante: enviar logoUrl actual para que el backend NO lo borre al hacer PUT
+    this.api.updateTeam(t.teamId, { name, city: city || undefined, logoUrl: t.logoUrl || undefined }).subscribe({
       next: () => {
         // Actualiza lista local
         const idx = this.teams.findIndex(x => x.teamId === t.teamId);
         if (idx >= 0) {
           this.teams[idx] = { ...this.teams[idx], name, city: city || null };
+          this.teamById.set(t.teamId, this.teams[idx]);
         }
         this.notify.showSuccess('Equipo actualizado', `${name}`);
         this.onCancelEdit();
@@ -197,6 +199,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   // datos
   teams: TeamDto[] = [];
   teamsTop10: TeamDto[] = [];
+  private teamById = new Map<number, TeamDto>();
   games: Game[] = [];
   activeGames: Game[] = [];
   detail: GameDetail | null = null;
@@ -363,6 +366,8 @@ export class HomePageComponent implements OnInit, OnDestroy {
       next: (teams) => {
         this.teams = teams;
         this.teamsTop10 = this.teams.slice(0, 10);
+        this.teamById.clear();
+        for (const tm of this.teams) this.teamById.set(tm.teamId, tm);
       },
       error: (err) => {
         // Mostrar pista si falta autenticación o hay problema de red
@@ -383,12 +388,24 @@ export class HomePageComponent implements OnInit, OnDestroy {
   private searchTeams(q: string) {
     const query = (q ?? '').trim();
     this.api.listTeamsPaged({ q: query, page: 1, pageSize: 20, sort: 'name_asc' }).subscribe({
-      next: (p) => { this.teams = p.items; this.teamsTop10 = this.teams.slice(0, 10); },
+      next: (p) => {
+        this.teams = p.items;
+        this.teamsTop10 = this.teams.slice(0, 10);
+        this.teamById.clear();
+        for (const tm of this.teams) this.teamById.set(tm.teamId, tm);
+      },
       error: () => { /* silencioso para no molestar mientras escribe */ }
     });
   }
 
   trackByTeamId(index: number, t: TeamDto): number { return t.teamId; }
+
+  // Helper: devuelve URL absoluta del logo por ID de equipo
+  teamLogoById(id?: number | null): string | null {
+    if (!id) return null;
+    const tm = this.teamById.get(id);
+    return tm ? this.getLogoUrl(tm.logoUrl) : null;
+  }
 
   reloadAll() {
     this.reloadGames();

@@ -22,6 +22,8 @@ export class ScoreboardComponent implements OnInit, OnChanges, OnDestroy {
   @Input({ required: true }) game!: Game;
   @Input() events: GameDetail['events'] = [];
   @Input() isAdmin = false;
+  @Input() homeLogoUrl?: string | null;
+  @Input() awayLogoUrl?: string | null;
   clockRunning = false;
   private clockSub?: Subscription;
   

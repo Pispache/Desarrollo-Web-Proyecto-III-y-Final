@@ -70,6 +70,7 @@
         <div class="led-teams">
           <!-- Equipo Local -->
           <div class="led-team led-team-home">
+            <img *ngIf="homeLogoUrl" [src]="homeLogoUrl" alt="Logo local" class="led-team-logo border border-secondary">
             <div class="led-team-name">{{ d.game.homeTeam }}</div>
             <div class="led-score">{{ d.game.homeScore || 0 }}</div>
             <div class="led-fouls" [class.led-fouls-bonus]="getTeamFouls('home') >= 5">
@@ -83,6 +84,7 @@
           
           <!-- Equipo Visitante -->
           <div class="led-team led-team-away">
+            <img *ngIf="awayLogoUrl" [src]="awayLogoUrl" alt="Logo visitante" class="led-team-logo border border-secondary">
             <div class="led-team-name">{{ d.game.awayTeam }}</div>
             <div class="led-score">{{ d.game.awayScore || 0 }}</div>
             <div class="led-fouls" [class.led-fouls-bonus]="getTeamFouls('away') >= 5">

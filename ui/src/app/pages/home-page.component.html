@@ -210,8 +210,12 @@
                      (click)="selectGame(game)">
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
-                      <h6 class="mb-1 fw-bold">
-                        {{ game.homeTeam }} <span class="text-muted">vs</span> {{ game.awayTeam }}
+                      <h6 class="mb-1 fw-bold d-flex align-items-center gap-2">
+                        <img *ngIf="teamLogoById(game.homeTeamId) as hlogo" [src]="hlogo" alt="home logo" style="height:20px;width:20px;object-fit:contain;border-radius:2px;" class="border border-secondary">
+                        <span>{{ game.homeTeam }}</span>
+                        <span class="text-muted">vs</span>
+                        <img *ngIf="teamLogoById(game.awayTeamId) as alogo" [src]="alogo" alt="away logo" style="height:20px;width:20px;object-fit:contain;border-radius:2px;" class="border border-secondary">
+                        <span>{{ game.awayTeam }}</span>
                       </h6>
                       <div class="d-flex align-items-center">
                         <span class="badge me-2"
@@ -268,7 +272,13 @@
                    class="list-group-item list-group-item-action">
                   <div class="d-flex justify-content-between align-items-center">
                     <div>
-                      <div class="fw-medium">{{ g.homeTeam }} vs {{ g.awayTeam }}</div>
+                      <div class="fw-medium d-flex align-items-center gap-2">
+                        <img *ngIf="teamLogoById(g.homeTeamId) as h2" [src]="h2" alt="home logo" style="height:18px;width:18px;object-fit:contain;border-radius:2px;" class="border border-secondary">
+                        <span>{{ g.homeTeam }}</span>
+                        <span class="text-muted">vs</span>
+                        <img *ngIf="teamLogoById(g.awayTeamId) as a2" [src]="a2" alt="away logo" style="height:18px;width:18px;object-fit:contain;border-radius:2px;" class="border border-secondary">
+                        <span>{{ g.awayTeam }}</span>
+                      </div>
                       <small class="text-muted">
                         <span class="badge bg-light text-dark me-1">Q{{ g.quarter }}</span>
                         <span class="text-capitalize">{{ g.status.toLowerCase() }}</span>
@@ -333,6 +343,14 @@
                                   title="Eliminar equipo">
                             <i class="bi bi-trash"></i>
                           </button>
+                          <a class="btn btn-sm btn-outline-secondary ms-1"
+                             [routerLink]="['/teams', t.teamId, 'manage']"
+                             [attr.aria-disabled]="!isAuthed()"
+                             [class.disabled]="!isAuthed()"
+                             title="Gestionar jugadores"
+                          >
+                            <i class="bi bi-people"></i>
+                          </a>
                         </td>
                       </tr>
                       <!-- Caja de edición inline -->
@@ -384,6 +402,8 @@
             [game]="d.game"
             [events]="d.events"
             [isAdmin]="isAuthed()"
+            [homeLogoUrl]="teamLogoById(d.game.homeTeamId)"
+            [awayLogoUrl]="teamLogoById(d.game.awayTeamId)"
             (adjustScore)="onAdjustScore($event)">
           </app-scoreboard>
         </div>

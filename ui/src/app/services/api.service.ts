@@ -49,6 +49,9 @@ export interface Player {
   number?: number | null;
   name: string;
   position?: string | null;
+  heightCm?: number | null;
+  age?: number | null;
+  nationality?: string | null;
   active: boolean;
   createdAt: string;
 }
@@ -241,6 +244,9 @@ export class ApiService {
   }
 
   /* ========= Equipos ========= */
+  getTeam(id: number): Observable<TeamDto> {
+    return this.get<TeamDto>(`/teams/${id}`).pipe(map(r => this.camel<TeamDto>(r)));
+  }
   listTeams(): Observable<TeamDto[]> {
     return this.listTeamsPaged().pipe(
       map(p => p.items)
@@ -320,13 +326,13 @@ export class ApiService {
       .pipe(map(rows => this.camel<Player[]>(rows)));
   }
 
-  createPlayer(teamId: number, p: { name: string; number?: number; position?: string }) {
+  createPlayer(teamId: number, p: { name: string; number?: number; position?: string; heightCm?: number; age?: number; nationality?: string }) {
     return this.post<{ playerId: number }>(`/teams/${teamId}/players`, p);
   }
 
   updatePlayer(
     playerId: number,
-    patch: Partial<{ name: string; number: number; position: string; active: boolean }>
+    patch: Partial<{ name: string; number: number; position: string; active: boolean; heightCm: number; age: number; nationality: string }>
   ) {
     return this.patch(`/players/${playerId}`, patch);
   }

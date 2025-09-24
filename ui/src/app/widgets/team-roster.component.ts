@@ -21,14 +21,17 @@ export class TeamRosterComponent implements OnChanges {
   newPlayer = {
     name: '',
     number: null as number | null,
-    position: ''
+    position: '',
+    heightCm: null as number | null,
+    age: null as number | null,
+    nationality: ''
   };
   isLoading = false;
   error: string | null = null;
 
   // Edición inline
   editingPlayerId: number | null = null;
-  editModel: { name: string; number: number | null; position: string } = { name: '', number: null, position: '' };
+  editModel: { name: string; number: number | null; position: string; heightCm: number | null; age: number | null; nationality: string } = { name: '', number: null, position: '', heightCm: null, age: null, nationality: '' };
 
   constructor(private api: ApiService) {}
 
@@ -64,6 +67,15 @@ export class TeamRosterComponent implements OnChanges {
       this.error = `El número ${this.newPlayer.number} ya está asignado a otro jugador de este equipo`;
       return;
     }
+    // Validaciones básicas de edad y estatura
+    if (this.newPlayer.age != null) {
+      const a = Number(this.newPlayer.age);
+      if (!Number.isInteger(a) || a < 8 || a > 70) { this.error = 'La edad debe estar entre 8 y 70'; return; }
+    }
+    if (this.newPlayer.heightCm != null) {
+      const h = Number(this.newPlayer.heightCm);
+      if (h < 100 || h > 260) { this.error = 'La estatura debe estar entre 100 y 260 cm'; return; }
+    }
 
     this.isLoading = true;
     this.error = null;
@@ -83,7 +95,10 @@ export class TeamRosterComponent implements OnChanges {
         this.api.createPlayer(teamId, {
           name: this.newPlayer.name.trim(),
           number: this.newPlayer.number ? Number(this.newPlayer.number) : undefined,
-          position: this.newPlayer.position.trim() || undefined
+          position: this.newPlayer.position.trim() || undefined,
+          heightCm: this.newPlayer.heightCm != null ? Number(this.newPlayer.heightCm) : undefined,
+          age: this.newPlayer.age != null ? Number(this.newPlayer.age) : undefined,
+          nationality: (this.newPlayer.nationality || '').trim() || undefined,
         }).subscribe({
           next: () => {
             this.loadPlayers();
@@ -109,7 +124,10 @@ export class TeamRosterComponent implements OnChanges {
     this.newPlayer = {
       name: '',
       number: null,
-      position: ''
+      position: '',
+      heightCm: null,
+      age: null,
+      nationality: ''
     };
   }
 
@@ -131,7 +149,10 @@ export class TeamRosterComponent implements OnChanges {
     this.editModel = {
       name: p.name || '',
       number: (p.number as any) ?? null,
-      position: (p.position as any) || ''
+      position: (p.position as any) || '',
+      heightCm: (p.heightCm as any) ?? null,
+      age: (p.age as any) ?? null,
+      nationality: (p.nationality as any) || ''
     };
     this.error = null;
   }
@@ -150,11 +171,23 @@ export class TeamRosterComponent implements OnChanges {
       this.error = `El número ${this.editModel.number} ya está asignado a otro jugador de este equipo`;
       return;
     }
+    // Validaciones básicas
+    if (this.editModel.age != null) {
+      const a = Number(this.editModel.age);
+      if (!Number.isInteger(a) || a < 8 || a > 70) { this.error = 'La edad debe estar entre 8 y 70'; return; }
+    }
+    if (this.editModel.heightCm != null) {
+      const h = Number(this.editModel.heightCm);
+      if (h < 100 || h > 260) { this.error = 'La estatura debe estar entre 100 y 260 cm'; return; }
+    }
     this.isLoading = true;
     this.api.updatePlayer(this.editingPlayerId, {
       name: this.editModel.name.trim(),
       number: this.editModel.number != null ? Number(this.editModel.number) : (undefined as any),
-      position: this.editModel.position?.trim() || (undefined as any)
+      position: this.editModel.position?.trim() || (undefined as any),
+      heightCm: this.editModel.heightCm != null ? Number(this.editModel.heightCm) : (undefined as any),
+      age: this.editModel.age != null ? Number(this.editModel.age) : (undefined as any),
+      nationality: this.editModel.nationality?.trim() || (undefined as any),
     }).subscribe({
       next: () => { this.isLoading = false; this.editingPlayerId = null; this.loadPlayers(); },
       error: (err) => { console.error('Error actualizando jugador:', err); this.isLoading = false; this.error = 'No se pudo actualizar el jugador'; }

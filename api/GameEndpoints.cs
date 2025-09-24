@@ -54,6 +54,22 @@ public static class GameEndpoints
     {
         var g = app.MapGroup("/api");
 
+        // Ensure DB schema contains new player fields (HeightCm, Age, Nationality)
+        try
+        {
+            using var c = new SqlConnection(cs());
+            c.Open();
+            // Add columns if they don't exist
+            var ensureSql = @"IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='Players' AND COLUMN_NAME='HeightCm')
+                                ALTER TABLE MarcadorDB.dbo.Players ADD HeightCm INT NULL;
+                              IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='Players' AND COLUMN_NAME='Age')
+                                ALTER TABLE MarcadorDB.dbo.Players ADD Age INT NULL;
+                              IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='Players' AND COLUMN_NAME='Nationality')
+                                ALTER TABLE MarcadorDB.dbo.Players ADD Nationality NVARCHAR(100) NULL;";
+            c.Execute(ensureSql);
+        }
+        catch { /* best-effort: no-op if fails */ }
+
         // Add foul summary endpoint
         g.MapGet("/games/{id:int}/foul-summary", async (int id) =>
         {
@@ -1081,7 +1097,7 @@ public static class GameEndpoints
         {
             using var c = Open(cs());
             var rows = await c.QueryAsync($@"
-                SELECT PlayerId, TeamId, Number, Name, Position, Active, CreatedAt
+                SELECT PlayerId, TeamId, Number, Name, Position, HeightCm, Age, Nationality, Active, CreatedAt
                 FROM {T}Players WHERE TeamId=@teamId
                 ORDER BY COALESCE(Number,255), Name;", new { teamId });
             return Results.Ok(rows);
@@ -1096,9 +1112,9 @@ public static class GameEndpoints
             {
                 using var c = Open(cs());
                 var id = await c.ExecuteScalarAsync<int>($@"
-                    INSERT INTO {T}Players(TeamId, Number, Name, Position, Active)
-                    OUTPUT INSERTED.PlayerId VALUES(@teamId,@num,@name,@pos,1);",
-                    new { teamId, num = body!.Number, name, pos = body!.Position });
+                    INSERT INTO {T}Players(TeamId, Number, Name, Position, HeightCm, Age, Nationality, Active)
+                    OUTPUT INSERTED.PlayerId VALUES(@teamId,@num,@name,@pos,@height,@age,@nat,1);",
+                    new { teamId, num = body!.Number, name, pos = body!.Position, height = body!.HeightCm, age = body!.Age, nat = body!.Nationality });
                 return Results.Created($"/api/players/{id}", new { playerId = id });
             }
             catch (SqlException ex) when (ex.Number is 2601 or 2627) { return Results.BadRequest(new { error = "Dorsal duplicado." }); }
@@ -1112,8 +1128,11 @@ public static class GameEndpoints
                   Number=COALESCE(@Number,Number),
                   Name=COALESCE(@Name,Name),
                   Position=COALESCE(@Position,Position),
+                  HeightCm=COALESCE(@HeightCm,HeightCm),
+                  Age=COALESCE(@Age,Age),
+                  Nationality=COALESCE(@Nationality,Nationality),
                   Active=COALESCE(@Active,Active)
-                WHERE PlayerId=@playerId;", new { playerId, b?.Number, b?.Name, b?.Position, b?.Active });
+                WHERE PlayerId=@playerId;", new { playerId, b?.Number, b?.Name, b?.Position, b?.HeightCm, b?.Age, b?.Nationality, b?.Active });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
         }).WithOpenApi();
 
@@ -1187,7 +1206,7 @@ public static class GameEndpoints
             }
 
             var rows = await c.QueryAsync($@"
-                SELECT PlayerId, TeamId, Number, Name, Position, Active, CreatedAt
+                SELECT PlayerId, TeamId, Number, Name, Position, HeightCm, Age, Nationality, Active, CreatedAt
                 FROM {T}Players WHERE TeamId=@teamId
                 ORDER BY COALESCE(Number,255), Name;", new { teamId });
             return Results.Ok(rows);

@@ -55,6 +55,18 @@
   text-shadow: 0 0 6px rgba(155,92,255,.8), 0 0 14px rgba(0,224,255,.35);
 }
 
+/* Logos centrales del marcador: tamaño moderado y responsivo */
+.scoreboard-logo-lg {
+  height: clamp(24px, 5vw, 40px);
+  width: clamp(24px, 5vw, 40px);
+  object-fit: contain;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.25);
+}
+
+/* Ajuste de separación para no empujar demasiado el contenido */
+.scoreboard-body .row.align-items-center .d-flex.flex-column { gap: .25rem !important; }
+
 /* Botón de Ajustar Puntuación con design tokens */
 .adjust-btn {
   background: linear-gradient(135deg, var(--color-primary), #6ea8fe);

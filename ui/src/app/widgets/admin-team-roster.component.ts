@@ -24,6 +24,9 @@ export class AdminTeamRosterComponent implements OnInit, OnDestroy {
   pName = '';
   pNumber?: number | null;
   pPosition = '';
+  pHeightCm?: number | null;
+  pAge?: number | null;
+  pNationality = '';
 
   private destroy$ = new Subject<void>();
 
@@ -79,6 +82,19 @@ export class AdminTeamRosterComponent implements OnInit, OnDestroy {
       }
       num = this.pNumber;
     }
+    // Validaciones básicas de edad/estatura
+    if (this.pAge !== null && this.pAge !== undefined && this.pAge !== ('' as any)) {
+      if (!Number.isInteger(this.pAge) || this.pAge < 8 || this.pAge > 70) {
+        this.errorMsg = 'La edad debe estar entre 8 y 70.';
+        return;
+      }
+    }
+    if (this.pHeightCm !== null && this.pHeightCm !== undefined && this.pHeightCm !== ('' as any)) {
+      if (this.pHeightCm < 100 || this.pHeightCm > 260) {
+        this.errorMsg = 'La estatura debe estar entre 100 y 260 cm.';
+        return;
+      }
+    }
 
     this.saving = true;
     this.errorMsg = '';
@@ -87,12 +103,18 @@ export class AdminTeamRosterComponent implements OnInit, OnDestroy {
         name,
         number: num,
         position: this.pPosition || undefined,
+        heightCm: this.pHeightCm ?? undefined,
+        age: this.pAge ?? undefined,
+        nationality: (this.pNationality || '').trim() || undefined,
       })
       .subscribe({
         next: () => {
           this.pName = '';
           this.pNumber = undefined;
           this.pPosition = '';
+          this.pHeightCm = undefined;
+          this.pAge = undefined;
+          this.pNationality = '';
           this.loadPlayers();
         },
         error: err => {

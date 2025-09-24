@@ -48,6 +48,35 @@
                    [disabled]="!canEdit || isLoading">
           </div>
         </div>
+
+        <div class="row g-2 mb-3">
+          <div class="col-4">
+            <label class="form-label small mb-1">Estatura (cm)</label>
+            <input type="number" class="form-control form-control-sm"
+                   [(ngModel)]="newPlayer.heightCm"
+                   name="playerHeightCm"
+                   min="100" max="260"
+                   placeholder="Ej: 185"
+                   [disabled]="!canEdit || isLoading">
+          </div>
+          <div class="col-4">
+            <label class="form-label small mb-1">Edad</label>
+            <input type="number" class="form-control form-control-sm"
+                   [(ngModel)]="newPlayer.age"
+                   name="playerAge"
+                   min="8" max="70"
+                   placeholder="Ej: 22"
+                   [disabled]="!canEdit || isLoading">
+          </div>
+          <div class="col-4">
+            <label class="form-label small mb-1">Nacionalidad</label>
+            <input type="text" class="form-control form-control-sm"
+                   [(ngModel)]="newPlayer.nationality"
+                   name="playerNationality"
+                   placeholder="Ej: Guatemala"
+                   [disabled]="!canEdit || isLoading">
+          </div>
+        </div>
         
         <div class="d-flex gap-2">
           <button type="submit" class="btn btn-primary btn-sm flex-grow-1" [disabled]="!canEdit || isLoading">
@@ -84,7 +113,12 @@
           <div class="flex-grow-1">
             <ng-container *ngIf="editingPlayerId !== p.playerId; else editFields">
               <div class="fw-medium">{{ p.name || 'Sin nombre' }}</div>
-              <small *ngIf="p.position" class="text-muted">{{ p.position }}</small>
+              <small *ngIf="p.position" class="text-muted d-block">{{ p.position }}</small>
+              <small class="text-muted" *ngIf="p.heightCm || p.age || p.nationality">
+                <span *ngIf="p.heightCm">Altura: {{ p.heightCm }} cm</span>
+                <span *ngIf="p.age"> • Edad: {{ p.age }}</span>
+                <span *ngIf="p.nationality"> • {{ p.nationality }}</span>
+              </small>
             </ng-container>
             <ng-template #editFields>
               <div class="row g-2">
@@ -101,6 +135,29 @@
                          [(ngModel)]="editModel.position"
                          [disabled]="!canEdit || isLoading"
                          placeholder="Posición">
+                </div>
+                <div class="col-4">
+                  <input type="number"
+                         class="form-control form-control-sm"
+                         [(ngModel)]="editModel.heightCm"
+                         [disabled]="!canEdit || isLoading"
+                         placeholder="Estatura (cm)"
+                         min="100" max="260">
+                </div>
+                <div class="col-4">
+                  <input type="number"
+                         class="form-control form-control-sm"
+                         [(ngModel)]="editModel.age"
+                         [disabled]="!canEdit || isLoading"
+                         placeholder="Edad"
+                         min="8" max="70">
+                </div>
+                <div class="col-4">
+                  <input type="text"
+                         class="form-control form-control-sm"
+                         [(ngModel)]="editModel.nationality"
+                         [disabled]="!canEdit || isLoading"
+                         placeholder="Nacionalidad">
                 </div>
               </div>
             </ng-template>
