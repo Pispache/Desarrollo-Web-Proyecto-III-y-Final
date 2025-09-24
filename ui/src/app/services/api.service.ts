@@ -81,6 +81,7 @@ export class ApiService {
   private get  = <T>(url: string) => this.http.get<T>(`${this.base}${url}`);
   private post = <T>(url: string, body: any) => this.http.post<T>(`${this.base}${url}`, body);
   private patch= <T>(url: string, body: any) => this.http.patch<T>(`${this.base}${url}`, body);
+  private put  = <T>(url: string, body: any) => this.http.put<T>(`${this.base}${url}`, body);
   private del  = <T>(url: string) => this.http.delete<T>(`${this.base}${url}`);
 
   /* ========= Juegos ========= */
@@ -240,13 +241,9 @@ export class ApiService {
   }
 
   /* ========= Equipos ========= */
-  listTeams(): Observable<Team[]> {
-    return this.get<any[]>(`/teams`).pipe(
-      map(rows => rows.map(r => ({
-        teamId: Number(r.TeamId ?? r.teamId),
-        name: (r.Name ?? r.name) as string,
-        createdAt: this.iso((r.CreatedAt ?? r.createdAt) as string),
-      } satisfies Team)))
+  listTeams(): Observable<TeamDto[]> {
+    return this.listTeamsPaged().pipe(
+      map(p => p.items)
     );
   }
 
@@ -289,6 +286,25 @@ export class ApiService {
   createTeamWithLogo(fd: FormData): Observable<TeamDto> {
     return this.http.post<TeamDto>(`${this.base}/teams/form`, fd).pipe(
       map(r => this.camel<TeamDto>(r)),
+      tap(() => this.teamsChanged$.next())
+    );
+  }
+
+  /** Actualiza equipo usando PUT para alinearse con el backend. */
+  updateTeam(teamId: number, payload: Partial<{ name: string; city: string; logoUrl?: string }>) {
+    // El backend espera un TeamUpsertDto (Name requerido, City/LogoUrl opcionales)
+    return this.put(`/teams/${teamId}`, {
+      name: payload.name,
+      city: payload.city,
+      logoUrl: payload.logoUrl
+    }).pipe(
+      tap(() => this.teamsChanged$.next())
+    );
+  }
+
+  /** Elimina un equipo por su ID. */
+  deleteTeam(teamId: number) {
+    return this.del(`/teams/${teamId}`).pipe(
       tap(() => this.teamsChanged$.next())
     );
   }

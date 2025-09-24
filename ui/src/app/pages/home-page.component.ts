@@ -1,8 +1,8 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { ApiService, Game, GameDetail, Team } from '../services/api.service';
+import { ApiService, Game, GameDetail, TeamDto } from '../services/api.service';
 import { ClockService } from '../services/clock.service';
 
 import { NotificationService } from '../services/notification.service';
@@ -13,8 +13,9 @@ import { ThemeToggleComponent } from '../widgets/theme-toggle.component';
 import { ThemeService, AppTheme } from '../services/theme.service';
 import { ClockComponent } from '../widgets/clock.component';
 import { TeamRosterComponent } from '../widgets/team-roster.component';
-import { FilterPipe } from '../pipes/filter.pipe';
-import { finalize } from 'rxjs';
+// import { FilterPipe } from '../pipes/filter.pipe';
+import { Subject, finalize } from 'rxjs';
+import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -30,13 +31,13 @@ import { AuthService } from '../services/auth.service';
     ControlPanelComponent,
     ClockComponent,
     TeamRosterComponent,
-    FilterPipe,
     ThemeToggleComponent
   ]
 })
-export class HomePageComponent {
+export class HomePageComponent implements OnInit, OnDestroy {
   // filtros / estado
   teamSearch = '';
+  private teamSearch$ = new Subject<string>();
   creating = false;
   advancing = false;
 
@@ -50,6 +51,79 @@ export class HomePageComponent {
 
   // Tema actual de la UI
   theme: AppTheme = 'dark';
+  // Base de la API para recursos estáticos (logos)
+  private readonly apiBase = (location.port === '4200')
+    ? `${location.protocol}//${location.hostname}:8080`
+    : '';
+
+  // Resuelve URL del logo (acepta absoluta, data URI o relativa a la API)
+  getLogoUrl(logoUrl?: string | null): string | null {
+    if (!logoUrl) return null;
+    const url = logoUrl.trim();
+    if (!url) return null;
+    // Si ya es absoluta o data URI, devolver tal cual
+    if (/^https?:\/\//i.test(url) || url.startsWith('data:')) return url;
+    // Construir respecto a la base de la API si estamos en dev (4200)
+    const prefix = this.apiBase || '';
+    const sep = url.startsWith('/') ? '' : '/';
+    return `${prefix}${sep}${url}`;
+  }
+
+  // ===== Acciones sobre equipos (editar / eliminar) =====
+  onEditTeam(t: TeamDto) {
+    this.editingTeamId = t.teamId;
+    this.editName = t.name || '';
+    this.editCity = t.city || '';
+  }
+
+  onCancelEdit() {
+    this.editingTeamId = null;
+    this.editName = '';
+    this.editCity = '';
+  }
+
+  onSaveTeam(t: TeamDto) {
+    const name = (this.editName || '').trim();
+    const city = (this.editCity || '').trim();
+    if (!name) { this.notify.showWarning('Validación', 'El nombre es obligatorio'); return; }
+    this.saving = true;
+    this.api.updateTeam(t.teamId, { name, city: city || undefined }).subscribe({
+      next: () => {
+        // Actualiza lista local
+        const idx = this.teams.findIndex(x => x.teamId === t.teamId);
+        if (idx >= 0) {
+          this.teams[idx] = { ...this.teams[idx], name, city: city || null };
+        }
+        this.notify.showSuccess('Equipo actualizado', `${name}`);
+        this.onCancelEdit();
+      },
+      error: (err) => {
+        console.error('Error actualizando equipo', err);
+        const msg = err?.error?.error || 'No se pudo actualizar el equipo';
+        this.notify.showError('Error', msg, true);
+      },
+      complete: () => { this.saving = false; }
+    });
+  }
+
+  async onDeleteTeam(t: TeamDto) {
+    const ok = await this.notify.confirm(`¿Eliminar el equipo "${t.name}"? Esta acción no se puede deshacer.`, 'Confirmar');
+    if (!ok) return;
+    this.deletingId = t.teamId;
+    this.api.deleteTeam(t.teamId).subscribe({
+      next: () => {
+        this.teams = this.teams.filter(x => x.teamId !== t.teamId);
+        this.notify.showSuccess('Equipo eliminado', `${t.name}`);
+        if (this.editingTeamId === t.teamId) this.onCancelEdit();
+      },
+      error: (err) => {
+        console.error('Error eliminando equipo', err);
+        const msg = err?.error?.error || 'No se pudo eliminar el equipo';
+        this.notify.showError('Error', msg, true);
+      },
+      complete: () => { this.deletingId = null; }
+    });
+  }
 
   /**
    * Valida que solo se ingresen letras en el nombre del equipo
@@ -121,7 +195,8 @@ export class HomePageComponent {
   }
 
   // datos
-  teams: Team[] = [];
+  teams: TeamDto[] = [];
+  teamsTop10: TeamDto[] = [];
   games: Game[] = [];
   activeGames: Game[] = [];
   detail: GameDetail | null = null;
@@ -130,6 +205,12 @@ export class HomePageComponent {
 
   // Bandera para mostrar notificación de caracteres no permitidos
   showInvalidCharWarning = false;
+  // Estado de edición/eliminación de equipos
+  editingTeamId: number | null = null;
+  editName = '';
+  editCity = '';
+  saving = false;
+  deletingId: number | null = null;
   // Observable de autenticación para el template (getter para evitar usar this.auth antes de constructor)
   get authed$() { return this.auth.authed$; }
   
@@ -140,6 +221,43 @@ export class HomePageComponent {
     // Aplicar tema al iniciar
     this.theme = this.themeSvc.getTheme();
     this.themeSvc.applyTheme(this.theme);
+
+    // Refrescar datos cuando cambie autenticación (cubre el caso de abrir Home sin sesión)
+    this.auth.authed$.pipe(takeUntil(this.destroy$)).subscribe(isAuthed => {
+      if (isAuthed) {
+        this.reloadAll();
+      } else {
+        // Limpiar vistas protegidas si se pierde sesión
+        this.teams = [];
+        this.games = [];
+        this.activeGames = [];
+        this.detail = null;
+      }
+    });
+
+    // Cuando haya cambios en equipos (crear/editar/eliminar) refrescar listado
+    this.api.teamsChanged$.pipe(takeUntil(this.destroy$)).subscribe(() => this.loadTeams());
+
+    // Búsqueda con debounce (server-side)
+    this.teamSearch$
+      .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
+      .subscribe(q => {
+        this.searchTeams(q);
+      });
+  }
+
+  private destroy$ = new Subject<void>();
+
+  ngOnInit(): void {
+    // En caso de que la página se cargue ya autenticada
+    if (this.auth.isAuthenticated()) {
+      this.reloadAll();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
   }
 
   logout() {
@@ -241,10 +359,36 @@ export class HomePageComponent {
   }
 
   loadTeams() {
-    this.api.listTeams().subscribe(teams => {
-      this.teams = teams;
+    this.api.listTeams().subscribe({
+      next: (teams) => {
+        this.teams = teams;
+        this.teamsTop10 = this.teams.slice(0, 10);
+      },
+      error: (err) => {
+        // Mostrar pista si falta autenticación o hay problema de red
+        const msg = err?.status === 401
+          ? 'Inicia sesión para ver los equipos (401).'
+          : 'No se pudieron cargar los equipos.';
+        try { this.notify.showInfo('Equipos', msg, 3000); } catch {}
+      }
     });
   }
+
+  // Disparado por (ngModelChange) en el input de búsqueda
+  onTeamSearchChange(q: string) {
+    this.teamSearch$.next(q ?? '');
+  }
+
+  // Consulta paginada al backend
+  private searchTeams(q: string) {
+    const query = (q ?? '').trim();
+    this.api.listTeamsPaged({ q: query, page: 1, pageSize: 20, sort: 'name_asc' }).subscribe({
+      next: (p) => { this.teams = p.items; this.teamsTop10 = this.teams.slice(0, 10); },
+      error: () => { /* silencioso para no molestar mientras escribe */ }
+    });
+  }
+
+  trackByTeamId(index: number, t: TeamDto): number { return t.teamId; }
 
   reloadAll() {
     this.reloadGames();
