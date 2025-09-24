@@ -1,0 +1,174 @@
+// Estilos para la página de resultados - Tema oscuro
+.p-4 {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
+  min-height: 100vh;
+  color: white !important;
+}
+
+// Título principal
+h1 {
+  color: white !important;
+}
+
+// Filtros
+select, input {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border-radius: 4px !important;
+}
+
+select:focus, input:focus {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border-color: #f59e0b !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.25) !important;
+}
+
+input::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+label {
+  color: white !important;
+}
+
+// Contenedores con bordes
+.border {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 8px !important;
+}
+
+// Títulos de secciones
+h3, h4 {
+  color: white !important;
+}
+
+// Lista de partidos
+ul.divide-y li {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.font-semibold {
+  color: white !important;
+}
+
+.text-xs, .text-sm {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.text-gray-500 {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+// Botones
+button {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  color: white !important;
+  border-radius: 4px !important;
+  transition: all 0.3s ease !important;
+}
+
+button:hover {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+}
+
+.text-blue-600 {
+  color: #60a5fa !important;
+}
+
+.text-blue-600:hover {
+  color: #93c5fd !important;
+}
+
+// Tablas
+table {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-radius: 6px !important;
+}
+
+th {
+  color: white !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+td {
+  color: white !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03) !important;
+}
+
+// Filas especiales
+.bg-gray-50 {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+// Footer de tablas
+tfoot tr {
+  background: rgba(255, 255, 255, 0.1) !important;
+}
+
+// Badges de estado
+.bg-red-600 {
+  background: #dc2626 !important;
+}
+
+.bg-gray-700 {
+  background: #374151 !important;
+}
+
+.bg-blue-600 {
+  background: #2563eb !important;
+}
+
+.bg-amber-600 {
+  background: #d97706 !important;
+}
+
+// Texto en badges
+.text-white {
+  color: white !important;
+}
+
+// Scrollbar personalizado para áreas de scroll
+.overflow-auto::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.overflow-auto::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.overflow-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+// Contenedor de detalle
+.text-lg {
+  color: white !important;
+}
+
+// Eventos recientes
+ul.divide-y {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border-radius: 6px !important;
+  padding: 0.5rem !important;
+}
+
+ul.divide-y li {
+  color: rgba(255, 255, 255, 0.9) !important;
+}

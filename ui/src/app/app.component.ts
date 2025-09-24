@@ -1,12 +1,13 @@
 import { Component, HostListener } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { NotificationDisplayComponent } from './components/notification-display.component';
+import { NavbarComponent } from './components/navbar.component';
 import { SoundService } from './services/sound.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, NotificationDisplayComponent],
+  imports: [RouterOutlet, NotificationDisplayComponent, NavbarComponent],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })

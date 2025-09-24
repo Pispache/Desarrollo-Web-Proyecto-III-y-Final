@@ -1,0 +1,25 @@
+// Estilos globales para el layout principal
+.main-content {
+  padding-top: 70px; // Altura de la navbar fija
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+// Ajustes responsive para el contenido principal
+@media (max-width: 768px) {
+  .main-content {
+    padding-top: 70px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+// Smooth scrolling para toda la aplicación
+html {
+  scroll-behavior: smooth;
+}
+
+// Prevenir scroll horizontal en móviles
+body {
+  overflow-x: hidden;
+}

@@ -39,6 +39,7 @@ type Side = 'HOME' | 'AWAY';
     TotalFoulsPipe,
   ],
   templateUrl: './results-page.component.html',
+  styleUrls: ['./results-page.component.scss']
 })
 export class ResultsPageComponent {
   // ===== Estado de filtros
