@@ -41,6 +41,7 @@ export interface GameDetail {
 }
 
 export interface Team { teamId: number; name: string; createdAt: string; }
+export interface TeamDto { teamId: number; name: string; city?: string | null; logoUrl?: string | null; createdAt: string; }
 
 export interface Player {
   playerId: number;
@@ -249,11 +250,46 @@ export class ApiService {
     );
   }
 
+  listTeamsPaged(params?: { q?: string; city?: string; page?: number; pageSize?: number; sort?: string }): Observable<{ items: TeamDto[]; total: number; page: number; pageSize: number }>{
+    const q = new URLSearchParams();
+    if (params?.q) q.set('q', params.q);
+    if (params?.city) q.set('city', params.city);
+    if (params?.page) q.set('page', String(params.page));
+    if (params?.pageSize) q.set('pageSize', String(params.pageSize));
+    if (params?.sort) q.set('sort', params.sort);
+    const qs = q.toString() ? `?${q.toString()}` : '';
+    return this.get<any>(`/teams${qs}`).pipe(
+      map((raw: any) => {
+        const arr: any[] = Array.isArray(raw?.items) ? raw.items : (Array.isArray(raw) ? raw : []);
+        const items: TeamDto[] = arr.map(r => ({
+          teamId: Number(r.TeamId ?? r.teamId),
+          name: (r.Name ?? r.name) as string,
+          city: (r.City ?? r.city) ?? null,
+          logoUrl: (r.LogoUrl ?? r.logoUrl) ?? null,
+          createdAt: this.iso((r.CreatedAt ?? r.createdAt) as string),
+        }));
+        return {
+          items,
+          total: Number(raw?.total ?? items.length),
+          page: Number(raw?.page ?? 1),
+          pageSize: Number(raw?.pageSize ?? items.length)
+        };
+      })
+    );
+  }
+
   createTeam(nameOrPayload: string | { name: string }) {
     const body = typeof nameOrPayload === 'string' ? { name: nameOrPayload } : nameOrPayload;
     return this.post<any>(`/teams`, body).pipe(
       map(r => ({ teamId: Number(r.teamId ?? r.TeamId), name: r.name ?? body.name })),
       tap(() => this.teamsChanged$.next()) // notifica para refrescar selects
+    );
+  }
+
+  createTeamWithLogo(fd: FormData): Observable<TeamDto> {
+    return this.http.post<TeamDto>(`${this.base}/teams/form`, fd).pipe(
+      map(r => this.camel<TeamDto>(r)),
+      tap(() => this.teamsChanged$.next())
     );
   }
 

@@ -47,13 +47,22 @@ public static class Bootstrap
 
                         var exists = await c.ExecuteScalarAsync<int>(
                             "SELECT COUNT(1) FROM MarcadorDB.dbo.AdminUsers WHERE Username=@u;", new { u });
-                        if (exists > 0) continue;
 
                         var (hash, salt) = AuthEndpoints.HashPassword(p);
-                        await c.ExecuteAsync(
-                            "INSERT INTO MarcadorDB.dbo.AdminUsers(Username, PasswordHash, PasswordSalt, Role, Active) VALUES(@u, @h, @s, @r, 1);",
-                            new { u, h = hash, s = salt, r });
-                        app.Logger.LogInformation("Admin user '{User}' seeded from file with role {Role}.", u, r);
+                        if (exists > 0)
+                        {
+                            await c.ExecuteAsync(
+                                "UPDATE MarcadorDB.dbo.AdminUsers SET PasswordHash=@h, PasswordSalt=@s, Role=@r, Active=1 WHERE Username=@u;",
+                                new { u, h = hash, s = salt, r });
+                            app.Logger.LogInformation("Admin user '{User}' updated from file with role {Role}.", u, r);
+                        }
+                        else
+                        {
+                            await c.ExecuteAsync(
+                                "INSERT INTO MarcadorDB.dbo.AdminUsers(Username, PasswordHash, PasswordSalt, Role, Active) VALUES(@u, @h, @s, @r, 1);",
+                                new { u, h = hash, s = salt, r });
+                            app.Logger.LogInformation("Admin user '{User}' seeded from file with role {Role}.", u, r);
+                        }
                     }
 
                     return; // ya procesamos archivo JSON

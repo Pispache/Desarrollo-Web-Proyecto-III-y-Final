@@ -42,9 +42,15 @@ export class HomePageComponent {
 
   // NUEVO: nombre del equipo a crear
   newTeamName = '';
+  // NUEVO: ciudad del equipo a crear
+  newTeamCity = '';
+  // NUEVO: archivo de logo temporal y vista previa
+  newTeamLogoFile: File | null = null;
+  newTeamLogoPreview: string | null = null;
+
   // Tema actual de la UI
   theme: AppTheme = 'dark';
-  
+
   /**
    * Valida que solo se ingresen letras en el nombre del equipo
    * La expresión regular /[^A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]/g elimina todo lo que NO sean:
@@ -73,6 +79,38 @@ export class HomePageComponent {
       this.newTeamName = cleanValue;
       // Disparar evento de input para actualizar la validación
       input.dispatchEvent(new Event('input'));
+    }
+  }
+
+  // ===== Registro de equipo: manejo de archivo/logo =====
+  onTeamFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const f = input.files && input.files[0];
+    if (!f) { this.newTeamLogoFile = null; this.clearTeamLogoPreview(); return; }
+    const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+    if (!allowed.includes(f.type)) {
+      this.notify.showError('Formato no soportado', 'Usa PNG/JPG/WEBP', true);
+      input.value = '';
+      return;
+    }
+    if (f.size > 2 * 1024 * 1024) {
+      this.notify.showError('Archivo muy grande', 'Límite 2MB', true);
+      input.value = '';
+      return;
+    }
+    this.newTeamLogoFile = f;
+    this.setTeamLogoPreview(f);
+  }
+
+  private setTeamLogoPreview(file: File) {
+    this.clearTeamLogoPreview();
+    this.newTeamLogoPreview = URL.createObjectURL(file);
+  }
+
+  private clearTeamLogoPreview() {
+    if (this.newTeamLogoPreview) {
+      URL.revokeObjectURL(this.newTeamLogoPreview);
+      this.newTeamLogoPreview = null;
     }
   }
 
@@ -299,12 +337,20 @@ export class HomePageComponent {
 
   createTeam() {
     const name = this.newTeamName.trim();
+    const city = this.newTeamCity.trim();
     if (!name) return;
 
+    const fd = new FormData();
+    fd.append('name', name);
+    if (city) fd.append('city', city);
+    if (this.newTeamLogoFile) fd.append('file', this.newTeamLogoFile);
+
     this.creating = true;
-    this.api.createTeam(name).subscribe({
+    this.api.createTeamWithLogo(fd).subscribe({
       next: () => {
         this.newTeamName = '';
+        this.newTeamCity = '';
+        this.clearTeamLogoPreview();
         this.creating = false;
         this.reloadAll();
       },

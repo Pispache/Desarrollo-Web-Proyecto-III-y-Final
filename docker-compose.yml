@@ -17,7 +17,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 30
-    profiles: ["db", "all"]
+    profiles: ["db", "api", "all"]
 
   db_init:
   # Ejecuta scripts de creación/semilla cuando db esté healthy
@@ -33,7 +33,7 @@ services:
       - ./scripts:/scripts
     entrypoint: ["/bin/bash","-c","/scripts/db-init.sh"]
     restart: "no"
-    profiles: ["db", "all"]
+    profiles: ["db", "api", "all"]
 
   api:
    # API ASP.NET Core 8; expone 8080 hacia la red del host
@@ -47,6 +47,7 @@ services:
       db_init:
         condition: service_completed_successfully
     environment:
+      - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=${ASPNETCORE_URLS}
       - DB_CONNECTION_STRING=Server=db,1435;Database=${DB_NAME};User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
       - JWT_SECRET=${JWT_SECRET}
@@ -55,15 +56,13 @@ services:
       - JWT_EXPIRES_MINUTES=${JWT_EXPIRES_MINUTES}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      # Opcional: seeding de múltiples usuarios. Formato: user:pass[:role];user2:pass2[:role2]
-      # Si ADMIN_USERS está definido, tendrá prioridad sobre ADMIN_USERNAME/ADMIN_PASSWORD en el seeder.
-      - ADMIN_USERS=${ADMIN_USERS}
       # Opción sencilla: archivo JSON montado dentro del contenedor
       - ADMIN_USERS_FILE=/app/users.json
     ports:
       - "8080:8080"
     volumes:
       - ./users.json:/app/users.json:ro
+      - ./api/wwwroot:/app/wwwroot
     profiles: ["api", "all"]
 
   ui:

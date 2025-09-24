@@ -17,6 +17,13 @@ BEGIN
 END
 GO
 
+-- Extend Teams with City and LogoUrl if not present
+IF COL_LENGTH('dbo.Teams','City') IS NULL
+    ALTER TABLE dbo.Teams ADD City NVARCHAR(100) NULL;
+IF COL_LENGTH('dbo.Teams','LogoUrl') IS NULL
+    ALTER TABLE dbo.Teams ADD LogoUrl NVARCHAR(256) NULL;
+GO
+
 /* =========================
    GAMES
    ========================= */

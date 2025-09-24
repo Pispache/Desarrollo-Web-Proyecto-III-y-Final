@@ -102,6 +102,23 @@
               </div>
                 <div class="form-text">Debe ser único y descriptivo.</div>
               </div>
+              <!-- Ciudad del equipo (opcional) -->
+              <div class="col-12">
+                <label class="form-label">Ciudad (opcional)</label>
+                <input type="text" class="form-control"
+                       [(ngModel)]="newTeamCity"
+                       placeholder="Ej. Guatemala">
+              </div>
+              <!-- Logo del equipo (opcional) -->
+              <div class="col-12">
+                <label class="form-label">Logo (PNG/JPG/WEBP, máx 2MB)</label>
+                <input type="file" class="form-control"
+                       (change)="onTeamFileSelected($event)"
+                       accept="image/png,image/jpeg,image/jpg,image/webp">
+                <div *ngIf="newTeamLogoPreview" class="text-center mt-2">
+                  <img [src]="newTeamLogoPreview" alt="Vista previa logo" class="img-thumbnail" style="max-height: 140px;">
+                </div>
+              </div>
               <div class="col-12 d-grid">
                 <button class="btn btn-success"
                         [disabled]="creating || !newTeamName.trim()"

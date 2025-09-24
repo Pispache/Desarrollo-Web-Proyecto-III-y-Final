@@ -3,6 +3,7 @@ using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.IO;
 
 // Punto de entrada de la API del marcador.
 // Configura DbContext, CORS (en dev), healthcheck y endpoints del dominio de juego.
@@ -37,6 +38,12 @@ if (!string.IsNullOrWhiteSpace(jwtSecret))
 
 var app = b.Build();
 app.UseCors();
+
+// Static files (serve team logos from wwwroot/uploads/logos)
+var contentRoot = app.Environment.ContentRootPath;
+var uploadsDir = Path.Combine(contentRoot, "wwwroot", "uploads", "logos");
+Directory.CreateDirectory(uploadsDir);
+app.UseStaticFiles();
 
 if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 

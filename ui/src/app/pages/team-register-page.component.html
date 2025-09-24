@@ -1,0 +1,40 @@
+<div class="container py-4">
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><i class="bi bi-people me-2"></i>Registrar Equipo</h5>
+          <a routerLink="/" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left"></i> Volver</a>
+        </div>
+        <div class="card-body">
+          <form (ngSubmit)="submit()" novalidate>
+            <div class="mb-3">
+              <label class="form-label">Nombre del equipo <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" [(ngModel)]="name" name="name" placeholder="Ej. Lobos" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Ciudad (opcional)</label>
+              <input type="text" class="form-control" [(ngModel)]="city" name="city" placeholder="Ej. Guatemala">
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Logo (PNG/JPG/WEBP, máx 2MB)</label>
+              <input type="file" class="form-control" (change)="onFileSelected($event)" accept="image/png,image/jpeg,image/jpg,image/webp">
+              <div *ngIf="previewUrl" class="preview mt-3 text-center">
+                <img [src]="previewUrl" alt="Vista previa" class="img-thumbnail" style="max-height: 180px;">
+              </div>
+            </div>
+
+            <div class="d-grid">
+              <button class="btn btn-primary" type="submit" [disabled]="busy">
+                <i class="bi" [ngClass]="busy ? 'bi-arrow-repeat' : 'bi-check-circle'" [class.rotate]="busy"></i>
+                {{ busy ? 'Registrando…' : 'Registrar Equipo' }}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

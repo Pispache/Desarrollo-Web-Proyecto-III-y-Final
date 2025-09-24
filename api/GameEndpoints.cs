@@ -1,6 +1,10 @@
 using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.IO;
 
 public class AdjustScoreDto
 {
@@ -178,6 +182,244 @@ public static class GameEndpoints
             var candidate = raw?.Trim()?.ToUpperInvariant();
             return (!string.IsNullOrEmpty(candidate) && allowed.Contains(candidate)) ? candidate : "PERSONAL";
         }
+
+        // ===== Teams =====
+        g.MapGet("/teams", async (
+            [FromQuery] string? q,
+            [FromQuery] string? city,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? sort = "name_asc") =>
+        {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            var offset = (page - 1) * pageSize;
+
+            var orderBy = sort?.ToLowerInvariant() switch
+            {
+                "name_desc" => "ORDER BY t.Name DESC",
+                "created_desc" => "ORDER BY t.CreatedAt DESC",
+                "created_asc" => "ORDER BY t.CreatedAt ASC",
+                _ => "ORDER BY t.Name ASC"
+            };
+
+            using var c = Open(cs());
+
+            var where = new List<string>();
+            var p = new DynamicParameters();
+            if (!string.IsNullOrWhiteSpace(q)) { where.Add("t.Name LIKE @q"); p.Add("q", $"%{q.Trim()}%"); }
+            if (!string.IsNullOrWhiteSpace(city)) { where.Add("t.City LIKE @city"); p.Add("city", $"%{city.Trim()}%"); }
+            var whereSql = where.Count > 0 ? ("WHERE " + string.Join(" AND ", where)) : "";
+
+            var sql = $"""
+            SELECT t.TeamId, t.Name, t.City, t.LogoUrl, t.CreatedAt
+            FROM {T}Teams t
+            {whereSql}
+            {orderBy}
+            OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY;
+            SELECT COUNT(1) FROM {T}Teams t {whereSql};
+            """;
+
+            p.Add("offset", offset);
+            p.Add("pageSize", pageSize);
+
+            using var multi = await c.QueryMultipleAsync(sql, p);
+            var items = (await multi.ReadAsync<TeamDto>()).ToList();
+            var total = await multi.ReadSingleAsync<int>();
+            return Results.Ok(new { items, total, page, pageSize });
+        }).RequireAuthorization("ADMIN").WithOpenApi();
+
+        g.MapGet("/teams/{id:int}", async (int id) =>
+        {
+            using var c = Open(cs());
+            var trow = await c.QuerySingleOrDefaultAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
+            return trow is null ? Results.NotFound() : Results.Ok(trow);
+        }).RequireAuthorization("ADMIN").WithOpenApi();
+
+        g.MapPost("/teams", async ([FromBody] TeamUpsertDto dto) =>
+        {
+            if (dto is null || string.IsNullOrWhiteSpace(dto.Name))
+                return Results.BadRequest(new { error = "Nombre es requerido" });
+
+            using var c = Open(cs());
+            var exists = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {T}Teams WHERE Name=@n;", new { n = dto.Name.Trim() });
+            if (exists > 0) return Results.Conflict(new { error = "Ya existe un equipo con ese nombre" });
+
+            var id = await c.ExecuteScalarAsync<int>($"""
+                INSERT INTO {T}Teams(Name, City, LogoUrl)
+                OUTPUT INSERTED.TeamId
+                VALUES(@n, @city, @logo);
+                """
+                , new { n = dto.Name.Trim(), city = string.IsNullOrWhiteSpace(dto.City) ? null : dto.City!.Trim(), logo = string.IsNullOrWhiteSpace(dto.LogoUrl) ? null : dto.LogoUrl!.Trim() });
+
+            var created = await c.QuerySingleAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
+            return Results.Created($"/api/teams/{id}", created);
+        }).RequireAuthorization("ADMIN").WithOpenApi();
+
+        g.MapPut("/teams/{id:int}", async (int id, [FromBody] TeamUpsertDto dto) =>
+        {
+            if (dto is null || string.IsNullOrWhiteSpace(dto.Name))
+                return Results.BadRequest(new { error = "Nombre es requerido" });
+
+            using var c = Open(cs());
+
+            var exists = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {T}Teams WHERE TeamId=@id;", new { id });
+            if (exists == 0) return Results.NotFound();
+
+            var dup = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {T}Teams WHERE Name=@n AND TeamId<>@id;", new { n = dto.Name.Trim(), id });
+            if (dup > 0) return Results.Conflict(new { error = "Ya existe un equipo con ese nombre" });
+
+            var rows = await c.ExecuteAsync($"""
+                UPDATE {T}Teams
+                SET Name=@n, City=@city, LogoUrl=@logo
+                WHERE TeamId=@id;
+                """
+                , new { id, n = dto.Name.Trim(), city = string.IsNullOrWhiteSpace(dto.City) ? null : dto.City!.Trim(), logo = string.IsNullOrWhiteSpace(dto.LogoUrl) ? null : dto.LogoUrl!.Trim() });
+
+            if (rows == 0) return Results.NotFound();
+            var updated = await c.QuerySingleAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
+            return Results.Ok(updated);
+        }).RequireAuthorization("ADMIN").WithOpenApi();
+
+        // Crear equipo con logo en un solo paso (multipart/form-data)
+        // Campos esperados: name, city (opcional), file (opcional)
+        g.MapPost("/teams/form", async (HttpRequest request) =>
+        {
+            if (!request.HasFormContentType)
+                return Results.BadRequest(new { error = "Content-Type debe ser multipart/form-data" });
+
+            var form = await request.ReadFormAsync();
+            var name = (form["name"].ToString() ?? string.Empty).Trim();
+            var city = (form["city"].ToString() ?? string.Empty).Trim();
+            var file = form.Files.FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(name))
+                return Results.BadRequest(new { error = "Nombre es requerido" });
+
+            using var c = Open(cs());
+
+            // Validar duplicado por nombre
+            var dup = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {T}Teams WHERE Name=@n;", new { n = name });
+            if (dup > 0) return Results.Conflict(new { error = "Ya existe un equipo con ese nombre" });
+
+            // Insertar equipo inicialmente sin logo
+            var id = await c.ExecuteScalarAsync<int>($"""
+                INSERT INTO {T}Teams(Name, City, LogoUrl)
+                OUTPUT INSERTED.TeamId
+                VALUES(@n, @city, NULL);
+                """ , new { n = name, city = string.IsNullOrWhiteSpace(city) ? null : city });
+
+            // Si hay archivo, validar y guardar
+            if (file != null && file.Length > 0)
+            {
+                var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/jpg", "image/webp" };
+                if (!allowed.Contains(file.ContentType))
+                    return Results.BadRequest(new { error = "Formato no soportado. Use PNG/JPG/WEBP." });
+                if (file.Length > 2 * 1024 * 1024)
+                    return Results.BadRequest(new { error = "Tamaño máximo 2MB" });
+
+                var ext = Path.GetExtension(file.FileName);
+                if (string.IsNullOrWhiteSpace(ext))
+                {
+                    ext = file.ContentType switch
+                    {
+                        "image/png" => ".png",
+                        "image/jpeg" => ".jpg",
+                        "image/jpg" => ".jpg",
+                        "image/webp" => ".webp",
+                        _ => ".img"
+                    };
+                }
+
+                var fileName = $"team-{id}-{Guid.NewGuid():N}{ext}";
+                var contentRoot = AppContext.BaseDirectory;
+                var uploadsRoot = Path.Combine(contentRoot, "wwwroot", "uploads", "logos");
+                Directory.CreateDirectory(uploadsRoot);
+                var filePath = Path.Combine(uploadsRoot, fileName);
+
+                using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                var publicUrl = $"/uploads/logos/{fileName}";
+                await c.ExecuteAsync($"UPDATE {T}Teams SET LogoUrl=@url WHERE TeamId=@id;", new { id, url = publicUrl });
+            }
+
+            var created = await c.QuerySingleAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
+            return Results.Created($"/api/teams/{id}", created);
+        }).RequireAuthorization("ADMIN").DisableAntiforgery().WithOpenApi();
+
+        g.MapDelete("/teams/{id:int}", async (int id) =>
+        {
+            using var c = Open(cs());
+            using var tx = c.BeginTransaction();
+
+            // Desvincular referencias en Games para permitir borrado
+            await c.ExecuteAsync($"UPDATE {T}Games SET HomeTeamId=NULL WHERE HomeTeamId=@id;", new { id }, tx);
+            await c.ExecuteAsync($"UPDATE {T}Games SET AwayTeamId=NULL WHERE AwayTeamId=@id;", new { id }, tx);
+
+            var rows = await c.ExecuteAsync($"DELETE FROM {T}Teams WHERE TeamId=@id;", new { id }, tx);
+            if (rows == 0) { tx.Rollback(); return Results.NotFound(); }
+            tx.Commit();
+            return Results.NoContent();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
+
+        // Upload team logo
+        g.MapPost("/teams/{id:int}/logo", async (int id, HttpRequest request) =>
+        {
+            if (!request.HasFormContentType)
+                return Results.BadRequest(new { error = "Content-Type debe ser multipart/form-data" });
+
+            var form = await request.ReadFormAsync();
+            var file = form.Files.FirstOrDefault();
+            if (file == null || file.Length == 0)
+                return Results.BadRequest(new { error = "Archivo de imagen requerido" });
+
+            // Validar tipo y tamaño (máx 2MB)
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/jpg", "image/webp" };
+            if (!allowed.Contains(file.ContentType))
+                return Results.BadRequest(new { error = "Formato no soportado. Use PNG/JPG/WEBP." });
+            if (file.Length > 2 * 1024 * 1024)
+                return Results.BadRequest(new { error = "Tamaño máximo 2MB" });
+
+            using var c = Open(cs());
+            var exists = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {T}Teams WHERE TeamId=@id;", new { id });
+            if (exists == 0) return Results.NotFound(new { error = "Equipo no existe" });
+
+            // Construir ruta física y pública
+            var ext = Path.GetExtension(file.FileName);
+            if (string.IsNullOrWhiteSpace(ext))
+            {
+                // fallback por content-type
+                ext = file.ContentType switch
+                {
+                    "image/png" => ".png",
+                    "image/jpeg" => ".jpg",
+                    "image/jpg" => ".jpg",
+                    "image/webp" => ".webp",
+                    _ => ".img"
+                };
+            }
+
+            var fileName = $"team-{id}-{Guid.NewGuid():N}{ext}";
+            var contentRoot = AppContext.BaseDirectory; // en contenedor: /app
+            // En Program.cs creamos wwwroot/uploads/logos y habilitamos static files
+            var uploadsRoot = Path.Combine(contentRoot, "wwwroot", "uploads", "logos");
+            Directory.CreateDirectory(uploadsRoot);
+            var filePath = Path.Combine(uploadsRoot, fileName);
+
+            using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var publicUrl = $"/uploads/logos/{fileName}";
+            await c.ExecuteAsync($"UPDATE {T}Teams SET LogoUrl=@url WHERE TeamId=@id;", new { id, url = publicUrl });
+
+            var team = await c.QuerySingleAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
+            return Results.Ok(team);
+        }).RequireAuthorization("ADMIN").DisableAntiforgery().WithOpenApi();
 
         // ===== Games =====
         g.MapGet("/games", async () =>
@@ -803,27 +1045,6 @@ public static class GameEndpoints
         }).WithOpenApi();
 
         // ===== Teams & Players =====
-        g.MapGet("/teams", async () =>
-        {
-            using var c = Open(cs());
-            var rows = await c.QueryAsync($"SELECT TeamId, Name, CreatedAt FROM {T}Teams ORDER BY Name;");
-            return Results.Ok(rows);
-        }).WithOpenApi();
-
-        g.MapPost("/teams", async ([FromBody] TeamCreateDto body) =>
-        {
-            var name = (body?.Name ?? "").Trim();
-            if (IsNullOrWhite(name)) return Results.BadRequest(new { error = "Name requerido." });
-
-            try
-            {
-                using var c = Open(cs());
-                var id = await c.ExecuteScalarAsync<int>($"INSERT INTO {T}Teams(Name) OUTPUT INSERTED.TeamId VALUES(@name);", new { name });
-                return Results.Created($"/api/teams/{id}", new { teamId = id, name });
-            }
-            catch (SqlException ex) when (ex.Number is 2601 or 2627) { return Results.Conflict(new { error = "Nombre duplicado." }); }
-        }).WithOpenApi();
-
         g.MapPost("/games/pair", async ([FromBody] PairDto body) =>
         {
             if (body.HomeTeamId <= 0 || body.AwayTeamId <= 0 || body.HomeTeamId == body.AwayTeamId)
