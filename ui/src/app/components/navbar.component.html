@@ -59,12 +59,7 @@
           </a>
         </li>
         
-        <li class="nav-item" *ngIf="isAuthenticated">
-          <a (click)="logout()" class="nav-link logout-btn">
-            <i class="bi bi-box-arrow-right"></i>
-            <span>SALIR</span>
-          </a>
-        </li>
+        <!---->
         
         <li class="nav-item" *ngIf="!isAuthenticated">
           <a routerLink="/login" 
@@ -77,6 +72,7 @@
         </li>
       </ul>
     </div>
+  
 
     <!-- Mobile Menu Toggle -->
     <div class="mobile-menu-toggle" (click)="toggleMenu()">
@@ -149,12 +145,7 @@
         </a>
       </li>
       
-      <li *ngIf="isAuthenticated" class="logout-item">
-        <a (click)="logout()">
-          <i class="bi bi-box-arrow-right"></i>
-          <span>Cerrar Sesión</span>
-        </a>
-      </li>
+      
       
       <li *ngIf="!isAuthenticated">
         <a routerLink="/login" 

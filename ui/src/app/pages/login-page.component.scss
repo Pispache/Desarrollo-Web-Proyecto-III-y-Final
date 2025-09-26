@@ -1,4 +1,50 @@
+:host {
+  display: block;
+  position: fixed;      /* cubrir todo el viewport */
+  inset: 0;
+  overflow: auto;       /* permitir scroll si es necesario */
+  /* Fondo morado/negro con degradados superpuestos */
+  background:
+    radial-gradient(1200px 800px at -10% -20%, rgba(102, 51, 153, 0.35) 0%, rgba(102, 51, 153, 0.15) 40%, transparent 70%),
+    radial-gradient(900px 700px at 110% 110%, rgba(30, 27, 75, 0.60) 0%, rgba(30, 27, 75, 0.25) 50%, transparent 75%),
+    linear-gradient(180deg, #0a0014 0%, #14082b 50%, #0a0a0f 100%);
+  z-index: 0;
+}
+
+/* Capa con figuras de baloncesto en patrón sutil */
+:host::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.15;
+  background-repeat: repeat;
+  background-size: 140px 140px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'>\
+    <g fill='none' stroke='rgba(255,255,255,0.08)' stroke-width='4'>\
+      <circle cx='70' cy='70' r='38'/>\
+      <path d='M70 32 A38 38 0 0 1 70 108'/>\
+      <path d='M32 70 A38 38 0 0 1 108 70'/>\
+    </g>\
+  </svg>");
+}
+
+/* Capa extra por si existiera un encabezado externo con fondo blanco */
+:host::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1;           /* por encima de cualquier header externo */
+  pointer-events: none;  /* no bloquea interacción */
+  background:
+    radial-gradient(1200px 800px at -10% -20%, rgba(102, 51, 153, 0.35) 0%, rgba(102, 51, 153, 0.15) 40%, transparent 70%),
+    radial-gradient(900px 700px at 110% 110%, rgba(30, 27, 75, 0.60) 0%, rgba(30, 27, 75, 0.25) 50%, transparent 75%),
+    linear-gradient(180deg, #0a0014 0%, #14082b 50%, #0a0a0f 100%);
+}
+
 .login-wrapper {
+  position: relative;
+  z-index: 2; /* encima de la capa ::after */
   max-width: 360px;
   margin: 10vh auto;
   padding: 24px;
