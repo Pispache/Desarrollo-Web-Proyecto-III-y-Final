@@ -8,11 +8,23 @@ import { TeamRegisterPageComponent } from './pages/team-register-page.component'
 import { TeamManagePageComponent } from './pages/team-manage-page.component';
 
 export const routes: Routes = [
+  // Login
   { path: 'login', component: LoginPageComponent },
-  { path: '', component: HomePageComponent, canActivate: [authGuard] }, // tablero de control (protegido)
-  { path: 'teams/register', component: TeamRegisterPageComponent, canActivate: [authGuard] },
-  { path: 'teams/:id/manage', component: TeamManagePageComponent, canActivate: [authGuard] },
-  { path: 'display/:id', component: DisplayPageComponent },   // tablero público 
-  { path: 'results', component: ResultsPageComponent },       // página de resultados
-  { path: '**', redirectTo: '' }
+
+  // Nueva estructura en español
+  { path: '', redirectTo: 'control', pathMatch: 'full' },
+  { path: 'control', component: HomePageComponent, canActivate: [authGuard] },
+  { path: 'equipos', component: TeamRegisterPageComponent, canActivate: [authGuard] },
+  { path: 'jugadores/:id', component: TeamManagePageComponent, canActivate: [authGuard] },
+  { path: 'tablero/:id', component: DisplayPageComponent },   // tablero público
+  { path: 'resultados', component: ResultsPageComponent },    // página de resultados
+
+  // Redirects legacy
+  { path: 'teams/register', redirectTo: 'equipos', pathMatch: 'full' },
+  { path: 'teams/:id/manage', redirectTo: 'jugadores/:id', pathMatch: 'full' },
+  { path: 'display/:id', redirectTo: 'tablero/:id', pathMatch: 'full' },
+  { path: 'results', redirectTo: 'resultados', pathMatch: 'full' },
+
+  // Fallback
+  { path: '**', redirectTo: 'control' }
 ];

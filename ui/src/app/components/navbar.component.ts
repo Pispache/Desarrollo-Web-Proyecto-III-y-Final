@@ -75,7 +75,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   navigateToDisplay() {
     // Aquí podrías obtener el ID del juego actual o mostrar un selector
     // Por ahora navegamos a una ruta genérica
-    this.router.navigate(['/display', '1']);
+    this.router.navigate(['/tablero', '1']);
     this.closeMenu();
   }
 
@@ -84,13 +84,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
     try {
       const last = typeof localStorage !== 'undefined' ? localStorage.getItem('last.teamId') : null;
       if (last && /^\d+$/.test(last)) {
-        this.router.navigate(['/teams', last, 'manage']);
+        this.router.navigate(['/jugadores', last]);
       } else {
         // Si no hay contexto de equipo, dirigir al registro/listado de equipos
-        this.router.navigate(['/teams/register']);
+        this.router.navigate(['/equipos']);
       }
     } catch {
-      this.router.navigate(['/teams/register']);
+      this.router.navigate(['/equipos']);
     }
     this.closeMenu();
   }
