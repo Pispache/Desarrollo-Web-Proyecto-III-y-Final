@@ -11,7 +11,7 @@ import { Subject } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
-  <div class="container-fluid py-3">
+  <div class="container-fluid py-3 team-manage">
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 d-flex align-items-center gap-2">
         <i class="bi bi-people"></i>
@@ -43,31 +43,31 @@ import { Subject } from 'rxjs';
       </div>
       <div class="card-body">
         <!-- Formulario: Agregar jugador -->
-        <div class="border rounded p-3 mb-3 bg-dark text-light border-secondary">
+        <div class="border rounded p-3 mb-3">
           <div class="row g-2 align-items-end">
             <div class="col-12 col-md-6 col-xl-4">
               <label class="form-label mb-1">Nombre del jugador</label>
-              <input class="form-control form-control-sm bg-dark text-light border-secondary" [(ngModel)]="newPlayerName" placeholder="Ej. Juan Pérez">
+              <input class="form-control form-control-sm" [(ngModel)]="newPlayerName" placeholder="Ej. Juan Pérez">
             </div>
             <div class="col-6 col-xl-2">
               <label class="form-label mb-1">Número</label>
-              <input class="form-control form-control-sm bg-dark text-light border-secondary" type="number" [(ngModel)]="newPlayerNumber" placeholder="Ej. 10">
+              <input class="form-control form-control-sm" type="number" [(ngModel)]="newPlayerNumber" placeholder="Ej. 10">
             </div>
             <div class="col-6 col-xl-3">
               <label class="form-label mb-1">Posición (opcional)</label>
-              <input class="form-control form-control-sm bg-dark text-light border-secondary" [(ngModel)]="newPlayerPosition" placeholder="Base, Alero, etc.">
+              <input class="form-control form-control-sm" [(ngModel)]="newPlayerPosition" placeholder="Base, Alero, etc.">
             </div>
             <div class="col-6 col-xl-2">
               <label class="form-label mb-1">Estatura (cm)</label>
-              <input class="form-control form-control-sm bg-dark text-light border-secondary" type="number" [(ngModel)]="newPlayerHeightCm" placeholder="Ej. 185" min="100" max="260">
+              <input class="form-control form-control-sm" type="number" [(ngModel)]="newPlayerHeightCm" placeholder="Ej. 185" min="100" max="260">
             </div>
             <div class="col-6 col-xl-2">
               <label class="form-label mb-1">Edad</label>
-              <input class="form-control form-control-sm bg-dark text-light border-secondary" type="number" [(ngModel)]="newPlayerAge" placeholder="Ej. 22" min="8" max="70">
+              <input class="form-control form-control-sm" type="number" [(ngModel)]="newPlayerAge" placeholder="Ej. 22" min="8" max="70">
             </div>
             <div class="col-12 col-xl-3">
               <label class="form-label mb-1">Nacionalidad</label>
-              <input class="form-control form-control-sm bg-dark text-light border-secondary" [(ngModel)]="newPlayerNationality" placeholder="Ej. Guatemala">
+              <input class="form-control form-control-sm" [(ngModel)]="newPlayerNationality" placeholder="Ej. Guatemala">
             </div>
             <div class="col-12 col-xl-3 d-grid">
               <button class="btn btn-sm btn-success" (click)="addPlayer()" [disabled]="saving || !newPlayerName.trim()">
@@ -97,27 +97,27 @@ import { Subject } from 'rxjs';
                 <td class="text-muted">#{{ p.playerId }}</td>
                 <td>
                   <span *ngIf="editingId !== p.playerId" class="badge bg-secondary">{{ p.number ?? '—' }}</span>
-                  <input *ngIf="editingId === p.playerId" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" [(ngModel)]="editNumber">
+                  <input *ngIf="editingId === p.playerId" type="number" class="form-control form-control-sm" [(ngModel)]="editNumber">
                 </td>
                 <td>
                   <span *ngIf="editingId !== p.playerId" class="fw-medium">{{ p.name }}</span>
-                  <input *ngIf="editingId === p.playerId" class="form-control form-control-sm bg-dark text-light border-secondary" [(ngModel)]="editName">
+                  <input *ngIf="editingId === p.playerId" class="form-control form-control-sm" [(ngModel)]="editName">
                 </td>
                 <td>
                   <span *ngIf="editingId !== p.playerId">{{ p.position || '—' }}</span>
-                  <input *ngIf="editingId === p.playerId" class="form-control form-control-sm bg-dark text-light border-secondary" [(ngModel)]="editPosition">
+                  <input *ngIf="editingId === p.playerId" class="form-control form-control-sm" [(ngModel)]="editPosition">
                 </td>
                 <td>
                   <span *ngIf="editingId !== p.playerId">{{ p.heightCm ? (p.heightCm + ' cm') : '—' }}</span>
-                  <input *ngIf="editingId === p.playerId" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" [(ngModel)]="editHeightCm" min="100" max="260" placeholder="cm">
+                  <input *ngIf="editingId === p.playerId" type="number" class="form-control form-control-sm" [(ngModel)]="editHeightCm" min="100" max="260" placeholder="cm">
                 </td>
                 <td>
                   <span *ngIf="editingId !== p.playerId">{{ p.age ?? '—' }}</span>
-                  <input *ngIf="editingId === p.playerId" type="number" class="form-control form-control-sm bg-dark text-light border-secondary" [(ngModel)]="editAge" min="8" max="70" placeholder="edad">
+                  <input *ngIf="editingId === p.playerId" type="number" class="form-control form-control-sm" [(ngModel)]="editAge" min="8" max="70" placeholder="edad">
                 </td>
                 <td>
                   <span *ngIf="editingId !== p.playerId">{{ p.nationality || '—' }}</span>
-                  <input *ngIf="editingId === p.playerId" class="form-control form-control-sm bg-dark text-light border-secondary" [(ngModel)]="editNationality" placeholder="Nacionalidad">
+                  <input *ngIf="editingId === p.playerId" class="form-control form-control-sm" [(ngModel)]="editNationality" placeholder="Nacionalidad">
                 </td>
                 <td class="text-end">
                   <ng-container *ngIf="editingId !== p.playerId; else editing">
@@ -139,7 +139,15 @@ import { Subject } from 'rxjs';
       </div>
     </div>
   </div>
-  `
+  `,
+  styles: [
+    `:host .team-manage, :host .team-manage .card, :host .team-manage .card-body { color: #000 !important; }`,
+    `:host .team-manage h4, :host .team-manage .form-label, :host .team-manage span, :host .team-manage small { color: #000 !important; }`,
+    `:host .team-manage .table thead th, :host .team-manage .table tbody td { color: #000 !important; }`,
+    `:host .team-manage .text-muted { color: #000 !important; }`,
+    `:host .team-manage input, :host .team-manage select { background: #fff !important; color: #000 !important; }`,
+    `:host .team-manage .badge { color: #000 !important; }`
+  ]
 })
 export class TeamManagePageComponent implements OnInit, OnDestroy {
   teamId!: number;
