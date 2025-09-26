@@ -73,63 +73,6 @@
           </div>
         </div>
 
-        <!-- 2) REGISTRAR EQUIPO (FIJO) -->
-        <div class="card shadow-sm" *ngIf="isAuthed()">
-          <div class="card-header header-contrast-high">
-            <h6 class="mb-0"><i class="bi bi-people me-2"></i>Registrar Nuevo Equipo</h6>
-          </div>
-          <div class="card-body">
-            <div class="row g-2">
-              <div class="col-12">
-                <label for="teamName" class="form-label">Nombre del Equipo</label>
-                <input id="teamName" type="text" class="form-control"
-                     [(ngModel)]="newTeamName" 
-                     (input)="onTeamNameInput($event)"
-                     pattern="[A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]+"
-                     title="Solo se permiten letras y espacios"
-                     placeholder="Ingrese el nombre del equipo…"
-                     #teamNameInput="ngModel"
-                     [ngClass]="{'is-invalid': (teamNameInput.invalid && teamNameInput.touched) || showInvalidCharWarning}">
-              
-              <!-- Mensaje de error para validación de patrón -->
-              <div *ngIf="teamNameInput.invalid && teamNameInput.touched" class="invalid-feedback">
-                Solo se permiten letras y espacios en el nombre del equipo.
-              </div>
-              
-              <!-- Mensaje de error en tiempo real -->
-              <div *ngIf="showInvalidCharWarning" class="text-warning small mt-1">
-                <i class="bi bi-exclamation-triangle-fill"></i> Solo se permiten letras y espacios. Los números y caracteres especiales no están permitidos.
-              </div>
-                <div class="form-text">Debe ser único y descriptivo.</div>
-              </div>
-              <!-- Ciudad del equipo (opcional) -->
-              <div class="col-12">
-                <label class="form-label">Ciudad (opcional)</label>
-                <input type="text" class="form-control"
-                       [(ngModel)]="newTeamCity"
-                       placeholder="Ej. Guatemala">
-              </div>
-              <!-- Logo del equipo (opcional) -->
-              <div class="col-12">
-                <label class="form-label">Logo (PNG/JPG/WEBP, máx 2MB)</label>
-                <input type="file" class="form-control"
-                       (change)="onTeamFileSelected($event)"
-                       accept="image/png,image/jpeg,image/jpg,image/webp">
-                <div *ngIf="newTeamLogoPreview" class="text-center mt-2">
-                  <img [src]="newTeamLogoPreview" alt="Vista previa logo" class="img-thumbnail" style="max-height: 140px;">
-                </div>
-              </div>
-              <div class="col-12 d-grid">
-                <button class="btn btn-success"
-                        [disabled]="creating || !newTeamName.trim()"
-                        (click)="createTeam()">
-                  <i class="bi bi-plus-circle me-1"></i>{{ creating ? 'Procesando…' : 'Registrar Equipo' }}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- 3) ESTADO (COMPACTO) -->
         <div *ngIf="detail as d" class="card shadow-sm">
           <div class="card-header header-contrast-high d-flex justify-content-between align-items-center">
