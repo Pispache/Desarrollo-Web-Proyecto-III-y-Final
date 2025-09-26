@@ -78,6 +78,15 @@ import { Subject } from 'rxjs';
         </div>
 
         <!-- Lista de jugadores -->
+        <div class="d-flex justify-content-end mb-2">
+          <div class="input-group input-group-sm" style="max-width: 320px;">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input type="text" class="form-control" [(ngModel)]="searchName" placeholder="Buscar por nombre" />
+            <button class="btn btn-outline-secondary" type="button" (click)="searchName = ''" [disabled]="!searchName">
+              <i class="bi bi-x-circle"></i>
+            </button>
+          </div>
+        </div>
         <div class="table-responsive">
           <table class="table table-hover align-middle mb-0">
             <thead>
@@ -93,7 +102,7 @@ import { Subject } from 'rxjs';
               </tr>
             </thead>
             <tbody>
-              <tr *ngFor="let p of players; trackBy: trackByPlayerId">
+              <tr *ngFor="let p of filteredPlayers; trackBy: trackByPlayerId">
                 <td class="text-muted">#{{ p.playerId }}</td>
                 <td>
                   <span *ngIf="editingId !== p.playerId" class="badge bg-secondary">{{ p.number ?? '—' }}</span>
@@ -130,8 +139,8 @@ import { Subject } from 'rxjs';
                   </ng-template>
                 </td>
               </tr>
-              <tr *ngIf="players.length === 0">
-                <td colspan="5" class="text-center text-muted py-3">No hay jugadores registrados</td>
+              <tr *ngIf="filteredPlayers.length === 0">
+                <td colspan="8" class="text-center text-muted py-3">No hay jugadores registrados</td>
               </tr>
             </tbody>
           </table>
@@ -153,6 +162,8 @@ export class TeamManagePageComponent implements OnInit, OnDestroy {
   teamId!: number;
   team: TeamDto | null = null;
   players: Player[] = [];
+  // filtro
+  searchName: string = '';
 
   // add form
   newPlayerName = '';
@@ -181,6 +192,13 @@ export class TeamManagePageComponent implements OnInit, OnDestroy {
     private api: ApiService,
     private notify: NotificationService
   ) {}
+
+  // Lista filtrada por nombre (cliente)
+  get filteredPlayers(): Player[] {
+    const q = (this.searchName || '').trim().toLowerCase();
+    if (!q) return this.players;
+    return this.players.filter(p => (p.name || '').toLowerCase().includes(q));
+  }
 
   ngOnInit(): void {
     const idParam = this.route.snapshot.paramMap.get('id');
