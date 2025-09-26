@@ -71,6 +71,35 @@ export class AuthService {
     return Date.now() >= exp.getTime();
   }
 
+  getUserRole(): string | null {
+    const token = this.getToken();
+    if (!token) return null;
+    
+    try {
+      // Decodificar el JWT (solo la parte del payload) soportando base64url
+      const part = token.split('.')[1];
+      if (!part) return null;
+      let base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = base64.length % 4;
+      if (pad) base64 = base64 + '='.repeat(4 - pad);
+      const json = atob(base64);
+      const payload = JSON.parse(json);
+      // El claim de rol en .NET suele ser ClaimTypes.Role
+      return payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+        || payload['role']
+        || payload['roles']?.[0]
+        || null;
+    } catch (error) {
+      console.error('Error decoding JWT:', error);
+      return null;
+    }
+  }
+
+  isAdmin(): boolean {
+    const role = this.getUserRole();
+    return role === 'ADMIN';
+  }
+
   private scheduleAutoLogout(): void {
     if (this.logoutTimer) { clearTimeout(this.logoutTimer); this.logoutTimer = undefined; }
     const exp = this.getExpiresAt();

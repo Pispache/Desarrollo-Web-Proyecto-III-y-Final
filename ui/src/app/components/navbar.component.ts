@@ -14,6 +14,7 @@ import { Subscription, filter } from 'rxjs';
 export class NavbarComponent implements OnInit, OnDestroy {
   isMenuOpen = false;
   isAuthenticated = false;
+  isAdmin = false;
   currentRoute = '';
   private authSubscription?: Subscription;
   private routerSubscription?: Subscription;
@@ -26,7 +27,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Suscribirse al estado de autenticación
     this.authSubscription = this.authService.authed$.subscribe(
-      isAuth => this.isAuthenticated = isAuth
+      isAuth => {
+        this.isAuthenticated = isAuth;
+        this.isAdmin = isAuth ? this.authService.isAdmin() : false;
+      }
     );
 
     // Suscribirse a cambios de ruta para cerrar el menú móvil
