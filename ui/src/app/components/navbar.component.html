@@ -31,6 +31,15 @@
           </a>
         </li>
         
+        <li class="nav-item" *ngIf="isAuthenticated">
+          <a (click)="navigateToPlayers()"
+             class="nav-link"
+             [class.active]="isActiveRoute('/teams')">
+            <i class="bi bi-people"></i>
+            <span>JUGADORES</span>
+          </a>
+        </li>
+        
         <li class="nav-item">
           <a (click)="navigateToDisplay()" 
              class="nav-link" 
@@ -113,6 +122,13 @@
            (click)="closeMenu()">
           <i class="bi bi-people-fill"></i>
           <span>Gestión de Equipos</span>
+        </a>
+      </li>
+      
+      <li *ngIf="isAuthenticated">
+        <a (click)="navigateToPlayers()" [class.active]="isActiveRoute('/teams')">
+          <i class="bi bi-people"></i>
+          <span>Jugadores</span>
         </a>
       </li>
       

@@ -183,6 +183,7 @@ export class TeamManagePageComponent implements OnInit, OnDestroy {
       return;
     }
     this.teamId = id;
+    try { localStorage.setItem('last.teamId', String(this.teamId)); } catch {}
     this.loadTeam();
     this.loadPlayers();
   }
