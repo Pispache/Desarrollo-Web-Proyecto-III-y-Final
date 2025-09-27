@@ -81,17 +81,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   // Acceso rápido a gestión de jugadores
   navigateToPlayers() {
-    try {
-      const last = typeof localStorage !== 'undefined' ? localStorage.getItem('last.teamId') : null;
-      if (last && /^\d+$/.test(last)) {
-        this.router.navigate(['/jugadores', last]);
-      } else {
-        // Si no hay contexto de equipo, dirigir al registro/listado de equipos
-        this.router.navigate(['/equipos']);
-      }
-    } catch {
-      this.router.navigate(['/equipos']);
-    }
+    // Siempre dirigir al selector de equipo de jugadores
+    this.router.navigate(['/jugadores']);
     this.closeMenu();
   }
 }

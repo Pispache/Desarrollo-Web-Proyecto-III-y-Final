@@ -6,6 +6,7 @@ import { LoginPageComponent } from './pages/login-page.component';
 import { authGuard } from './guards/auth.guard';
 import { TeamRegisterPageComponent } from './pages/team-register-page.component';
 import { TeamManagePageComponent } from './pages/team-manage-page.component';
+import { PlayersTeamSelectPageComponent } from './pages/players-team-select-page.component';
 
 export const routes: Routes = [
   // Login
@@ -15,6 +16,7 @@ export const routes: Routes = [
   { path: '', redirectTo: 'control', pathMatch: 'full' },
   { path: 'control', component: HomePageComponent, canActivate: [authGuard] },
   { path: 'equipos', component: TeamRegisterPageComponent, canActivate: [authGuard] },
+  { path: 'jugadores', component: PlayersTeamSelectPageComponent, canActivate: [authGuard] },
   { path: 'jugadores/:id', component: TeamManagePageComponent, canActivate: [authGuard] },
   { path: 'tablero/:id', component: DisplayPageComponent },   // tablero público
   { path: 'resultados', component: ResultsPageComponent },    // página de resultados
