@@ -1,0 +1,171 @@
+:host {
+  /* Tokens base alineados con Home */
+  --bg-0: #0b0a1a;
+  --bg-1: #17142e;
+  --bg-2: #24194b;
+  --fg-0: var(--color-text, #e7e9ff);
+  --muted: var(--color-muted, #9aa0bd);
+  --accent: #9b5cff;
+  --accent-2: #00e0ff;
+  --danger: #ff4d6d;
+  --stroke: var(--color-border, rgba(255, 255, 255, 0.08));
+  --shadow: 0 10px 30px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
+  --radius: 16px;
+  display: block;
+}
+
+/* Fondo degradado y grano como Home */
+.container-fluid {
+  min-height: 100vh;
+  color: var(--fg-0);
+  background:
+    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
+    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  position: relative;
+  isolation: isolate;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 24px 24px, 36px 36px;
+    background-position: 0 0, 12px 18px;
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+/* Cards estilo glass como en Home */
+.card {
+  background: var(--color-surface, rgba(20, 18, 43, 0.6));
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--shadow);
+
+  > .card-header {
+    border-bottom: 1px solid var(--stroke);
+    background: color-mix(in oklab, var(--color-surface-header, rgba(255,255,255,0.02)) 100%, transparent) !important;
+    color: var(--color-text-on-header, var(--fg-0)) !important;
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; bottom: -1px; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+      opacity: .7;
+    }
+  }
+}
+
+/* Botón primario con gradiente */
+.btn.btn-primary {
+  --g1: var(--color-primary, var(--accent));
+  --g2: var(--accent-2);
+  background: linear-gradient(135deg, var(--g1), var(--g2));
+  border: none;
+  color: #0b0a1a;
+  font-weight: 600;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 224, 255, .25);
+  transition: all 0.2s ease;
+
+  &:hover { filter: brightness(1.05); box-shadow: 0 12px 26px rgba(0,224,255,.35); color: #0b0a1a; }
+  &:active { transform: translateY(1px); }
+}
+
+/* Inputs/selects alineados al tema */
+.form-control, .form-select {
+  background: rgba(255,255,255,0.06);
+  color: var(--fg-0);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  &::placeholder { color: rgba(231,233,255,0.55); }
+  &:focus {
+    color: var(--fg-0);
+    background: rgba(255,255,255,0.08);
+    border-color: transparent;
+    box-shadow: 0 0 0 3px rgba(155,92,255,.25), 0 0 12px rgba(0,224,255,.25);
+    outline: none;
+  }
+}
+
+/* Estructura específica de Torneo */
+.tournament {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1rem;
+}
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.header h1 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.group-form {
+  display: flex;
+  gap: 0.75rem;
+  align-items: end;
+  flex-wrap: wrap;
+  background: rgba(20, 18, 43, 0.6);
+  border: 1px solid var(--stroke);
+  padding: 0.75rem;
+  border-radius: 10px;
+}
+
+.field { display: grid; gap: 0.25rem; min-width: 240px; }
+.field input { padding: 0.6rem 0.8rem; }
+
+.btn.btn-primary { padding: 0.6rem 0.9rem; cursor: pointer; }
+.btn.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.card { overflow: hidden; display: flex; flex-direction: column; }
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0.9rem;
+  position: relative;
+}
+
+.card-title { display: flex; align-items: center; gap: 0.5rem; }
+.card-title h3 { margin: 0; font-size: 1.05rem; }
+
+.icon-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+}
+.icon-btn:hover { background: rgba(255,255,255,0.08); }
+.icon-btn.danger { color: #dc2626; }
+
+.card-body { padding: 0.9rem; }
+.muted { color: #6b7280; margin: 0; }
+
+.empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: #6b7280;
+  padding: 2rem 0;
+}

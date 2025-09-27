@@ -21,7 +21,7 @@
           </a>
         </li>
         
-        <li class="nav-item" *ngIf="isAuthenticated">
+        <li class="nav-item" *ngIf="isAdmin">
           <a routerLink="/equipos" 
              class="nav-link" 
              [class.active]="isActiveRoute('/equipos')"
@@ -31,7 +31,7 @@
           </a>
         </li>
         
-        <li class="nav-item" *ngIf="isAuthenticated">
+        <li class="nav-item" *ngIf="isAdmin">
           <a (click)="navigateToPlayers()"
              class="nav-link"
              [class.active]="isActiveRoute('/jugadores')">
@@ -122,7 +122,7 @@
         </a>
       </li>
       
-      <li *ngIf="isAuthenticated">
+      <li *ngIf="isAdmin">
         <a routerLink="/equipos" 
            [class.active]="isActiveRoute('/equipos')"
            (click)="closeMenu()">
@@ -131,7 +131,7 @@
         </a>
       </li>
       
-      <li *ngIf="isAuthenticated">
+      <li *ngIf="isAdmin">
         <a (click)="navigateToPlayers()" [class.active]="isActiveRoute('/jugadores')">
           <i class="bi bi-people"></i>
           <span>Jugadores</span>
@@ -152,6 +152,15 @@
            (click)="closeMenu()">
           <i class="bi bi-bar-chart-fill"></i>
           <span>Resultados</span>
+        </a>
+      </li>
+      
+      <li>
+        <a routerLink="/torneo" 
+           [class.active]="isActiveRoute('/torneo')"
+           (click)="closeMenu()">
+          <i class="bi bi-bar-chart-fill"></i>
+          <span>Torneo</span>
         </a>
       </li>
       

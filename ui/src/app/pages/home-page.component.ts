@@ -269,6 +269,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   isAuthed(): boolean { return this.auth.isAuthenticated(); }
+  isAdmin(): boolean { return this.auth.isAdmin(); }
 
   // Handle game status changes
   private handleStatusChange(operation: Promise<any>, successMessage: string) {
@@ -451,10 +452,10 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   reloadGames() {
-    this.api.listGames().subscribe((g) => {
+    this.api.listGames().subscribe((g: Game[]) => {
       this.games = g;
       // Incluir partidos en progreso, suspendidos y programados en la lista de activos
-      this.activeGames = g.filter((game) => 
+      this.activeGames = g.filter((game: Game) => 
         game.status === 'IN_PROGRESS' || game.status === 'SUSPENDED' || game.status === 'SCHEDULED'
       );
     });
@@ -463,15 +464,16 @@ export class HomePageComponent implements OnInit, OnDestroy {
   view(id: number) {
     this.selectedGameId = id;
     this.api.getGame(id).subscribe({
-      next: (d) => {
+      next: (d: GameDetail | null) => {
+        if (!d) return;
         this.detail = d;
         // Scoreboard/ControlPanel gestionan el estado del reloj de forma autónoma
         // Asegurarse de que el partido esté en la lista de juegos activos
-        if (!this.activeGames.some(g => g.gameId === id)) {
+        if (!this.activeGames.some((g: Game) => g.gameId === id)) {
           this.reloadGames();
         }
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error cargando partido:', err);
         alert('No se pudo cargar el partido. Intente nuevamente.');
       }
@@ -482,13 +484,15 @@ export class HomePageComponent implements OnInit, OnDestroy {
     if (!homeTeamId || !awayTeamId || homeTeamId === awayTeamId) return;
     this.creating = true;
     this.api.pairGame(homeTeamId, awayTeamId).subscribe({
-      next: ({ gameId }) => {
+      next: (res: any) => {
+        const gameId: number | undefined = res?.gameId;
+        if (!gameId) return;
         // Recargamos la lista de juegos
         this.reloadGames();
         // Cargamos el detalle del nuevo partido
         this.view(gameId);
       },
-      error: (err) => {
+      error: (err: any) => {
         console.error('Error creando partido:', err);
         alert('Error al crear el partido. Por favor, intente nuevamente.');
       },
@@ -500,7 +504,6 @@ export class HomePageComponent implements OnInit, OnDestroy {
     const name = this.newTeamName.trim();
     const city = this.newTeamCity.trim();
     if (!name) return;
-
     const fd = new FormData();
     fd.append('name', name);
     if (city) fd.append('city', city);

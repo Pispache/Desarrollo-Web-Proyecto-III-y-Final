@@ -67,6 +67,32 @@ public static class GameEndpoints
                               IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='Players' AND COLUMN_NAME='Nationality')
                                 ALTER TABLE MarcadorDB.dbo.Players ADD Nationality NVARCHAR(100) NULL;";
             c.Execute(ensureSql);
+            // Ensure Logos table exists
+            var ensureLogos = @"IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='Logos')
+BEGIN
+  CREATE TABLE MarcadorDB.dbo.Logos (
+    LogoId INT IDENTITY(1,1) PRIMARY KEY,
+    TeamId INT NULL,
+    ContentType NVARCHAR(100) NOT NULL,
+    Data VARBINARY(MAX) NOT NULL,
+    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+  );
+END;";
+            c.Execute(ensureLogos);
+            // Ensure FK Logos -> Teams with ON DELETE CASCADE
+            var ensureFk = @"IF NOT EXISTS (
+  SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Logos_Teams' AND parent_object_id = OBJECT_ID('MarcadorDB.dbo.Logos')
+)
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = 'TeamId' AND Object_ID = Object_ID('MarcadorDB.dbo.Logos'))
+  BEGIN
+    ALTER TABLE MarcadorDB.dbo.Logos ADD TeamId INT NULL;
+  END;
+  ALTER TABLE MarcadorDB.dbo.Logos
+  ADD CONSTRAINT FK_Logos_Teams FOREIGN KEY (TeamId)
+  REFERENCES MarcadorDB.dbo.Teams(TeamId) ON DELETE CASCADE;
+END;";
+            c.Execute(ensureFk);
         }
         catch { /* best-effort: no-op if fails */ }
 
@@ -106,7 +132,7 @@ public static class GameEndpoints
                 team = teamFouls,
                 players = playerFouls 
             });
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // Add adjust score endpoint
         g.MapPost("/games/{id:int}/adjust-score", async (int id, [FromBody] AdjustScoreDto dto) =>
@@ -181,7 +207,7 @@ public static class GameEndpoints
                 Console.WriteLine($"Error en la conexión: {ex}");
                 return Results.Problem("Error de conexión con la base de datos", statusCode: 500);
             }
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
 
         // ===== Helpers mínimos =====
@@ -243,14 +269,14 @@ public static class GameEndpoints
             var items = (await multi.ReadAsync<TeamDto>()).ToList();
             var total = await multi.ReadSingleAsync<int>();
             return Results.Ok(new { items, total, page, pageSize });
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapGet("/teams/{id:int}", async (int id) =>
         {
             using var c = Open(cs());
             var trow = await c.QuerySingleOrDefaultAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
             return trow is null ? Results.NotFound() : Results.Ok(trow);
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/teams", async ([FromBody] TeamUpsertDto dto) =>
         {
@@ -325,7 +351,7 @@ public static class GameEndpoints
                 VALUES(@n, @city, NULL);
                 """ , new { n = name, city = string.IsNullOrWhiteSpace(city) ? null : city });
 
-            // Si hay archivo, validar y guardar
+            // Si hay archivo, validar y guardar en BD (tabla Logos)
             if (file != null && file.Length > 0)
             {
                 var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "image/png", "image/jpeg", "image/jpg", "image/webp" };
@@ -334,31 +360,23 @@ public static class GameEndpoints
                 if (file.Length > 2 * 1024 * 1024)
                     return Results.BadRequest(new { error = "Tamaño máximo 2MB" });
 
-                var ext = Path.GetExtension(file.FileName);
-                if (string.IsNullOrWhiteSpace(ext))
+                byte[] data;
+                using (var ms = new MemoryStream())
                 {
-                    ext = file.ContentType switch
-                    {
-                        "image/png" => ".png",
-                        "image/jpeg" => ".jpg",
-                        "image/jpg" => ".jpg",
-                        "image/webp" => ".webp",
-                        _ => ".img"
-                    };
+                    await file.CopyToAsync(ms);
+                    data = ms.ToArray();
                 }
 
-                var fileName = $"team-{id}-{Guid.NewGuid():N}{ext}";
-                var contentRoot = AppContext.BaseDirectory;
-                var uploadsRoot = Path.Combine(contentRoot, "wwwroot", "uploads", "logos");
-                Directory.CreateDirectory(uploadsRoot);
-                var filePath = Path.Combine(uploadsRoot, fileName);
+                // Eliminar logos previos del equipo (si existieran) para evitar huérfanos
+                await c.ExecuteAsync($"DELETE FROM {T}Logos WHERE TeamId=@teamId;", new { teamId = id });
+                // Insertar logo y actualizar URL pública a endpoint API
+                var logoId = await c.ExecuteScalarAsync<int>($@"
+                    INSERT INTO {T}Logos(TeamId, ContentType, Data)
+                    OUTPUT INSERTED.LogoId
+                    VALUES(@teamId, @ct, @data);
+                ", new { teamId = id, ct = file.ContentType, data });
 
-                using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
-                {
-                    await file.CopyToAsync(stream);
-                }
-
-                var publicUrl = $"/uploads/logos/{fileName}";
+                var publicUrl = $"/api/logos/{logoId}";
                 await c.ExecuteAsync($"UPDATE {T}Teams SET LogoUrl=@url WHERE TeamId=@id;", new { id, url = publicUrl });
             }
 
@@ -381,7 +399,7 @@ public static class GameEndpoints
             return Results.NoContent();
         }).RequireAuthorization("ADMIN").WithOpenApi();
 
-        // Upload team logo
+        // Upload team logo (guarda en BD)
         g.MapPost("/teams/{id:int}/logo", async (int id, HttpRequest request) =>
         {
             if (!request.HasFormContentType)
@@ -403,39 +421,38 @@ public static class GameEndpoints
             var exists = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {T}Teams WHERE TeamId=@id;", new { id });
             if (exists == 0) return Results.NotFound(new { error = "Equipo no existe" });
 
-            // Construir ruta física y pública
-            var ext = Path.GetExtension(file.FileName);
-            if (string.IsNullOrWhiteSpace(ext))
+            // Guardar bytes en BD (tabla Logos) y actualizar URL pública a endpoint API
+            byte[] data;
+            using (var ms = new MemoryStream())
             {
-                // fallback por content-type
-                ext = file.ContentType switch
-                {
-                    "image/png" => ".png",
-                    "image/jpeg" => ".jpg",
-                    "image/jpg" => ".jpg",
-                    "image/webp" => ".webp",
-                    _ => ".img"
-                };
+                await file.CopyToAsync(ms);
+                data = ms.ToArray();
             }
 
-            var fileName = $"team-{id}-{Guid.NewGuid():N}{ext}";
-            var contentRoot = AppContext.BaseDirectory; // en contenedor: /app
-            // En Program.cs creamos wwwroot/uploads/logos y habilitamos static files
-            var uploadsRoot = Path.Combine(contentRoot, "wwwroot", "uploads", "logos");
-            Directory.CreateDirectory(uploadsRoot);
-            var filePath = Path.Combine(uploadsRoot, fileName);
+            // Eliminar logos previos del equipo antes de insertar el nuevo
+            await c.ExecuteAsync($"DELETE FROM {T}Logos WHERE TeamId=@teamId;", new { teamId = id });
 
-            using (var stream = new FileStream(filePath, FileMode.Create, FileAccess.Write))
-            {
-                await file.CopyToAsync(stream);
-            }
+            var logoId = await c.ExecuteScalarAsync<int>($@"
+                INSERT INTO {T}Logos(TeamId, ContentType, Data)
+                OUTPUT INSERTED.LogoId
+                VALUES(@teamId, @ct, @data);
+            ", new { teamId = id, ct = file.ContentType, data });
 
-            var publicUrl = $"/uploads/logos/{fileName}";
+            var publicUrl = $"/api/logos/{logoId}";
             await c.ExecuteAsync($"UPDATE {T}Teams SET LogoUrl=@url WHERE TeamId=@id;", new { id, url = publicUrl });
 
             var team = await c.QuerySingleAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
             return Results.Ok(team);
         }).RequireAuthorization("ADMIN").DisableAntiforgery().WithOpenApi();
+
+        // Serve logo bytes from DB by id (público)
+        g.MapGet("/logos/{logoId:int}", async (int logoId) =>
+        {
+            using var c = Open(cs());
+            var row = await c.QuerySingleOrDefaultAsync<(string ContentType, byte[] Data)>($"SELECT ContentType, Data FROM {T}Logos WHERE LogoId=@logoId;", new { logoId });
+            if (row.Equals(default((string, byte[])))) return Results.NotFound();
+            return Results.File(row.Data, row.ContentType);
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // ===== Games =====
         g.MapGet("/games", async () =>
@@ -443,7 +460,7 @@ public static class GameEndpoints
             using var c = Open(cs());
             var rows = await c.QueryAsync($"SELECT TOP 50 * FROM {T}Games ORDER BY GameId DESC;");
             return Results.Ok(rows);
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games", async ([FromBody] CreateGameDto body) =>
         {
@@ -466,7 +483,7 @@ public static class GameEndpoints
 
             tx.Commit();
             return Results.Created($"/api/games/{id}", new { gameId = id, home, away });
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapGet("/games/{id:int}", async (int id) =>
         {
@@ -475,7 +492,7 @@ public static class GameEndpoints
             if (game is null) return Results.NotFound();
             var events = await c.QueryAsync($"SELECT TOP 100 * FROM {T}GameEvents WHERE GameId=@id ORDER BY EventId DESC;", new { id });
             return Results.Ok(new { game, events });
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/start", async (int id) =>
         {
@@ -488,7 +505,7 @@ public static class GameEndpoints
             await Exec(c, $"UPDATE {T}GameClocks SET Running=1, StartedAt=SYSUTCDATETIME(), UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit();
             return Results.NoContent();
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/advance-quarter", async (int id) =>
         {
@@ -624,7 +641,7 @@ public static class GameEndpoints
                 quarter = previousQuarter,
                 isOvertime = previousQuarter > 4
             });
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/finish", async (int id) =>
         {
@@ -635,7 +652,7 @@ public static class GameEndpoints
             await Exec(c, $"UPDATE {T}GameClocks SET Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit(); 
             return Results.NoContent();
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/cancel", async (int id) =>
         {
@@ -646,7 +663,7 @@ public static class GameEndpoints
             await Exec(c, $"UPDATE {T}GameClocks SET Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit(); 
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/suspend", async (int id) =>
         {
@@ -657,7 +674,7 @@ public static class GameEndpoints
             await Exec(c, $"UPDATE {T}GameClocks SET Running=0, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit(); 
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
         
         g.MapPost("/games/{id:int}/resume", async (int id) =>
         {
@@ -726,7 +743,7 @@ public static class GameEndpoints
 
             tx.Commit();
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // Endpoint para restar un punto
         g.MapPost("/games/{id:int}/subtract-point", async (int id, [FromBody] ScoreDto dto) =>
@@ -975,7 +992,7 @@ public static class GameEndpoints
             }, tx);
 
             tx.Commit(); return Results.NoContent();
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // ===== Overtime =====
         g.MapPost("/games/{gameId}/overtime", async (int gameId) =>
@@ -1058,7 +1075,7 @@ public static class GameEndpoints
                 quarter = nextQuarter,
                 durationMs = overtimeMs
             });
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // ===== Teams & Players =====
         g.MapPost("/games/pair", async ([FromBody] PairDto body) =>

@@ -6,8 +6,10 @@ import { LoginPageComponent } from './pages/login-page.component';
 import { authGuard } from './guards/auth.guard';
 import { TeamRegisterPageComponent } from './pages/team-register-page.component';
 import { TeamManagePageComponent } from './pages/team-manage-page.component';
-import { PlayersTeamSelectPageComponent } from './pages/players-team-select-page.component';
 
+import { PlayersTeamSelectPageComponent } from './pages/players-team-select-page.component';
+import { TournamentPageComponent } from './pages/tournament-page.component';
+import { adminGuard } from './guards/admin.guard';
 export const routes: Routes = [
   // Login
   { path: 'login', component: LoginPageComponent },
@@ -15,11 +17,14 @@ export const routes: Routes = [
   // Nueva estructura en español
   { path: '', redirectTo: 'control', pathMatch: 'full' },
   { path: 'control', component: HomePageComponent, canActivate: [authGuard] },
+
   { path: 'equipos', component: TeamRegisterPageComponent, canActivate: [authGuard] },
   { path: 'jugadores', component: PlayersTeamSelectPageComponent, canActivate: [authGuard] },
   { path: 'jugadores/:id', component: TeamManagePageComponent, canActivate: [authGuard] },
+
   { path: 'tablero/:id', component: DisplayPageComponent },   // tablero público
   { path: 'resultados', component: ResultsPageComponent },    // página de resultados
+  { path: 'torneo', component: TournamentPageComponent, canActivate: [authGuard] },
 
   // Redirects legacy
   { path: 'teams/register', redirectTo: 'equipos', pathMatch: 'full' },
