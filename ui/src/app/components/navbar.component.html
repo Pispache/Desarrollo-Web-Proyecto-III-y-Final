@@ -69,8 +69,6 @@
           </a>
         </li>
         
-        <!---->
-        
         <li class="nav-item" *ngIf="!isAuthenticated">
           <a routerLink="/login" 
              class="nav-link" 
@@ -82,7 +80,19 @@
         </li>
       </ul>
     </div>
-  
+
+    <!-- Desktop Actions: derecha -->
+    <div class="d-none d-md-flex align-items-center gap-2">
+      <button class="btn btn-primary btn-sm" (click)="onRefresh()" title="Actualizar datos">
+        <i class="bi bi-arrow-clockwise me-1"></i>
+        <span>Actualizar</span>
+      </button>
+      <app-theme-toggle size="sm"></app-theme-toggle>
+      <button *ngIf="isAuthenticated" class="btn btn-outline-danger btn-sm" (click)="logout()" title="Cerrar sesión">
+        <i class="bi bi-box-arrow-right me-1"></i>
+        <span>Cerrar sesión</span>
+      </button>
+    </div>
 
     <!-- Mobile Menu Toggle -->
     <div class="mobile-menu-toggle" (click)="toggleMenu()">
@@ -109,6 +119,16 @@
       </div>
       <button class="close-btn" (click)="closeMenu()">
         <i class="bi bi-x-lg"></i>
+      </button>
+    </div>
+    <!-- Mobile quick actions -->
+    <div class="px-3 py-2 d-flex align-items-center gap-2 border-bottom">
+      <button class="btn btn-primary btn-sm w-100" (click)="onRefresh(); closeMenu()">
+        <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
+      </button>
+      <app-theme-toggle size="sm"></app-theme-toggle>
+      <button *ngIf="isAuthenticated" class="btn btn-outline-danger btn-sm w-100" (click)="logout()">
+        <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
       </button>
     </div>
     

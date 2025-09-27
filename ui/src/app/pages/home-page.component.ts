@@ -1,4 +1,5 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, Inject } from '@angular/core';
+import { AuthService } from '../services/auth.service';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -9,14 +10,13 @@ import { NotificationService } from '../services/notification.service';
 import { SoundService } from '../services/sound.service';
 import { ScoreboardComponent } from '../widgets/scoreboard.component';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
-import { ThemeToggleComponent } from '../widgets/theme-toggle.component';
-import { ThemeService, AppTheme } from '../services/theme.service';
 import { ClockComponent } from '../widgets/clock.component';
 import { TeamRosterComponent } from '../widgets/team-roster.component';
 // import { FilterPipe } from '../pipes/filter.pipe';
 import { Subject, finalize } from 'rxjs';
 import { debounceTime, distinctUntilChanged, takeUntil } from 'rxjs/operators';
-import { AuthService } from '../services/auth.service';
+
+import { UiEventsService } from '../services/ui-events.service';
 
 @Component({
   selector: 'app-home-page',
@@ -30,8 +30,7 @@ import { AuthService } from '../services/auth.service';
     ScoreboardComponent,
     ControlPanelComponent,
     ClockComponent,
-    TeamRosterComponent,
-    ThemeToggleComponent
+    TeamRosterComponent
   ]
 })
 export class HomePageComponent implements OnInit, OnDestroy {
@@ -48,10 +47,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   // NUEVO: archivo de logo temporal y vista previa
   newTeamLogoFile: File | null = null;
   newTeamLogoPreview: string | null = null;
-
-  // Tema actual de la UI
-  theme: AppTheme = 'dark';
-  // Base de la API para recursos estáticos (logos)
+  // Base de la API para recursos estÃ¡ticos (logos)
   private readonly apiBase = (location.port === '4200')
     ? `${location.protocol}//${location.hostname}:8080`
     : '';
@@ -85,7 +81,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   onSaveTeam(t: TeamDto) {
     const name = (this.editName || '').trim();
     const city = (this.editCity || '').trim();
-    if (!name) { this.notify.showWarning('Validación', 'El nombre es obligatorio'); return; }
+    if (!name) { this.notify.showWarning('ValidaciÃ³n', 'El nombre es obligatorio'); return; }
     this.saving = true;
     // Importante: enviar logoUrl actual para que el backend NO lo borre al hacer PUT
     this.api.updateTeam(t.teamId, { name, city: city || undefined, logoUrl: t.logoUrl || undefined }).subscribe({
@@ -109,7 +105,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   async onDeleteTeam(t: TeamDto) {
-    const ok = await this.notify.confirm(`¿Eliminar el equipo "${t.name}"? Esta acción no se puede deshacer.`, 'Confirmar');
+    const ok = await this.notify.confirm(`Â¿Eliminar el equipo "${t.name}"? Esta acciÃ³n no se puede deshacer.`, 'Confirmar');
     if (!ok) return;
     this.deletingId = t.teamId;
     this.api.deleteTeam(t.teamId).subscribe({
@@ -129,23 +125,23 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
   /**
    * Valida que solo se ingresen letras en el nombre del equipo
-   * La expresión regular /[^A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]/g elimina todo lo que NO sean:
-   * - Letras mayúsculas y minúsculas (A-Z, a-z)
-   * - Vocales con acentos (áéíóú, ÁÉÍÓÚ)
-   * - Letra ñ y ü (mayúsculas y minúsculas)
+   * La expresiÃ³n regular /[^A-Za-zÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ¼ÃœÃ±Ã‘\s]/g elimina todo lo que NO sean:
+   * - Letras mayÃºsculas y minÃºsculas (A-Z, a-z)
+   * - Vocales con acentos (Ã¡Ã©Ã­Ã³Ãº, ÃÃ‰ÃÃ“Ãš)
+   * - Letra Ã± y Ã¼ (mayÃºsculas y minÃºsculas)
    * - Espacios en blanco
    */
   onTeamNameInput(event: Event) {
     const input = event.target as HTMLInputElement;
     const originalValue = input.value;
     
-    // Remover caracteres no deseados usando una expresión regular
-    const cleanValue = originalValue.replace(/[^A-Za-záéíóúÁÉÍÓÚüÜñÑ\s]/g, '');
+    // Remover caracteres no deseados usando una expresiÃ³n regular
+    const cleanValue = originalValue.replace(/[^A-Za-zÃ¡Ã©Ã­Ã³ÃºÃÃ‰ÃÃ“ÃšÃ¼ÃœÃ±Ã‘\s]/g, '');
     
-    // Mostrar notificación si se detectaron caracteres no permitidos
+    // Mostrar notificaciÃ³n si se detectaron caracteres no permitidos
     if (originalValue !== cleanValue) {
       this.showInvalidCharWarning = true;
-      // Ocultar el mensaje después de 3 segundos
+      // Ocultar el mensaje despuÃ©s de 3 segundos
       setTimeout(() => this.showInvalidCharWarning = false, 3000);
     }
 
@@ -153,7 +149,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
     if (input.value !== cleanValue) {
       input.value = cleanValue;
       this.newTeamName = cleanValue;
-      // Disparar evento de input para actualizar la validación
+      // Disparar evento de input para actualizar la validaciÃ³n
       input.dispatchEvent(new Event('input'));
     }
   }
@@ -170,7 +166,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
       return;
     }
     if (f.size > 2 * 1024 * 1024) {
-      this.notify.showError('Archivo muy grande', 'Límite 2MB', true);
+      this.notify.showError('Archivo muy grande', 'LÃ­mite 2MB', true);
       input.value = '';
       return;
     }
@@ -190,12 +186,6 @@ export class HomePageComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Toggle de tema oscuro/claro
-  toggleTheme() {
-    this.theme = this.theme === 'dark' ? 'light' as AppTheme : 'dark' as AppTheme;
-    this.themeSvc.setTheme(this.theme);
-  }
-
   // datos
   teams: TeamDto[] = [];
   teamsTop10: TeamDto[] = [];
@@ -206,31 +196,28 @@ export class HomePageComponent implements OnInit, OnDestroy {
   selectedGameId: number | null = null;
   autoAdvanceEnabled = localStorage.getItem('clock.autoAdvance') === '1';
 
-  // Bandera para mostrar notificación de caracteres no permitidos
+  // Bandera para mostrar notificaciÃ³n de caracteres no permitidos
   showInvalidCharWarning = false;
-  // Estado de edición/eliminación de equipos
+  // Estado de ediciÃ³n/eliminaciÃ³n de equipos
   editingTeamId: number | null = null;
   editName = '';
   editCity = '';
   saving = false;
   deletingId: number | null = null;
-  // Observable de autenticación para el template (getter para evitar usar this.auth antes de constructor)
+  // Observable de autenticaciÃ³n para el template (getter para evitar usar this.auth antes de constructor)
   get authed$() { return this.auth.authed$; }
   
-  constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService, private clock: ClockService, private themeSvc: ThemeService, private auth: AuthService, private router: Router) {
+  constructor(private api: ApiService, private notify: NotificationService, private sound: SoundService, private clock: ClockService, @Inject(AuthService) private auth: AuthService, private router: Router, @Inject(UiEventsService) private uiEvents: UiEventsService) {
     this.reloadAll();
-    // Asegurar que los sonidos estén precargados para reproducir en auto-advance
+    // Asegurar que los sonidos estÃ©n precargados para reproducir en auto-advance
     try { this.sound.preloadAll(); } catch {}
-    // Aplicar tema al iniciar
-    this.theme = this.themeSvc.getTheme();
-    this.themeSvc.applyTheme(this.theme);
 
-    // Refrescar datos cuando cambie autenticación (cubre el caso de abrir Home sin sesión)
-    this.auth.authed$.pipe(takeUntil(this.destroy$)).subscribe(isAuthed => {
+    // Refrescar datos cuando cambie autenticaciÃ³n (cubre el caso de abrir Home sin sesiÃ³n)
+    this.auth.authed$.pipe(takeUntil(this.destroy$)).subscribe((isAuthed: boolean) => {
       if (isAuthed) {
         this.reloadAll();
       } else {
-        // Limpiar vistas protegidas si se pierde sesión
+        // Limpiar vistas protegidas si se pierde sesiÃ³n
         this.teams = [];
         this.games = [];
         this.activeGames = [];
@@ -241,18 +228,24 @@ export class HomePageComponent implements OnInit, OnDestroy {
     // Cuando haya cambios en equipos (crear/editar/eliminar) refrescar listado
     this.api.teamsChanged$.pipe(takeUntil(this.destroy$)).subscribe(() => this.loadTeams());
 
-    // Búsqueda con debounce (server-side)
+    // BÃºsqueda con debounce (server-side)
     this.teamSearch$
       .pipe(debounceTime(300), distinctUntilChanged(), takeUntil(this.destroy$))
       .subscribe(q => {
         this.searchTeams(q);
       });
+
+    // Escuchar evento global de recarga desde la navbar
+    this.uiEvents.reloadAll$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.reloadAll());
+
   }
 
   private destroy$ = new Subject<void>();
 
   ngOnInit(): void {
-    // En caso de que la página se cargue ya autenticada
+    // En caso de que la pÃ¡gina se cargue ya autenticada
     if (this.auth.isAuthenticated()) {
       this.reloadAll();
     }
@@ -278,17 +271,17 @@ export class HomePageComponent implements OnInit, OnDestroy {
       if (this.detail) {
         this.view(this.detail.game.gameId);
       }
-      this.notify.showSuccess('Éxito', successMessage);
+      this.notify.showSuccess('Ã‰xito', successMessage);
     }).catch(error => {
       console.error('Error en handleStatusChange:', error);
-      const errorMessage = error?.error?.error || 'Ocurrió un error al actualizar el estado del partido.';
+      const errorMessage = error?.error?.error || 'OcurriÃ³ un error al actualizar el estado del partido.';
       this.notify.showError('Error', errorMessage, true);
     });
   }
 
   // Game status control methods
   async finishGame(gameId: number) {
-    const ok = await this.notify.confirm('¿Está seguro que desea marcar este partido como finalizado?', 'Confirmar');
+    const ok = await this.notify.confirm('Â¿EstÃ¡ seguro que desea marcar este partido como finalizado?', 'Confirmar');
     if (ok) {
       this.handleStatusChange(
         this.api.finish(gameId).toPromise(),
@@ -298,7 +291,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   async suspendGame(gameId: number) {
-    const ok = await this.notify.confirm('¿Está seguro que desea suspender este partido? Podrá reanudarlo más tarde.', 'Confirmar');
+    const ok = await this.notify.confirm('Â¿EstÃ¡ seguro que desea suspender este partido? PodrÃ¡ reanudarlo mÃ¡s tarde.', 'Confirmar');
     if (ok) {
       this.handleStatusChange(
         this.api.suspendGame(gameId).toPromise(),
@@ -315,7 +308,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   async cancelGame(gameId: number) {
-    const ok = await this.notify.confirm('¿Está seguro que desea cancelar este partido? Esta acción no se puede deshacer.', 'Confirmar');
+    const ok = await this.notify.confirm('Â¿EstÃ¡ seguro que desea cancelar este partido? Esta acciÃ³n no se puede deshacer.', 'Confirmar');
     if (ok) {
       this.api.cancelGame(gameId).subscribe({
         next: () => {
@@ -323,7 +316,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
           if (this.detail?.game.gameId === gameId) {
             this.view(gameId);
           }
-          this.notify.showSuccess('Éxito', 'Partido cancelado correctamente.');
+          this.notify.showSuccess('Ã‰xito', 'Partido cancelado correctamente.');
         },
         error: (error) => {
           console.error('Error al cancelar el partido:', error);
@@ -336,7 +329,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
   // Iniciar un partido programado
   async startGame(gameId: number) {
-    const ok = await this.notify.confirm('¿Está seguro que desea iniciar este partido?', 'Confirmar');
+    const ok = await this.notify.confirm('Â¿EstÃ¡ seguro que desea iniciar este partido?', 'Confirmar');
     if (ok) {
       this.api.start(gameId).subscribe({
         next: () => {
@@ -344,7 +337,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
           this.view(gameId);
           // Iniciar el reloj backend y notificar a los suscriptores (Display)
           this.clock.start(gameId);
-          this.notify.showSuccess('Éxito', 'Partido iniciado');
+          this.notify.showSuccess('Ã‰xito', 'Partido iniciado');
         },
         error: (err: any) => {
           console.error('Error al iniciar el partido:', err);
@@ -354,7 +347,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
     }
   }
 
-  // ===== API wrappers (lógica mínima) =====
+  // ===== API wrappers (lÃ³gica mÃ­nima) =====
   // Check if there are any active (in progress or suspended) games
   hasActiveGames(): boolean {
     return this.activeGames.some(game => 
@@ -371,16 +364,16 @@ export class HomePageComponent implements OnInit, OnDestroy {
         for (const tm of this.teams) this.teamById.set(tm.teamId, tm);
       },
       error: (err) => {
-        // Mostrar pista si falta autenticación o hay problema de red
+        // Mostrar pista si falta autenticaciÃ³n o hay problema de red
         const msg = err?.status === 401
-          ? 'Inicia sesión para ver los equipos (401).'
+          ? 'Inicia sesiÃ³n para ver los equipos (401).'
           : 'No se pudieron cargar los equipos.';
         try { this.notify.showInfo('Equipos', msg, 3000); } catch {}
       }
     });
   }
 
-  // Disparado por (ngModelChange) en el input de búsqueda
+  // Disparado por (ngModelChange) en el input de bÃºsqueda
   onTeamSearchChange(q: string) {
     this.teamSearch$.next(q ?? '');
   }
@@ -442,11 +435,11 @@ export class HomePageComponent implements OnInit, OnDestroy {
           };
         }
         
-        console.log('Puntuación ajustada correctamente');
+        console.log('PuntuaciÃ³n ajustada correctamente');
       },
       error: (error) => {
-        console.error('Error ajustando puntuación:', error);
-        // Aquí podrías mostrar un mensaje de error al usuario
+        console.error('Error ajustando puntuaciÃ³n:', error);
+        // AquÃ­ podrÃ­as mostrar un mensaje de error al usuario
       }
     });
   }
@@ -467,8 +460,8 @@ export class HomePageComponent implements OnInit, OnDestroy {
       next: (d: GameDetail | null) => {
         if (!d) return;
         this.detail = d;
-        // Scoreboard/ControlPanel gestionan el estado del reloj de forma autónoma
-        // Asegurarse de que el partido esté en la lista de juegos activos
+        // Scoreboard/ControlPanel gestionan el estado del reloj de forma autÃ³noma
+        // Asegurarse de que el partido estÃ© en la lista de juegos activos
         if (!this.activeGames.some((g: Game) => g.gameId === id)) {
           this.reloadGames();
         }
@@ -529,16 +522,16 @@ export class HomePageComponent implements OnInit, OnDestroy {
   async onResetGame() {
     const game = this.detail?.game;
     if (!game) return;
-    const ok = await this.notify.confirm('¿Está seguro que desea reiniciar el juego? Se restablecerán los puntajes, faltas y el reloj.', 'Confirmar');
+    const ok = await this.notify.confirm('Â¿EstÃ¡ seguro que desea reiniciar el juego? Se restablecerÃ¡n los puntajes, faltas y el reloj.', 'Confirmar');
     if (ok) {
       this.api.resetGame(game.gameId).subscribe({
         next: () => {
-          // Recargar los datos del juego después del reinicio
+          // Recargar los datos del juego despuÃ©s del reinicio
           this.reloadGames();
           if (this.detail) {
             this.view(this.detail.game.gameId);
           }
-          this.notify.showSuccess('Éxito', 'Juego reiniciado');
+          this.notify.showSuccess('Ã‰xito', 'Juego reiniciado');
         },
         error: (err) => {
           console.error('Error al reiniciar el juego:', err);
@@ -553,7 +546,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
     const g = this.detail?.game;
     if (!g || this.advancing || g.status !== 'IN_PROGRESS') return;
 
-    // Si por alguna razón llega sin auto-advance activado, no hagas nada
+    // Si por alguna razÃ³n llega sin auto-advance activado, no hagas nada
     if (!this.autoAdvanceEnabled) return;
 
     const tied = g.homeScore === g.awayScore;
@@ -563,13 +556,13 @@ export class HomePageComponent implements OnInit, OnDestroy {
       this.api.advance(g.gameId).subscribe({
         next: () => {
           this.view(g.gameId); // refresca detalle
-          this.notify.showInfo(label, `Se avanzó a ${toQ <= 4 ? `Q${toQ}` : `T.E. ${toQ - 4}`}`, 2200);
+          this.notify.showInfo(label, `Se avanzÃ³ a ${toQ <= 4 ? `Q${toQ}` : `T.E. ${toQ - 4}`}`, 2200);
           this.sound.play('click');
           this.notify.triggerQuarterEndFlash?.();
         },
         error: (err) => {
           console.error('Error auto-advance:', err);
-          this.notify.showError('Error', 'No se pudo avanzar automáticamente', true);
+          this.notify.showError('Error', 'No se pudo avanzar automÃ¡ticamente', true);
           this.sound.play('error');
           this.advancing = false; // Asegurar que se pueda reintentar
         },
@@ -579,40 +572,40 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
     // --- Reglas ---
     if (g.quarter < 4) {
-      // Q1–Q3 → avanza al siguiente cuarto
+      // Q1â€“Q3 â†’ avanza al siguiente cuarto
       doAdvance('Fin de cuarto', g.quarter, g.quarter + 1);
       return;
     }
 
     if (g.quarter === 4) {
-      // Q4: si hay empate → crear T.E. (Q5); si no, NO avanzar
+      // Q4: si hay empate â†’ crear T.E. (Q5); si no, NO avanzar
       if (tied) {
-        doAdvance('Fin del 4º • Iniciando T.E.', 4, 5);
+        doAdvance('Fin del 4Âº â€¢ Iniciando T.E.', 4, 5);
       }
       return;
     }
 
     if (g.quarter >= 5) {
-      // En T.E.: si sigue empatado → otro T.E.; si no, no avanzar (queda definido)
+      // En T.E.: si sigue empatado â†’ otro T.E.; si no, no avanzar (queda definido)
       if (tied) {
-        doAdvance('Fin de T.E. • Nuevo T.E.', g.quarter, g.quarter + 1);
+        doAdvance('Fin de T.E. â€¢ Nuevo T.E.', g.quarter, g.quarter + 1);
       }
       return;
     }
   }
 
-  // Maneja el ajuste de puntuación desde el scoreboard
+  // Maneja el ajuste de puntuaciÃ³n desde el scoreboard
   onAdjustScore(adjustment: { homeDelta: number; awayDelta: number }) {
     const gameId = this.detail?.game?.gameId;
     if (!gameId) return;
-    // Validación UI ya se realiza en Scoreboard; aquí simplemente aplicamos el ajuste
+    // ValidaciÃ³n UI ya se realiza en Scoreboard; aquÃ­ simplemente aplicamos el ajuste
     
     this.api.adjustScore(gameId, adjustment.homeDelta, adjustment.awayDelta).subscribe({
       next: () => {
         // Actualizar la vista con los nuevos puntajes
         this.view(gameId);
 
-        // Agregar eventos sintéticos para reflejar el ajuste manual en la UI inmediatamente
+        // Agregar eventos sintÃ©ticos para reflejar el ajuste manual en la UI inmediatamente
         if (this.detail) {
           const nowIso = new Date().toISOString();
           const q = this.detail.game.quarter;
@@ -631,9 +624,9 @@ export class HomePageComponent implements OnInit, OnDestroy {
         }
       },
       error: (err: any) => {
-        console.error('Error ajustando puntuación', err);
+        console.error('Error ajustando puntuaciÃ³n', err);
         // Mostrar mensaje de error centralizado
-        this.notify.showError('Error', 'No se pudo ajustar la puntuación. Intente nuevamente.', true);
+        this.notify.showError('Error', 'No se pudo ajustar la puntuaciÃ³n. Intente nuevamente.', true);
       }
     });
   }
@@ -657,11 +650,16 @@ export class HomePageComponent implements OnInit, OnDestroy {
   // Maneja el evento de reinicio solicitado desde el panel de control
   onResetRequested() {
     if (this.detail) {
-      // Recargar el juego después de reiniciar
+      // Recargar el juego despuÃ©s de reiniciar
       this.view(this.detail.game.gameId);
-      // Recargar también la lista de juegos
+      // Recargar tambiÃ©n la lista de juegos
       this.reloadGames();
     }
   }
 
 }
+
+
+
+
+

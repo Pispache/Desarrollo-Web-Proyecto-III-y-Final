@@ -3,11 +3,13 @@ import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { Subscription, filter } from 'rxjs';
+import { ThemeToggleComponent } from '../widgets/theme-toggle.component';
+import { UiEventsService } from '../services/ui-events.service';
 
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ThemeToggleComponent],
   templateUrl: './navbar.component.html',
   styleUrls: ['./navbar.component.scss']
 })
@@ -21,7 +23,8 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   constructor(
     private authService: AuthService,
-    private router: Router
+    private router: Router,
+    private uiEvents: UiEventsService
   ) {}
 
   ngOnInit() {
@@ -62,6 +65,11 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.authService.logout();
     this.router.navigate(['/login']);
     this.closeMenu();
+  }
+
+  onRefresh() {
+    // Emite un evento global para que las páginas relevantes recarguen datos
+    this.uiEvents.triggerReloadAll();
   }
 
   isActiveRoute(route: string): boolean {
