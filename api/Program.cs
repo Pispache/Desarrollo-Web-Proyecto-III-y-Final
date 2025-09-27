@@ -71,6 +71,7 @@ await Bootstrap.SeedAdminAsync(app, GetCs);
 
 app.MapGameEndpoints(GetCs);
 app.MapClockEndpoints(GetCs);
+app.MapTournamentEndpoints(GetCs);
 
 app.Run();
 

@@ -1,0 +1,91 @@
+<div class="container-fluid py-4 tournament">
+  <header class="header">
+    <h1><i class="bi bi-trophy-fill"></i> Torneo</h1>
+    <p>Agrega grupos, asigna equipos y calcula automáticamente sus posiciones a partir de los partidos finalizados.</p>
+    <div>
+      <button class="btn btn-primary" (click)="refreshStandings()">
+        <i class="bi bi-arrow-clockwise"></i> Actualizar posiciones
+      </button>
+    </div>
+  </header>
+
+  <form class="group-form" (submit)="$event.preventDefault(); addGroup()">
+    <div class="field">
+      <label for="groupName">Nombre del grupo</label>
+      <input id="groupName" type="text" class="form-control" placeholder="Ej. Grupo A" [(ngModel)]="newGroupName" name="groupName" />
+    </div>
+    <button type="submit" class="btn btn-primary" [disabled]="!newGroupName.trim()">
+      <i class="bi bi-plus-circle"></i> Agregar grupo
+    </button>
+  </form>
+
+  <div class="cards">
+    <div class="card" *ngFor="let g of groups">
+      <div class="card-header">
+        <div class="card-title">
+          <i class="bi bi-collection"></i>
+          <h3>{{ g.name }}</h3>
+        </div>
+        <button class="icon-btn danger" (click)="removeGroup(g.groupId)" [disabled]="deletingGroupId === g.groupId" title="Eliminar">
+          <i class="bi" [ngClass]="deletingGroupId === g.groupId ? 'bi-hourglass-split' : 'bi-trash'"></i>
+        </button>
+      </div>
+      <div class="card-body">
+        <!-- Selector para agregar equipos registrados -->
+        <div class="group-team-add">
+          <label>Agregar equipo</label>
+          <div class="row">
+            <select class="form-select" [(ngModel)]="selectedByGroup[g.groupId]" name="select-{{g.groupId}}" [disabled]="g.teams.length >= 4">
+              <option [ngValue]="''">Selecciona un equipo...</option>
+              <option *ngFor="let t of availableTeams(g)" [ngValue]="t.teamId">{{ t.name }}</option>
+            </select>
+            <button class="btn btn-primary" (click)="addTeamToGroup(g)" [disabled]="!selectedByGroup[g.groupId] || (g.teams.length >= 4)">
+              <i class="bi bi-plus-circle"></i> Añadir
+            </button>
+          </div>
+          <small class="text-warning" *ngIf="g.teams.length >= 4">
+            <i class="bi bi-exclamation-triangle-fill"></i> Máximo 4 equipos por grupo
+          </small>
+        </div>
+
+        <!-- Tabla de posiciones del grupo (cálculo automático) -->
+        <div class="standings" *ngIf="g.teams.length; else emptyGroup">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Equipo</th>
+                <th>PJ</th>
+                <th>G</th>
+                <th>E</th>
+                <th>P</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let t of g.teams">
+                <td>{{ t.name }}</td>
+                <td>{{ getPJ(t) }}</td>
+                <td>{{ t.g }}</td>
+                <td>{{ t.e }}</td>
+                <td>{{ t.p }}</td>
+                <td>
+                  <button class="icon-btn danger" (click)="removeTeamFromGroup(g, t.teamId)" title="Quitar">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <ng-template #emptyGroup>
+          <p class="muted">Aún no hay equipos en este grupo.</p>
+        </ng-template>
+      </div>
+    </div>
+
+    <div *ngIf="groups.length === 0" class="empty">
+      <i class="bi bi-inboxes"></i>
+      <p>No has agregado ningún grupo.</p>
+    </div>
+  </div>
+</div>
