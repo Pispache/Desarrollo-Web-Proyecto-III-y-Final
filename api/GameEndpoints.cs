@@ -132,7 +132,7 @@ END;";
                 team = teamFouls,
                 players = playerFouls 
             });
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // Add adjust score endpoint
         g.MapPost("/games/{id:int}/adjust-score", async (int id, [FromBody] AdjustScoreDto dto) =>
@@ -207,7 +207,7 @@ END;";
                 Console.WriteLine($"Error en la conexión: {ex}");
                 return Results.Problem("Error de conexión con la base de datos", statusCode: 500);
             }
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
 
         // ===== Helpers mínimos =====
@@ -269,14 +269,14 @@ END;";
             var items = (await multi.ReadAsync<TeamDto>()).ToList();
             var total = await multi.ReadSingleAsync<int>();
             return Results.Ok(new { items, total, page, pageSize });
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapGet("/teams/{id:int}", async (int id) =>
         {
             using var c = Open(cs());
             var trow = await c.QuerySingleOrDefaultAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
             return trow is null ? Results.NotFound() : Results.Ok(trow);
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/teams", async ([FromBody] TeamUpsertDto dto) =>
         {
@@ -452,7 +452,7 @@ END;";
             var row = await c.QuerySingleOrDefaultAsync<(string ContentType, byte[] Data)>($"SELECT ContentType, Data FROM {T}Logos WHERE LogoId=@logoId;", new { logoId });
             if (row.Equals(default((string, byte[])))) return Results.NotFound();
             return Results.File(row.Data, row.ContentType);
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // ===== Games =====
         g.MapGet("/games", async () =>
@@ -460,7 +460,7 @@ END;";
             using var c = Open(cs());
             var rows = await c.QueryAsync($"SELECT TOP 50 * FROM {T}Games ORDER BY GameId DESC;");
             return Results.Ok(rows);
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games", async ([FromBody] CreateGameDto body) =>
         {
@@ -483,7 +483,7 @@ END;";
 
             tx.Commit();
             return Results.Created($"/api/games/{id}", new { gameId = id, home, away });
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapGet("/games/{id:int}", async (int id) =>
         {
@@ -492,7 +492,7 @@ END;";
             if (game is null) return Results.NotFound();
             var events = await c.QueryAsync($"SELECT TOP 100 * FROM {T}GameEvents WHERE GameId=@id ORDER BY EventId DESC;", new { id });
             return Results.Ok(new { game, events });
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/start", async (int id) =>
         {
@@ -505,7 +505,7 @@ END;";
             await Exec(c, $"UPDATE {T}GameClocks SET Running=1, StartedAt=SYSUTCDATETIME(), UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit();
             return Results.NoContent();
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/advance-quarter", async (int id) =>
         {
@@ -641,7 +641,7 @@ END;";
                 quarter = previousQuarter,
                 isOvertime = previousQuarter > 4
             });
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/finish", async (int id) =>
         {
@@ -652,7 +652,7 @@ END;";
             await Exec(c, $"UPDATE {T}GameClocks SET Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit(); 
             return Results.NoContent();
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/cancel", async (int id) =>
         {
@@ -663,7 +663,7 @@ END;";
             await Exec(c, $"UPDATE {T}GameClocks SET Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit(); 
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/suspend", async (int id) =>
         {
@@ -674,7 +674,7 @@ END;";
             await Exec(c, $"UPDATE {T}GameClocks SET Running=0, UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit(); 
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
         
         g.MapPost("/games/{id:int}/resume", async (int id) =>
         {
@@ -743,7 +743,7 @@ END;";
 
             tx.Commit();
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // Endpoint para restar un punto
         g.MapPost("/games/{id:int}/subtract-point", async (int id, [FromBody] ScoreDto dto) =>
@@ -992,7 +992,7 @@ END;";
             }, tx);
 
             tx.Commit(); return Results.NoContent();
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // ===== Overtime =====
         g.MapPost("/games/{gameId}/overtime", async (int gameId) =>
@@ -1075,7 +1075,7 @@ END;";
                 quarter = nextQuarter,
                 durationMs = overtimeMs
             });
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // ===== Teams & Players =====
         g.MapPost("/games/pair", async ([FromBody] PairDto body) =>

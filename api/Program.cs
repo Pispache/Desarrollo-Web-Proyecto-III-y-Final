@@ -33,6 +33,8 @@ if (!string.IsNullOrWhiteSpace(jwtSecret))
     b.Services.AddAuthorization(options =>
     {
         options.AddPolicy("ADMIN", p => p.RequireRole("ADMIN"));
+        // Allow both ADMIN and USUARIO roles to access certain endpoints
+        options.AddPolicy("ADMIN_OR_USER", p => p.RequireRole("ADMIN", "USUARIO"));
     });
 }
 

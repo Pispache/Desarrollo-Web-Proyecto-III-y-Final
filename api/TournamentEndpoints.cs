@@ -13,7 +13,7 @@ public static class TournamentEndpoints
 
     public static void MapTournamentEndpoints(this WebApplication app, Func<string> cs)
     {
-        var g = app.MapGroup("/api").RequireAuthorization("ADMIN");
+        var g = app.MapGroup("/api");
 
         // Ensure schema for tournament groups
         try
@@ -67,7 +67,7 @@ LEFT JOIN {TT}Teams t ON t.TeamId = gt.TeamId
                               .ToList()
             });
             return Results.Ok(result);
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // Create group
         g.MapPost("/tournaments/default/groups", async ([FromBody] GroupCreateDto body) =>
@@ -92,7 +92,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
             {
                 return Results.Problem($"Error creando grupo: {ex.Message}", statusCode: 500);
             }
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         // Delete group (and its memberships)
         g.MapDelete("/tournaments/default/groups/{groupId:int}", async (int groupId) =>
@@ -105,7 +105,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
             if (rows == 0) { tx.Rollback(); return Results.NotFound(); }
             tx.Commit();
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         // Add team to group
         g.MapPost("/tournaments/default/groups/{groupId:int}/teams", async (int groupId, [FromBody] GroupAddTeamDto body) =>
@@ -132,7 +132,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
                 return Results.Problem($"Error agregando equipo: {ex.Message}", statusCode: 500);
             }
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         // Remove team from group
         g.MapDelete("/tournaments/default/groups/{groupId:int}/teams/{teamId:int}", async (int groupId, int teamId) =>
@@ -142,7 +142,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
             var rows = await c.ExecuteAsync($"DELETE FROM {TT}TournamentGroupTeams WHERE GroupId=@groupId AND TeamId=@teamId;", new { groupId, teamId });
             if (rows == 0) return Results.NotFound();
             return Results.NoContent();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN").WithOpenApi();
 
         static SqlConnection Open(string cs) { var c = new SqlConnection(cs); c.Open(); return c; }
         static async Task EnsureSchemaAsync(SqlConnection c)

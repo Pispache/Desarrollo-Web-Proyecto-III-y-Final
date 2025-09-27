@@ -10,7 +10,6 @@ public class ClockDurationDto
 public static class ClockEndpoints
 {
     const string T = "MarcadorDB.dbo.";
-
     public static void MapClockEndpoints(this WebApplication app, Func<string> cs)
     {
         // helpers mínimos
@@ -47,7 +46,7 @@ public static class ClockEndpoints
                 remainingMs = rem,
                 updatedAt = (DateTime)dto.UpdatedAt
             });
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // POST set duration
         app.MapPost("/api/games/{id:int}/clock/duration", async (int id, [FromBody] ClockDurationDto dto) =>
@@ -64,7 +63,7 @@ public static class ClockEndpoints
                 WHERE GameId = @id;", new { id, quarterMs = dto.Minutes * 60 * 1000 });
 
             return ok > 0 ? Results.Ok() : Results.NotFound();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // POST start (idempotente)
         app.MapPost("/api/games/{id:int}/clock/start", async (int id) =>
@@ -77,7 +76,7 @@ public static class ClockEndpoints
                   UpdatedAt = SYSUTCDATETIME()
                 WHERE GameId=@id AND RemainingMs > 0;", new { id });
             return ok > 0 ? Results.NoContent() : Results.BadRequest(new { error = "No se pudo iniciar." });
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // POST pause
         app.MapPost("/api/games/{id:int}/clock/pause", async (int id) =>
@@ -94,7 +93,7 @@ public static class ClockEndpoints
                   Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME()
                 WHERE GameId=@id;", new { id });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // POST reset (quarterMs opcional)
         app.MapPost("/api/games/{id:int}/clock/reset", async (int id, [FromBody] ClockResetDto? b) =>
@@ -107,6 +106,6 @@ public static class ClockEndpoints
                   Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME()
                 WHERE GameId=@id;", new { id, qms = b?.QuarterMs });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
-        }).WithOpenApi();
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
     }
 }
