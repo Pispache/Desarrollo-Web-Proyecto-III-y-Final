@@ -55,6 +55,7 @@
               <tr>
                 <th>Equipo</th>
                 <th>PJ</th>
+                <th>PTS</th>
                 <th>G</th>
                 <th>E</th>
                 <th>P</th>
@@ -65,6 +66,7 @@
               <tr *ngFor="let t of g.teams">
                 <td>{{ t.name }}</td>
                 <td>{{ getPJ(t) }}</td>
+                <td>{{ getPTS(t) }}</td>
                 <td>{{ t.g }}</td>
                 <td>{{ t.e }}</td>
                 <td>{{ t.p }}</td>

@@ -296,6 +296,16 @@ export class ApiService {
     );
   }
 
+  /** Sube/actualiza el logo del equipo. Devuelve el TeamDto actualizado. */
+  uploadTeamLogo(teamId: number, file: File): Observable<TeamDto> {
+    const fd = new FormData();
+    fd.append('file', file);
+    return this.http.post<TeamDto>(`${this.base}/teams/${teamId}/logo`, fd).pipe(
+      map(r => this.camel<TeamDto>(r)),
+      tap(() => this.teamsChanged$.next())
+    );
+  }
+
   /** Actualiza equipo usando PUT para alinearse con el backend. */
   updateTeam(teamId: number, payload: Partial<{ name: string; city: string; logoUrl?: string }>) {
     // El backend espera un TeamUpsertDto (Name requerido, City/LogoUrl opcionales)

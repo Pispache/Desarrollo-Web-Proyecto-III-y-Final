@@ -35,7 +35,7 @@ export class TournamentPageComponent implements OnInit {
   creatingGroup = false;
   deletingGroupId: number | null = null;
   // Feature flag: true => trabajar en localStorage (sin backend) para pruebas
-  private useLocal = true;
+  private useLocal = false;
 
   constructor(
     private api: ApiService,
@@ -157,6 +157,9 @@ export class TournamentPageComponent implements OnInit {
   }
 
   getPJ(team: GroupTeam) { return team.g + team.p + team.e; }
+ 
+  // Puntos totales en el grupo: 3 por victoria, 1 por empate, 0 por derrota
+  getPTS(team: GroupTeam) { return team.g * 3 + team.e; }
 
   availableTeams(group: Group): TeamDto[] {
     if ((group.teams?.length ?? 0) >= 4) return [];
@@ -209,6 +212,8 @@ export class TournamentPageComponent implements OnInit {
             }
           }
         }
+        // Ordenar la tabla por puntos (desc), luego por ganados (desc), luego por nombre
+        g.teams.sort((a, b) => (this.getPTS(b) - this.getPTS(a)) || (b.g - a.g) || a.name.localeCompare(b.name));
       }
     });
   }

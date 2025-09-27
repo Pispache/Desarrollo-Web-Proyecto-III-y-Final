@@ -42,6 +42,22 @@ import { Subject } from 'rxjs';
         </div>
       </div>
       <div class="card-body">
+        <!-- Actualizar logo del equipo -->
+        <div class="border rounded p-3 mb-3">
+          <div class="row g-2 align-items-center">
+            <div class="col-12 col-md-6 col-xl-4">
+              <label class="form-label mb-1">Actualizar logo del equipo</label>
+              <input class="form-control form-control-sm" type="file" accept="image/png, image/jpeg, image/webp" (change)="onLogoFileSelected($event)">
+              <small class="text-muted d-block mt-1">Formatos permitidos: PNG, JPG, WEBP. Máx 2MB.</small>
+            </div>
+            <div class="col-12 col-md-3 d-grid">
+              <button class="btn btn-sm btn-primary mt-4 mt-md-0" (click)="uploadLogo()" [disabled]="!selectedLogoFile || uploadingLogo">
+                <i class="bi" [ngClass]="uploadingLogo ? 'bi-hourglass-split' : 'bi-upload' "></i>
+                {{ uploadingLogo ? 'Subiendo...' : 'Actualizar logo' }}
+              </button>
+            </div>
+          </div>
+        </div>
         <!-- Formulario: Agregar jugador -->
         <div class="border rounded p-3 mb-3">
           <div class="row g-2 align-items-end">
@@ -183,6 +199,9 @@ export class TeamManagePageComponent implements OnInit, OnDestroy {
   editNationality: string = '';
 
   saving = false;
+  // logo upload
+  selectedLogoFile: File | null = null;
+  uploadingLogo = false;
 
   private destroy$ = new Subject<void>();
 
@@ -233,6 +252,37 @@ export class TeamManagePageComponent implements OnInit, OnDestroy {
     this.api.getTeam(this.teamId).subscribe({
       next: (t) => this.team = t,
       error: () => this.notify.showError('Error', 'No se pudo cargar el equipo', true)
+    });
+  }
+
+  onLogoFileSelected(ev: Event) {
+    const input = ev.target as HTMLInputElement;
+    const file = input?.files?.[0] ?? null;
+    this.selectedLogoFile = file || null;
+  }
+
+  uploadLogo() {
+    if (!this.teamId || !this.selectedLogoFile) return;
+    const f = this.selectedLogoFile;
+    // Validación simple del lado cliente
+    const allowed = ['image/png','image/jpeg','image/jpg','image/webp'];
+    if (!allowed.includes(f.type)) {
+      this.notify.showWarning('Archivo inválido', 'Formato no soportado. Use PNG/JPG/WEBP');
+      return;
+    }
+    if (f.size > 2 * 1024 * 1024) {
+      this.notify.showWarning('Archivo demasiado grande', 'Máx 2MB');
+      return;
+    }
+    this.uploadingLogo = true;
+    this.api.uploadTeamLogo(this.teamId, f).subscribe({
+      next: t => {
+        this.team = t;
+        this.selectedLogoFile = null;
+        this.notify.showSuccess('Logo actualizado', 'El logo del equipo se actualizó correctamente');
+      },
+      error: () => this.notify.showError('Error', 'No se pudo actualizar el logo', true),
+      complete: () => this.uploadingLogo = false
     });
   }
 
