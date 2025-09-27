@@ -1,72 +1,112 @@
 // Estilos para el formulario de registro de equipo
-.card {
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
-}
+// 1) Aplicamos estilos "oscuros" por defecto (tema base) pero
+//    los limitamos al wrapper .team-register-page para no contaminar otras vistas.
+.team-register-page {
+  /* Fondo de página y altura mínima */
+  min-height: 100vh;
+  /* Gradiente suave en oscuro (base) */
+  background: radial-gradient(1200px 400px at 10% -10%, rgba(88, 28, 135, 0.35), rgba(88, 28, 135, 0) 60%),
+              radial-gradient(1600px 600px at 90% -20%, rgba(37, 99, 235, 0.35), rgba(37, 99, 235, 0) 60%),
+              linear-gradient(180deg, #0b1428 0%, #0f213c 60%, #0b1428 100%);
 
-.card-header {
-  background: rgba(0, 0, 0, 0.2) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
-}
+  .card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
 
-.card-header h5 {
-  color: white !important;
-}
+  .card-header {
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: #fff;
+  }
 
-.card-body {
-  background: transparent !important;
-}
+  .card-header h5 { color: #fff; }
+  .card-body { background: transparent !important; }
 
-.form-label {
-  color: white !important;
-  font-weight: 500;
-}
+  .form-label { color: #fff; font-weight: 500; }
 
-.form-control {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  color: white !important;
-}
+  .form-control {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+  }
+  .form-control::placeholder { color: rgba(255, 255, 255, 0.6); }
+  .form-control:focus {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25);
+    color: #fff;
+  }
 
-.form-control::placeholder {
-  color: rgba(255, 255, 255, 0.6) !important;
-}
+  .text-danger { color: #ff6b6b; }
 
-.form-control:focus {
-  background: rgba(255, 255, 255, 0.15) !important;
-  border-color: #f59e0b !important;
-  box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25) !important;
-  color: white !important;
-}
+  .btn-outline-secondary {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+  }
+  .btn-outline-secondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #fff;
+  }
 
-.text-danger {
-  color: #ff6b6b !important;
-}
+  .preview img { 
+    object-fit: contain; 
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+  }
 
-.btn-outline-secondary {
-  color: white !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-}
-
-.btn-outline-secondary:hover {
-  background: rgba(255, 255, 255, 0.1) !important;
-  border-color: rgba(255, 255, 255, 0.5) !important;
-  color: white !important;
-}
-
-.preview img { 
-  object-fit: contain; 
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-}
-
-.rotate { 
-  animation: spin 1s linear infinite; 
+  .rotate { animation: spin 1s linear infinite; }
 }
 
 @keyframes spin { 
   from { transform: rotate(0deg); } 
   to { transform: rotate(360deg); } 
+}
+
+// 2) Overrides para tema CLARO cuando <html data-theme="light"> está activo
+[data-theme="light"] .team-register-page {
+  /* Fondo blanco pleno en modo claro */
+  min-height: 100vh;
+  background: #ffffff !important;
+
+  /* Forzar tema claro sobre estilos globales oscuros con !important */
+  .card {
+    background: #ffffff !important;
+    border: 1px solid rgba(0, 0, 0, 0.125) !important;
+    color: #212529 !important;
+  }
+  .card-header {
+    background: #f8f9fa !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+    color: #212529 !important;
+  }
+  .card-header h5 { color: #212529 !important; }
+  .card-body { background: transparent; }
+
+  .form-label { color: #212529; }
+  .form-control {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    color: #212529;
+  }
+  .form-control::placeholder { color: rgba(0, 0, 0, 0.45); }
+  .form-control:focus {
+    background: #fff;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    color: #212529;
+  }
+
+  .btn-outline-secondary {
+    color: #212529;
+    border-color: rgba(0, 0, 0, 0.2);
+  }
+  .btn-outline-secondary:hover {
+    background: rgba(0, 0, 0, 0.03);
+    border-color: rgba(0, 0, 0, 0.35);
+    color: #212529;
+  }
+  .preview img { border-color: rgba(0, 0, 0, 0.12); }
 }

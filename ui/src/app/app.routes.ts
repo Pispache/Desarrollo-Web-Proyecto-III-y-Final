@@ -10,6 +10,7 @@ import { TeamManagePageComponent } from './pages/team-manage-page.component';
 import { PlayersTeamSelectPageComponent } from './pages/players-team-select-page.component';
 import { TournamentPageComponent } from './pages/tournament-page.component';
 import { adminGuard } from './guards/admin.guard';
+import { ScoreboardsPageComponent } from './pages/scoreboards-page.component';
 export const routes: Routes = [
   // Login
   { path: 'login', component: LoginPageComponent },
@@ -23,6 +24,8 @@ export const routes: Routes = [
   { path: 'jugadores/:id', component: TeamManagePageComponent, canActivate: [adminGuard] },
 
   { path: 'tablero/:id', component: DisplayPageComponent },   // tablero público
+  { path: 'tablero', redirectTo: 'tableros', pathMatch: 'full' }, // redirección al listado
+  { path: 'tableros', component: ScoreboardsPageComponent },  // listador de tableros
   { path: 'resultados', component: ResultsPageComponent },    // página de resultados
   { path: 'torneo', component: TournamentPageComponent, canActivate: [authGuard] },
 

@@ -180,6 +180,23 @@ body {
   flex-direction: column;
 }
 
+/* === Offset global para navbar fijo === */
+:root { --navbar-height-global: 70px; }
+
+body {
+  /* Deja padding laterales en 0, pero agrega margen superior para no tapar encabezados */
+  padding-top: calc(var(--navbar-height-global) + 24px);
+}
+
+@media (max-width: 767px) {
+  body { padding-top: calc(var(--navbar-height-global) + 28px); }
+}
+
+/* Evitar solape en anclas/scroll posicionando encabezados bajo navbar fijo */
+h1, h2, h3, .card, .page-title, .section-title {
+  scroll-margin-top: calc(var(--navbar-height-global) + 28px);
+}
+
 /* Ajustes para el tema oscuro */
 .bg-light {
   background-color: #2d2d2d !important;

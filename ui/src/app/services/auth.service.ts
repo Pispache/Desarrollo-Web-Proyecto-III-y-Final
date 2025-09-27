@@ -100,6 +100,32 @@ export class AuthService {
     return role === 'ADMIN';
   }
 
+  // Obtiene un nombre de usuario legible del JWT, probando varios claims comunes
+  getUsername(): string | null {
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const part = token.split('.')[1];
+      if (!part) return null;
+      let base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = base64.length % 4;
+      if (pad) base64 = base64 + '='.repeat(4 - pad);
+      const json = atob(base64);
+      const payload = JSON.parse(json);
+      return (
+        payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ||
+        payload['name'] ||
+        payload['preferred_username'] ||
+        payload['unique_name'] ||
+        payload['email'] ||
+        payload['sub'] ||
+        null
+      );
+    } catch {
+      return null;
+    }
+  }
+
   private scheduleAutoLogout(): void {
     if (this.logoutTimer) { clearTimeout(this.logoutTimer); this.logoutTimer = undefined; }
     const exp = this.getExpiresAt();

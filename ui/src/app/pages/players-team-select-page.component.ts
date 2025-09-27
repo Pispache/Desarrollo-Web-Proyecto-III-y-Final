@@ -9,7 +9,8 @@ import { ApiService, TeamDto } from '../services/api.service';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterModule],
   template: `
-  <div class="container py-3">
+  <div class="players-team-select-page py-3">
+    <div class="container">
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 d-flex align-items-center gap-2">
         <i class="bi bi-people"></i>
@@ -87,14 +88,47 @@ import { ApiService, TeamDto } from '../services/api.service';
         </div>
       </div>
     </div>
+    </div>
   </div>
   `,
   styles: [
-    `:host .card, :host .card-body { color: #000 !important; }`,
-    `:host h4, :host .form-label, :host span, :host small { color: #000 !important; }`,
-    `:host input, :host select { background: #fff !important; color: #000 !important; }`,
-    // Alineación vertical consistente en filas (sin flex en el <td>)
-    `:host .row-cell { min-height: 44px; display: flex; align-items: center; }`
+    // Fondo de página y layout
+    `.players-team-select-page{min-height:100vh;` +
+      `background:radial-gradient(1200px 400px at 10% -10%,rgba(88,28,135,.35),rgba(88,28,135,0) 60%),`+
+      `radial-gradient(1600px 600px at 90% -20%,rgba(37,99,235,.35),rgba(37,99,235,0) 60%),`+
+      `linear-gradient(180deg,#0b1428 0%,#0f213c 60%,#0b1428 100%);}`,
+    // Card y controles en oscuro (base)
+    `.players-team-select-page .card{background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);`+
+      `border:1px solid rgba(255,255,255,.1);color:#fff;}`,
+    `.players-team-select-page .card-header{background:rgba(0,0,0,.2);`+
+      `border-bottom:1px solid rgba(255,255,255,.1);color:#fff;}`,
+    `.players-team-select-page .form-label{color:#fff;font-weight:500;}`,
+    `.players-team-select-page input,.players-team-select-page select{`+
+      `background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;}`,
+    `.players-team-select-page input::placeholder{color:rgba(255,255,255,.6);}`,
+    `.players-team-select-page input:focus,.players-team-select-page select:focus{`+
+      `background:rgba(255,255,255,.15);border-color:#f59e0b;box-shadow:0 0 0 .2rem rgba(245,158,11,.25);color:#fff;}`,
+    `.players-team-select-page .table{color:#e5e7eb;}`,
+    `.players-team-select-page .table thead th{color:#cbd5e1;border-bottom-color:rgba(255,255,255,.15);}`,
+    `.players-team-select-page .table tbody td{border-top-color:rgba(255,255,255,.08);}`,
+    // Light theme overrides
+    `[data-theme="light"] .players-team-select-page{`+
+      `background:radial-gradient(1200px 400px at 10% -10%,rgba(99,102,241,.12),rgba(99,102,241,0) 60%),`+
+      `radial-gradient(1600px 600px at 90% -20%,rgba(59,130,246,.10),rgba(59,130,246,0) 60%),`+
+      `linear-gradient(180deg,#f3f6fb 0%,#eef2f7 60%,#f3f6fb 100%);}`,
+    `[data-theme="light"] .players-team-select-page .card{background:#fff;border:1px solid rgba(0,0,0,.125);color:#212529;}`,
+    `[data-theme=\"light\"] .players-team-select-page .card-header{background:#f8f9fa;border-bottom:1px solid rgba(0,0,0,.1);color:#212529;}`,
+    `[data-theme=\"light\"] .players-team-select-page .form-label{color:#212529;}`,
+    `[data-theme=\"light\"] .players-team-select-page input,`+
+    `[data-theme=\"light\"] .players-team-select-page select{background:#fff;border:1px solid rgba(0,0,0,.2);color:#212529;}`,
+    `[data-theme=\"light\"] .players-team-select-page input::placeholder{color:rgba(0,0,0,.45);}`,
+    `[data-theme=\"light\"] .players-team-select-page input:focus,`+
+    `[data-theme=\"light\"] .players-team-select-page select:focus{background:#fff;border-color:#0d6efd;box-shadow:0 0 0 .2rem rgba(13,110,253,.25);color:#212529;}`,
+    `[data-theme=\"light\"] .players-team-select-page .table{color:#1f2937;}`,
+    `[data-theme=\"light\"] .players-team-select-page .table thead th{color:#111827;border-bottom-color:rgba(0,0,0,.12);}`,
+    `[data-theme=\"light\"] .players-team-select-page .table tbody td{border-top-color:rgba(0,0,0,.06);}`,
+    // Utilidad fila
+    `.row-cell{min-height:44px;display:flex;align-items:center;}`
   ]
 })
 export class PlayersTeamSelectPageComponent implements OnInit {

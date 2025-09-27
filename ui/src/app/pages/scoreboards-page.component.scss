@@ -1,0 +1,13 @@
+.scoreboards-page {
+  min-height: 100vh;
+}
+
+:root:not([data-theme="light"]) .scoreboards-page {
+  background: radial-gradient(1200px 400px at 10% -10%, rgba(88, 28, 135, 0.35), rgba(88, 28, 135, 0) 60%),
+              radial-gradient(1600px 600px at 90% -20%, rgba(37, 99, 235, 0.35), rgba(37, 99, 235, 0) 60%),
+              linear-gradient(180deg, #0b1428 0%, #0f213c 60%, #0b1428 100%);
+}
+
+[data-theme="light"] .scoreboards-page {
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
+}

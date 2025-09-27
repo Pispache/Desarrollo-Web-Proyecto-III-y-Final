@@ -18,6 +18,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   isAuthenticated = false;
   isAdmin = false;
   currentRoute = '';
+  username: string | null = null;
   private authSubscription?: Subscription;
   private routerSubscription?: Subscription;
 
@@ -33,6 +34,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
       isAuth => {
         this.isAuthenticated = isAuth;
         this.isAdmin = isAuth ? this.authService.isAdmin() : false;
+        this.username = isAuth ? (this.authService.getUsername() || null) : null;
       }
     );
 
@@ -46,6 +48,10 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
     // Obtener ruta inicial
     this.currentRoute = this.router.url;
+    // Cargar nombre de usuario inicial si ya hay sesión
+    if (this.authService.isAuthenticated()) {
+      this.username = this.authService.getUsername();
+    }
   }
 
   ngOnDestroy() {
