@@ -215,7 +215,7 @@ h1, h2, h3, .card, .page-title, .section-title {
   border-color: var(--led-border) !important;
 }
 
-/* Ajustes para las tarjetas */
+/* Ajustes para las tarjetas (tema oscuro por defecto) */
 .card {
   background-color: var(--dark-card);
   border-color: var(--dark-border);
@@ -223,7 +223,7 @@ h1, h2, h3, .card, .page-title, .section-title {
   position: relative;
   z-index: 10;
   margin-bottom: 1rem;
-  
+
   .card-header {
     background-color: #2d2d2d !important;
     border-bottom-color: var(--dark-border);
@@ -247,6 +247,30 @@ h1, h2, h3, .card, .page-title, .section-title {
   }
 }
 
+/* ===== Overrides globales para MODO CLARO ===== */
+:root[data-theme="light"] {
+  /* Cards claras con texto oscuro y borde sutil */
+  .card {
+    background-color: #ffffff !important;
+    border-color: rgba(0,0,0,0.08) !important;
+    color: #111827 !important;
+  }
+  .card > .card-header {
+    background-color: #f8f9fa !important;
+    border-bottom-color: rgba(0,0,0,0.08) !important;
+    color: #111827 !important;
+  }
+  /* Forzar texto oscuro en títulos e íconos dentro del header */
+  .card > .card-header h1,
+  .card > .card-header h2,
+  .card > .card-header h3,
+  .card > .card-header h4,
+  .card > .card-header h5,
+  .card > .card-header h6,
+  .card > .card-header .card-title,
+  .card > .card-header .bi { color: #111827 !important; }
+}
+
 /* Ajustes para los botones */
 .btn-outline-secondary {
   color: #e0e0e0;
@@ -259,19 +283,17 @@ h1, h2, h3, .card, .page-title, .section-title {
   }
 }
 
-/* Ajustes para las tablas */
-.table {
+/* Ajustes para las tablas (solo en modo oscuro) */
+:root:not([data-theme="light"]) .table {
   --bs-table-bg: transparent;
   --bs-table-striped-bg: rgba(255, 255, 255, 0.02);
   --bs-table-hover-bg: rgba(255, 255, 255, 0.05);
   color: #f0f0f0;
-  
   thead th {
     background-color: #2d2d2d;
     border-bottom-color: var(--dark-border);
     color: #f0f0f0;
   }
-  
   tbody tr {
     &:hover {
       --bs-table-hover-color: #fff;
@@ -279,6 +301,79 @@ h1, h2, h3, .card, .page-title, .section-title {
     }
   }
 }
+
+/* Overrides globales para tablas en modo claro */
+:root[data-theme="light"] .table {
+  color: #111827;
+}
+:root[data-theme="light"] .table thead {
+  --bs-table-bg: #f3f4f6;
+  --bs-table-color: #111827;
+}
+:root[data-theme="light"] .table thead > tr > th {
+  background-color: var(--bs-table-bg) !important;
+  color: var(--bs-table-color) !important;
+  border-bottom-color: rgba(0,0,0,0.08) !important;
+}
+:root[data-theme="light"] .table tbody td {
+  border-color: rgba(0,0,0,0.08) !important;
+  color: #111827 !important;
+}
+
+/* Ensure base light table variables are neutral (no grey tint) */
+:root[data-theme="light"] .table {
+  --bs-table-bg: #ffffff;
+  --bs-table-accent-bg: transparent;
+}
+
+/* Force table cell background to white in LIGHT mode (beats Bootstrap defaults) */
+:root[data-theme="light"] .table > :not(caption) > * > * {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+/* Subtle hover for table rows in LIGHT mode */
+:root[data-theme="light"] .table tbody tr:hover > * {
+  background-color: rgba(17,24,39,0.02) !important;
+}
+
+/* Pagination overrides in LIGHT mode: white background */
+:root[data-theme="light"] .pagination .page-link {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+  border-color: rgba(0,0,0,0.12) !important;
+}
+:root[data-theme="light"] .pagination .page-link:hover {
+  background-color: #f9fafb !important;
+}
+:root[data-theme="light"] .page-item.active .page-link {
+  background-color: var(--color-primary, #0d6efd) !important;
+  border-color: var(--color-primary, #0d6efd) !important;
+  color: #ffffff !important;
+}
+:root[data-theme="light"] .page-item.disabled .page-link,
+:root[data-theme="light"] .page-item.disabled .page-link:hover {
+  background-color: #f3f4f6 !important;
+  color: #9ca3af !important;
+  border-color: rgba(0,0,0,0.08) !important;
+}
+
+/* Texto muted coherente en modo claro */
+:root[data-theme="light"] .text-muted { color: #6b7280 !important; }
+
+/* ===== Global utility: page title with strong contrast over headers ===== */
+.page-title { color: var(--color-text, #e7e9f0); }
+:root[data-theme="light"] .page-title { color: #ffffff !important; }
+.page-title .bi { color: currentColor !important; }
+
+/* Strong override for Results page title in LIGHT mode */
+:root[data-theme="light"] .results-page .page-title { color: #ffffff !important; }
+html[data-theme="light"] .results-page h1.page-title,
+html[data-theme="light"] .results-page h3.page-title,
+html[data-theme="light"] .results-page h4.page-title { color:#ffffff !important; }
+/* Cover nested spans/icons inside page-title for Results */
+html[data-theme="light"] .results-page .page-title, 
+html[data-theme="light"] .results-page .page-title * { color:#ffffff !important; }
 
 /* Ajustes para la lista de partidos */
 .list-group-item {
@@ -599,19 +694,10 @@ h1, h2, h3, .card, .page-title, .section-title {
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: var(--warning-color) transparent;
+}
 
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background-color: var(--warning-color);
-    border-radius: 3px;
-  }
+.event-list::-webkit-scrollbar {
+  width: 6px;
 }
 
 /* Estilos para el estado del partido */

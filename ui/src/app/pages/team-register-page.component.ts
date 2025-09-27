@@ -18,8 +18,30 @@ export class TeamRegisterPageComponent {
   file: File | null = null;
   previewUrl: string | null = null;
   busy = false;
+  // Aviso de caracteres no permitidos (igual que Home)
+  showInvalidCharWarning = false;
 
   constructor(private api: ApiService, private notify: NotificationService, private router: Router) {}
+
+  /**
+   * Valida que solo se ingresen letras y espacios en el nombre del equipo.
+   * Copia del comportamiento en Home (onTeamNameInput)
+   */
+  onTeamNameInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const originalValue = input.value;
+    // Remueve todo lo que NO sean letras (con acentos), ñ/Ñ, ü/Ü o espacios
+    const cleanValue = originalValue.replace(/[^A-Za-zÁÉÍÓÚáéíóúÜüÑñ\s]/g, '');
+    if (originalValue !== cleanValue) {
+      this.showInvalidCharWarning = true;
+      setTimeout(() => (this.showInvalidCharWarning = false), 3000);
+    }
+    if (input.value !== cleanValue) {
+      input.value = cleanValue;
+      this.name = cleanValue;
+      input.dispatchEvent(new Event('input'));
+    }
+  }
 
   onFileSelected(event: Event) {
     const input = event.target as HTMLInputElement;

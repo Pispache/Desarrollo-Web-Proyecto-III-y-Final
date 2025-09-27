@@ -1,0 +1,76 @@
+/* Fondo estilo HOME: degradado morado/azul con grano sutil */
+.players-team-select-page {
+  min-height: 100vh;
+  color: var(--color-text, #e7e9ff);
+  background:
+    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
+    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  position: relative;
+  isolation: isolate;
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 24px 24px, 36px 36px;
+    background-position: 0 0, 12px 18px;
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+/* ===== MODO OSCURO (inputs/selects) ===== */
+:root:not([data-theme="light"]) .players-team-select-page .form-control,
+:root:not([data-theme="light"]) .players-team-select-page .form-select {
+  background: rgba(255,255,255,0.06) !important;
+  color: var(--color-text, #e7e9ff) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+  border-radius: 12px;
+}
+:root:not([data-theme="light"]) .players-team-select-page .form-control::placeholder {
+  color: rgba(231,233,255,0.55) !important;
+}
+:root:not([data-theme="light"]) .players-team-select-page .form-control:focus,
+:root:not([data-theme="light"]) .players-team-select-page .form-select:focus {
+  background: rgba(255,255,255,0.08) !important;
+  border-color: transparent !important;
+  box-shadow: 0 0 0 3px rgba(155,92,255,.25), 0 0 12px rgba(0,224,255,.25) !important;
+  outline: none !important;
+}
+
+/* Tema CLARO: mismo look que Registrar Equipo */
+:root[data-theme="light"] .players-team-select-page {
+  /* Usa el mismo fondo que HOME en ambos temas */
+  background:
+    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
+    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%) !important;
+}
+:root[data-theme="light"] .players-team-select-page .card { background:#ffffff !important; color:#111827 !important; }
+:root[data-theme="light"] .players-team-select-page .card-header { background:#f8f9fa !important; border-bottom:1px solid rgba(0,0,0,0.08) !important; }
+:root[data-theme="light"] .players-team-select-page .card > .card-body { background: transparent !important; }
+
+/* Tabla en blanco puro */
+:root[data-theme="light"] .players-team-select-page .table { color:#111827 !important; }
+:root[data-theme="light"] .players-team-select-page .table thead {
+  --bs-table-bg: #f3f4f6; /* igual que Register/Scoreboards */
+  --bs-table-color: #111827;
+}
+:root[data-theme="light"] .players-team-select-page .table thead > tr > th {
+  background-color: var(--bs-table-bg) !important;
+  color: var(--bs-table-color) !important;
+  border-bottom-color: rgba(0,0,0,0.08) !important;
+}
+:root[data-theme="light"] .players-team-select-page .table tbody td { border-top-color: rgba(0,0,0,0.08) !important; color:#111827 !important; }
+:root[data-theme="light"] .players-team-select-page .table tbody tr:hover { background-color: rgba(17,24,39,0.02) !important; }
+
+/* No forzamos el wrapper; el card ya es blanco */
+
+/* Footer/paginación */
+:root[data-theme="light"] .players-team-select-page .text-muted {
+  color: #6b7280 !important;
+}

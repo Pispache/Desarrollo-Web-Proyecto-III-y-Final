@@ -15,7 +15,7 @@ import { Subject } from 'rxjs';
     <div class="d-flex align-items-center justify-content-between mb-3">
       <h4 class="mb-0 d-flex align-items-center gap-2">
         <i class="bi bi-people"></i>
-        Gestionar Equipo
+        Administrar Jugadores
         <span *ngIf="team" class="badge bg-secondary ms-2">#{{ team.teamId }}</span>
       </h4>
       <div class="d-flex gap-2">
@@ -166,12 +166,54 @@ import { Subject } from 'rxjs';
   </div>
   `,
   styles: [
-    `:host .team-manage, :host .team-manage .card, :host .team-manage .card-body { color: #000 !important; }`,
-    `:host .team-manage h4, :host .team-manage .form-label, :host .team-manage span, :host .team-manage small { color: #000 !important; }`,
-    `:host .team-manage .table thead th, :host .team-manage .table tbody td { color: #000 !important; }`,
-    `:host .team-manage .text-muted { color: #000 !important; }`,
-    `:host .team-manage input, :host .team-manage select { background: #fff !important; color: #000 !important; }`,
-    `:host .team-manage .badge { color: #000 !important; }`
+    // Fondo degradado y textura (oscuro por defecto)
+    `.team-manage{min-height:100vh;`+
+      `background:radial-gradient(1200px 700px at 20% -200px,rgba(155,92,255,.35),transparent 60%),`+
+      `radial-gradient(800px 500px at 90% 0%,rgba(0,224,255,.25),transparent 60%),`+
+      `linear-gradient(180deg,#0c0a1d 0%,#0a0918 100%);position:relative;isolation:isolate;}`,
+    `.team-manage::after{content:'';position:absolute;inset:0;`+
+      `background-image:radial-gradient(rgba(255,255,255,.04) 1px,transparent 1px),radial-gradient(rgba(255,255,255,.03) 1px,transparent 1px);`+
+      `background-size:24px 24px,36px 36px;background-position:0 0,12px 18px;pointer-events:none;z-index:-1;}`,
+
+    // Cards estilo glass y header con subrayado de acento
+    `.team-manage .card{background:var(--color-surface,rgba(20,18,43,.6));border:1px solid var(--color-border,rgba(255,255,255,.08));`+
+      `border-radius:16px;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 10px 30px rgba(0,0,0,.45),0 2px 8px rgba(0,0,0,.35);}`,
+    `.team-manage .card>.card-header{border-bottom:1px solid var(--color-border,rgba(255,255,255,.12));`+
+      `background:color-mix(in oklab, var(--color-surface-header, rgba(255,255,255,.02)) 100%, transparent)!important;`+
+      `color:var(--color-text,#e7e9ff)!important;position:relative;}`,
+    `.team-manage .card>.card-header::after{content:'';position:absolute;left:0;right:0;bottom:-1px;height:2px;`+
+      `background:linear-gradient(90deg,transparent,#9b5cff,#00e0ff,transparent);opacity:.7;}`,
+
+    // Inputs/selects y tabla en oscuro
+    `.team-manage .form-label{color:var(--color-text,#e7e9ff);font-weight:500;}`,
+    `.team-manage .form-control,.team-manage .form-select{background:rgba(255,255,255,.06);color:var(--color-text,#e7e9ff);`+
+      `border:1px solid rgba(255,255,255,.12);border-radius:12px;}`,
+    `.team-manage .form-control::placeholder{color:rgba(231,233,255,.55);}`,
+    `.team-manage .form-control:focus,.team-manage .form-select:focus{background:rgba(255,255,255,.08);border-color:transparent;`+
+      `box-shadow:0 0 0 3px rgba(155,92,255,.25),0 0 12px rgba(0,224,255,.25);outline:none;color:var(--color-text,#e7e9ff);}`,
+    `.team-manage .table{color:var(--color-text,#e7e9ff);}`,
+    `.team-manage .table thead th{--bs-table-bg:var(--color-surface-header,rgba(255,255,255,.04));--bs-table-color:var(--color-text,#e7e9ff);`+
+      `background-color:var(--bs-table-bg)!important;color:var(--bs-table-color)!important;border-bottom:1px solid rgba(255,255,255,.12)!important;}`,
+    `.team-manage .table tbody td{border-top-color:rgba(255,255,255,.08)!important;}`,
+
+    // Botón outline secundario coherente
+    `.team-manage .btn-outline-secondary{border-radius:12px;border-color:rgba(255,255,255,.18);color:var(--color-text,#e7e9ff);`+
+      `background:rgba(0,0,0,.12);transition:all .2s ease;}`,
+    `.team-manage .btn-outline-secondary:hover{border-color:#9b5cff;box-shadow:0 0 0 3px rgba(155,92,255,.2);color:var(--color-text,#e7e9ff);}`,
+
+    // Tema claro
+    `[data-theme="light"] .team-manage{background:linear-gradient(180deg,#f3f6fb 0%,#eef2f7 60%,#f3f6fb 100%)!important;}`,
+    `[data-theme="light"] .team-manage .card{background:#fff!important;border:1px solid rgba(0,0,0,.08)!important;color:#111827!important;}`,
+    `[data-theme="light"] .team-manage .card>.card-header{background:#f8f9fa!important;border-bottom:1px solid rgba(0,0,0,.08)!important;color:#111827!important;}`,
+    `[data-theme="light"] .team-manage .card>.card-header::after{opacity:.35;}`,
+    `[data-theme="light"] .team-manage h4{color:#111827!important;}`,
+    `[data-theme="light"] .team-manage .form-label{color:#111827!important;}`,
+    `[data-theme="light"] .team-manage .form-control,.team-manage .form-select{background:#fff!important;border:1px solid rgba(0,0,0,.2)!important;color:#111827!important;}`,
+    `[data-theme="light"] .team-manage .form-control::placeholder{color:rgba(17,24,39,.45)!important;}`,
+    `[data-theme="light"] .team-manage .form-control:focus,.team-manage .form-select:focus{background:#fff!important;border-color:transparent!important;box-shadow:0 0 0 3px rgba(37,99,235,.15)!important;color:#111827!important;}`,
+    `[data-theme="light"] .team-manage .table thead{--bs-table-bg:#f3f4f6;--bs-table-color:#111827;}`,
+    `[data-theme="light"] .team-manage .table thead th{background-color:var(--bs-table-bg)!important;color:var(--bs-table-color)!important;border-bottom-color:rgba(0,0,0,.08)!important;}`,
+    `[data-theme="light"] .team-manage .table tbody td{border-top-color:rgba(0,0,0,.08)!important;color:#111827!important;}`
   ]
 })
 export class TeamManagePageComponent implements OnInit, OnDestroy {

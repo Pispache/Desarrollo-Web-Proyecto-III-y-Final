@@ -2,61 +2,117 @@
 // 1) Aplicamos estilos "oscuros" por defecto (tema base) pero
 //    los limitamos al wrapper .team-register-page para no contaminar otras vistas.
 .team-register-page {
-  /* Fondo de página y altura mínima */
+  /* Tokens locales similares a Home */
+  --fg-0: var(--color-text, #e7e9ff);
+  --muted: var(--color-muted, #9aa0bd);
+  --accent: #9b5cff;
+  --accent-2: #00e0ff;
+  --stroke: var(--color-border, rgba(255, 255, 255, 0.08));
+  --glass: rgba(20, 18, 43, 0.6);
+  --shadow: 0 10px 30px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
+  --radius: 16px;
+
+  /* Fondo degradado oscuro como Home */
   min-height: 100vh;
-  /* Gradiente suave en oscuro (base) */
-  background: radial-gradient(1200px 400px at 10% -10%, rgba(88, 28, 135, 0.35), rgba(88, 28, 135, 0) 60%),
-              radial-gradient(1600px 600px at 90% -20%, rgba(37, 99, 235, 0.35), rgba(37, 99, 235, 0) 60%),
-              linear-gradient(180deg, #0b1428 0%, #0f213c 60%, #0b1428 100%);
+  color: var(--fg-0);
+  background:
+    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
+    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  position: relative;
+  isolation: isolate;
 
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 24px 24px, 36px 36px;
+    background-position: 0 0, 12px 18px;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Cards con glassmorphism */
   .card {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: var(--color-surface, var(--glass));
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow);
+
+    > .card-header {
+      border-bottom: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--color-surface-header, rgba(255,255,255,0.02)) 100%, transparent) !important;
+      color: var(--color-text, var(--fg-0)) !important;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        left: 0; right: 0; bottom: -1px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+        opacity: .7;
+      }
+    }
   }
 
-  .card-header {
-    background: rgba(0, 0, 0, 0.2);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    color: #fff;
+  /* Inputs en oscuro (coherentes con Home) */
+  .form-label { color: var(--fg-0); font-weight: 500; }
+  .form-control, .form-select {
+    background: rgba(255,255,255,0.06);
+    color: var(--fg-0);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    &::placeholder { color: rgba(231,233,255,0.55); }
+    &:focus {
+      color: var(--fg-0);
+      background: rgba(255,255,255,0.08);
+      border-color: transparent;
+      box-shadow: 0 0 0 3px rgba(155,92,255,.25), 0 0 12px rgba(0,224,255,.25);
+      outline: none;
+    }
   }
 
-  .card-header h5 { color: #fff; }
-  .card-body { background: transparent !important; }
-
-  .form-label { color: #fff; font-weight: 500; }
-
-  .form-control {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: #fff;
+  /* Botón primario con gradiente */
+  .btn-primary {
+    --g1: var(--color-primary, var(--accent));
+    --g2: var(--accent-2);
+    background: linear-gradient(135deg, var(--g1), var(--g2));
+    border: none;
+    color: #0b0a1a;
+    font-weight: 600;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 224, 255, .25);
+    transition: all 0.2s ease;
+    &:hover { filter: brightness(1.05); box-shadow: 0 12px 26px rgba(0,224,255,.35); color: #0b0a1a; }
+    &:active { transform: translateY(1px); }
   }
-  .form-control::placeholder { color: rgba(255, 255, 255, 0.6); }
-  .form-control:focus {
-    background: rgba(255, 255, 255, 0.15);
-    border-color: #f59e0b;
-    box-shadow: 0 0 0 0.2rem rgba(245, 158, 11, 0.25);
-    color: #fff;
-  }
-
-  .text-danger { color: #ff6b6b; }
 
   .btn-outline-secondary {
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.3);
-  }
-  .btn-outline-secondary:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.5);
-    color: #fff;
+    border-radius: 12px;
+    border-color: rgba(255,255,255,0.18);
+    color: var(--fg-0);
+    background: rgba(0,0,0,0.12);
+    transition: all 0.2s ease;
+    &:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(155,92,255,.2);
+      color: var(--fg-0);
+    }
   }
 
-  .preview img { 
-    object-fit: contain; 
+  .preview img {
+    object-fit: contain;
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-radius: 8px;
   }
 
+  .card-body { background: transparent !important; }
   .rotate { animation: spin 1s linear infinite; }
 }
 
@@ -67,46 +123,82 @@
 
 // 2) Overrides para tema CLARO cuando <html data-theme="light"> está activo
 [data-theme="light"] .team-register-page {
-  /* Fondo blanco pleno en modo claro */
+  /* Fondo claro degradado como en scoreboards (coherencia visual) */
   min-height: 100vh;
-  background: #ffffff !important;
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%) !important;
+  color: #111827 !important;
 
-  /* Forzar tema claro sobre estilos globales oscuros con !important */
-  .card {
+  /* Card estilo blanco con sombra y borde sutil (supera reglas globales oscuras) */
+  .card,
+  .card.card {
     background: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.125) !important;
-    color: #212529 !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: #111827 !important;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.12), 0 2px 8px rgba(0,0,0,.08);
   }
-  .card-header {
+
+  /* Encabezado claro con subrayado de acento como en scoreboards */
+  .card .card-header,
+  .card > .card-header {
     background: #f8f9fa !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
-    color: #212529 !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08) !important;
+    color: #111827 !important;
+    position: relative;
+    z-index: 2;
   }
-  .card-header h5 { color: #212529 !important; }
+  .card .card-header::after {
+    content: '';
+    position: absolute;
+    left: 0; right: 0; bottom: -1px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #9b5cff, #00e0ff, transparent);
+    opacity: .35;
+  }
+  /* Forzar texto oscuro en títulos e íconos del header (selectores válidos dentro del bloque) */
+  & .card > .card-header h1,
+  & .card > .card-header h2,
+  & .card > .card-header h3,
+  & .card > .card-header h4,
+  & .card > .card-header h5,
+  & .card > .card-header h6,
+  & .card > .card-header .card-title,
+  & .card > .card-header .bi {
+    color: #111827 !important;
+  }
+  & .card > .card-header.header-contrast-high,
+  & .card > .card-header.header-contrast-high * {
+    color: #111827 !important;
+  }
   .card-body { background: transparent; }
 
-  .form-label { color: #212529; }
+  /* Formularios coherentes con modo claro */
+  .form-label { color: #111827; }
   .form-control {
-    background: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    color: #212529;
+    background: #fff !important;
+    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    color: #111827 !important;
+    border-radius: 12px;
   }
-  .form-control::placeholder { color: rgba(0, 0, 0, 0.45); }
+  .form-control::placeholder { color: rgba(17, 24, 39, 0.45) !important; }
   .form-control:focus {
-    background: #fff;
-    border-color: #0d6efd;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-    color: #212529;
+    background: #fff !important;
+    border-color: transparent !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .15) !important;
+    color: #111827 !important;
   }
 
+  /* Botón volver (outline) en modo claro */
   .btn-outline-secondary {
-    color: #212529;
-    border-color: rgba(0, 0, 0, 0.2);
+    color: #374151 !important;
+    border-color: #cbd5e1 !important;
+    background: transparent !important;
   }
   .btn-outline-secondary:hover {
-    background: rgba(0, 0, 0, 0.03);
-    border-color: rgba(0, 0, 0, 0.35);
-    color: #212529;
+    background: #f3f4f6 !important;
+    border-color: #94a3b8 !important;
+    color: #111827 !important;
   }
+
   .preview img { border-color: rgba(0, 0, 0, 0.12); }
 }

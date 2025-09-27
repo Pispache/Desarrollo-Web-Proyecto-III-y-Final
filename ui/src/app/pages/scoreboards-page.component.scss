@@ -1,13 +1,133 @@
 .scoreboards-page {
+  /* Variables similares a Home */
+  --fg-0: var(--color-text, #e7e9ff);
+  --muted: var(--color-muted, #9aa0bd);
+  --accent: #9b5cff;
+  --accent-2: #00e0ff;
+  --stroke: var(--color-border, rgba(255, 255, 255, 0.08));
+  --shadow: 0 10px 30px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
+  --radius: 16px;
+
   min-height: 100vh;
+  color: var(--fg-0);
+  position: relative;
+  isolation: isolate;
+
+  /* Fondo degradado oscuro (igual espíritu que Home) */
+  background:
+    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
+    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
+      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+    background-size: 24px 24px, 36px 36px;
+    background-position: 0 0, 12px 18px;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* Cards (glass) */
+  .card {
+    background: var(--color-surface, rgba(20, 18, 43, 0.6));
+    border: 1px solid var(--stroke);
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: var(--shadow);
+
+    > .card-header {
+      border-bottom: 1px solid var(--stroke);
+      background: color-mix(in oklab, var(--color-surface-header, rgba(255,255,255,0.02)) 100%, transparent) !important;
+      color: var(--color-text, var(--fg-0)) !important;
+      position: relative;
+
+      &::after {
+        content: '';
+        position: absolute;
+        left: 0; right: 0; bottom: -1px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+        opacity: .7;
+      }
+    }
+  }
+
+  /* Inputs */
+  .form-control, .form-select {
+    background: rgba(255,255,255,0.06);
+    color: var(--fg-0);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 12px;
+    &::placeholder { color: rgba(231,233,255,0.55); }
+    &:focus {
+      color: var(--fg-0);
+      background: rgba(255,255,255,0.08);
+      border-color: transparent;
+      box-shadow: 0 0 0 3px rgba(155,92,255,.25), 0 0 12px rgba(0,224,255,.25);
+      outline: none;
+    }
+  }
+
+  /* Tabla */
+  .table {
+    color: var(--color-text, var(--fg-0));
+    thead {
+      --bs-table-bg: var(--color-surface-header, rgba(255,255,255,0.04));
+      --bs-table-color: var(--color-text, var(--fg-0));
+      th { border-color: var(--stroke); color: var(--muted); }
+    }
+    thead > tr > th { background-color: var(--bs-table-bg) !important; color: var(--bs-table-color) !important; }
+    tbody tr {
+      td { border-color: var(--stroke); }
+      &:hover { background: color-mix(in oklab, var(--color-text, #e5e9f0) 3%, transparent); }
+    }
+  }
 }
 
-:root:not([data-theme="light"]) .scoreboards-page {
-  background: radial-gradient(1200px 400px at 10% -10%, rgba(88, 28, 135, 0.35), rgba(88, 28, 135, 0) 60%),
-              radial-gradient(1600px 600px at 90% -20%, rgba(37, 99, 235, 0.35), rgba(37, 99, 235, 0) 60%),
-              linear-gradient(180deg, #0b1428 0%, #0f213c 60%, #0b1428 100%);
-}
-
+/* ===== Tema claro: igualar Home (fondos claros y cards blancas) ===== */
 [data-theme="light"] .scoreboards-page {
-  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%) !important;
+  color: #111827;
+
+  /* Forzar el título superior "Tableros" en blanco en modo claro */
+  .page-title { color: #ffffff !important; }
+  .page-title .bi { color: #ffffff !important; }
+
+  .card {
+    background: #ffffff !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+    > .card-header {
+      background: #f8f9fa !important;
+      border-bottom: 1px solid rgba(0,0,0,0.08) !important;
+      color: #111827 !important;
+      &::after { opacity: .35; }
+    }
+  }
+
+  .form-control, .form-select {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.2);
+    color: #111827;
+    &::placeholder { color: rgba(17,24,39,0.45); }
+    &:focus {
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+    }
+  }
+
+  .table {
+    thead {
+      --bs-table-bg: #f3f4f6;
+      --bs-table-color: #111827;
+      th { border-color: rgba(0,0,0,0.08); color: #6b7280; }
+    }
+    tbody tr td { border-color: rgba(0,0,0,0.08); }
+    tbody tr:hover { background: rgba(17,24,39,0.02); }
+  }
 }

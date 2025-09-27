@@ -1,7 +1,7 @@
-<div class="p-4 max-w-5xl mx-auto grid gap-4">
+<div class="results-page p-4 max-w-5xl mx-auto grid gap-4">
   <!-- Filtros -->
   <div class="flex flex-wrap items-center justify-between gap-2">
-    <h1 class="text-2xl font-semibold">Resultados</h1>
+    <h1 class="page-title text-2xl font-semibold">Resultados</h1>
     <div class="flex flex-wrap gap-2 items-center">
       <label class="text-sm">Estado:</label>
       <select [(ngModel)]="statusFilter" (change)="applyFilters()" class="border rounded px-2 py-1">
@@ -19,7 +19,7 @@
   <div class="grid gap-4" style="grid-template-columns: 1fr 2fr;">
     <!-- Lista de partidos -->
     <div class="border rounded p-3">
-      <h3 class="font-medium mb-2">Partidos</h3>
+      <h3 class="page-title font-medium mb-2">Partidos</h3>
       <ul class="divide-y">
         <li *ngFor="let g of filtered" class="py-2 flex items-center justify-between">
           <div>
