@@ -16,16 +16,14 @@ import { Subscription } from 'rxjs';
 })
 export class AppComponent implements OnInit, OnDestroy {
   private armed = false;
-  showNavbar = false;
+  showNavbar = true;
   private sub?: Subscription;
   constructor(private sound: SoundService, private auth: AuthService) {}
 
   ngOnInit(): void {
-    // Reaccionar a cambios de autenticación para mostrar/ocultar navbar
-    this.showNavbar = this.auth.isAdmin();
-    this.sub = this.auth.authed$.subscribe(() => {
-      this.showNavbar = this.auth.isAdmin();
-    });
+    // Navbar siempre visible (contiene enlaces públicos y protegidos)
+    this.showNavbar = true;
+    this.sub = this.auth.authed$.subscribe(() => {});
   }
 
   ngOnDestroy(): void {

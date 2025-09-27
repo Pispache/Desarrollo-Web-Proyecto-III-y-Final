@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, TeamDto } from '../services/api.service';
 import { NotificationService } from '../services/notification.service';
 import { TournamentService, TournamentGroupDto } from '../services/tournament.service';
+import { AuthService } from '../services/auth.service';
 
 interface Group {
   groupId: number;
@@ -40,7 +41,8 @@ export class TournamentPageComponent implements OnInit {
   constructor(
     private api: ApiService,
     private notify: NotificationService,
-    private tournament: TournamentService
+    private tournament: TournamentService,
+    private auth: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -184,6 +186,9 @@ export class TournamentPageComponent implements OnInit {
       this.allTeams = list;
     });
   }
+
+  // ====== Role helpers ======
+  isAdmin(): boolean { return this.auth.isAdmin(); }
 
   // Recalcula automáticamente G/P/E para cada equipo del grupo usando partidos finalizados
   refreshStandings() {

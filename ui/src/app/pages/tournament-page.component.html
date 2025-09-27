@@ -9,7 +9,7 @@
     </div>
   </header>
 
-  <form class="group-form" (submit)="$event.preventDefault(); addGroup()">
+  <form class="group-form" *ngIf="isAdmin()" (submit)="$event.preventDefault(); addGroup()">
     <div class="field">
       <label for="groupName">Nombre del grupo</label>
       <input id="groupName" type="text" class="form-control" placeholder="Ej. Grupo A" [(ngModel)]="newGroupName" name="groupName" />
@@ -26,13 +26,13 @@
           <i class="bi bi-collection"></i>
           <h3>{{ g.name }}</h3>
         </div>
-        <button class="icon-btn danger" (click)="removeGroup(g.groupId)" [disabled]="deletingGroupId === g.groupId" title="Eliminar">
+        <button *ngIf="isAdmin()" class="icon-btn danger" (click)="removeGroup(g.groupId)" [disabled]="deletingGroupId === g.groupId" title="Eliminar">
           <i class="bi" [ngClass]="deletingGroupId === g.groupId ? 'bi-hourglass-split' : 'bi-trash'"></i>
         </button>
       </div>
       <div class="card-body">
         <!-- Selector para agregar equipos registrados -->
-        <div class="group-team-add">
+        <div class="group-team-add" *ngIf="isAdmin()">
           <label>Agregar equipo</label>
           <div class="row">
             <select class="form-select" [(ngModel)]="selectedByGroup[g.groupId]" name="select-{{g.groupId}}" [disabled]="g.teams.length >= 4">
@@ -59,7 +59,7 @@
                 <th>G</th>
                 <th>E</th>
                 <th>P</th>
-                <th>Acciones</th>
+                <th *ngIf="isAdmin()">Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -70,7 +70,7 @@
                 <td>{{ t.g }}</td>
                 <td>{{ t.e }}</td>
                 <td>{{ t.p }}</td>
-                <td>
+                <td *ngIf="isAdmin()">
                   <button class="icon-btn danger" (click)="removeTeamFromGroup(g, t.teamId)" title="Quitar">
                     <i class="bi bi-trash"></i>
                   </button>
