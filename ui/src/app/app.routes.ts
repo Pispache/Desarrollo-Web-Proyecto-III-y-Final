@@ -18,9 +18,9 @@ export const routes: Routes = [
   { path: '', redirectTo: 'control', pathMatch: 'full' },
   { path: 'control', component: HomePageComponent, canActivate: [authGuard] },
 
-  { path: 'equipos', component: TeamRegisterPageComponent, canActivate: [authGuard] },
-  { path: 'jugadores', component: PlayersTeamSelectPageComponent, canActivate: [authGuard] },
-  { path: 'jugadores/:id', component: TeamManagePageComponent, canActivate: [authGuard] },
+  { path: 'equipos', component: TeamRegisterPageComponent, canActivate: [adminGuard] },
+  { path: 'jugadores', component: PlayersTeamSelectPageComponent, canActivate: [adminGuard] },
+  { path: 'jugadores/:id', component: TeamManagePageComponent, canActivate: [adminGuard] },
 
   { path: 'tablero/:id', component: DisplayPageComponent },   // tablero público
   { path: 'resultados', component: ResultsPageComponent },    // página de resultados

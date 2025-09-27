@@ -53,6 +53,27 @@ $pagination-hover-border-color: $dark-border;
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
 
 /* =====================================================
+   Roles UI helpers
+   - The app toggles body.role-admin / body.role-user in app.component.ts
+   - Hide admin-only actions for non-admin users for defense-in-depth
+   ===================================================== */
+body.role-user {
+  // Ocultar acciones administrativas en listado de equipos
+  [title="Editar equipo"],
+  [title="Eliminar equipo"],
+  [title="Gestionar jugadores"] {
+    display: none !important;
+  }
+}
+
+/* Enlaces marcados como .disabled no deben recibir clics */
+.disabled,
+[aria-disabled="true"] {
+  pointer-events: none !important;
+  opacity: .65;
+}
+
+/* =====================================================
    Transiciones globales para cambios de tema
    - Controladas por el token: --transition-theme (ver _theme.scss)
    - Evita código duplicado en componentes.

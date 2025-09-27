@@ -23,7 +23,10 @@ export class AppComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.sub = this.auth.authed$.subscribe(isAuthed => {
       this.showNavbar = isAuthed;
+      this.applyRoleClass();
     });
+    // Aplicar al cargar por si ya hay sesión activa
+    this.applyRoleClass();
   }
 
   ngOnDestroy(): void {
@@ -39,6 +42,15 @@ export class AppComponent implements OnInit, OnDestroy {
     this.armed = true;
     this.sound.preloadAll();
     this.sound.unlock();
+  }
+
+  private applyRoleClass() {
+    try {
+      const isAdmin = this.auth.isAdmin();
+      const body = document.body;
+      body.classList.toggle('role-admin', isAdmin);
+      body.classList.toggle('role-user', !isAdmin);
+    } catch {}
   }
 
 }
