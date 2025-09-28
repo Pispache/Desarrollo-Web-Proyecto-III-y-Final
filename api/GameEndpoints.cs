@@ -452,7 +452,7 @@ END;";
             var row = await c.QuerySingleOrDefaultAsync<(string ContentType, byte[] Data)>($"SELECT ContentType, Data FROM {T}Logos WHERE LogoId=@logoId;", new { logoId });
             if (row.Equals(default((string, byte[])))) return Results.NotFound();
             return Results.File(row.Data, row.ContentType);
-        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
+        }).AllowAnonymous().WithOpenApi();
 
         // ===== Games =====
         g.MapGet("/games", async () =>
