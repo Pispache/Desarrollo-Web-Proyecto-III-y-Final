@@ -23,10 +23,10 @@ export const routes: Routes = [
   { path: 'jugadores', component: PlayersTeamSelectPageComponent, canActivate: [adminGuard] },
   { path: 'jugadores/:id', component: TeamManagePageComponent, canActivate: [adminGuard] },
 
-  { path: 'tablero/:id', component: DisplayPageComponent },   // tablero público
+  { path: 'tablero/:id', component: DisplayPageComponent, canActivate: [authGuard] },   // protegido
   { path: 'tablero', redirectTo: 'tableros', pathMatch: 'full' }, // redirección al listado
   { path: 'tableros', component: ScoreboardsPageComponent },  // listador de tableros
-  { path: 'resultados', component: ResultsPageComponent },    // página de resultados
+  { path: 'resultados', component: ResultsPageComponent, canActivate: [authGuard] },    // protegido
   { path: 'torneo', component: TournamentPageComponent, canActivate: [authGuard] },
 
   // Redirects legacy
