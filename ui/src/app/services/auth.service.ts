@@ -15,6 +15,8 @@ export class AuthService {
   private _authed$ = new BehaviorSubject<boolean>(!!this.getToken());
   readonly authed$ = this._authed$.asObservable();
   private logoutTimer?: any;
+  private bc?: BroadcastChannel;
+  private isLoggingOut = false; // evita duplicados por múltiples disparadores
 
   constructor(private http: HttpClient, private router: Router, private notify: NotificationService) {
     // Verificar expiración al iniciar
@@ -25,6 +27,32 @@ export class AuthService {
       this.scheduleAutoLogout();
       this._authed$.next(true);
     }
+
+    // Sincronización entre pestañas: BroadcastChannel (principal)
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        this.bc = new BroadcastChannel('auth');
+        this.bc.onmessage = (ev: MessageEvent) => {
+          const msg = ev.data as { type: string; reason?: string };
+          if (msg?.type === 'logout') {
+            // No notificar aquí para evitar duplicados; centralizar en logout
+            this.logout(true, msg.reason || 'expired', 'external');
+          }
+        };
+      }
+    } catch {}
+
+    // Fallback: evento storage por cambios en localStorage
+    try {
+      if (typeof window !== 'undefined') {
+        window.addEventListener('storage', (e: StorageEvent) => {
+          if (e.key === TOKEN_KEY && e.newValue === null) {
+            // Centralizar en logout
+            this.logout(true, 'expired', 'external');
+          }
+        });
+      }
+    } catch {}
   }
 
   login(username: string, password: string): Observable<LoginResponse> {
@@ -34,19 +62,41 @@ export class AuthService {
         this.safeSetItem(EXPIRES_KEY, res.expiresAt ?? '');
         this._authed$.next(true);
         this.scheduleAutoLogout();
+        // Notificar a otras pestañas que hay sesión activa (opcional)
+        try { this.bc?.postMessage({ type: 'login' }); } catch {}
       })
     );
   }
 
-  logout(navigate: boolean = true, reason?: 'expired' | 'manual' | string): void {
+  logout(
+    navigate: boolean = true,
+    reason?: 'expired' | 'logged_out' | 'manual' | string,
+    origin: 'local' | 'external' | 'interceptor' | 'guard' = 'local'
+  ): void {
+    if (this.isLoggingOut) return; // dedupe
+    this.isLoggingOut = true;
+    setTimeout(() => (this.isLoggingOut = false), 500);
+
     this.safeRemoveItem(TOKEN_KEY);
     this.safeRemoveItem(EXPIRES_KEY);
     this._authed$.next(false);
     if (this.logoutTimer) { clearTimeout(this.logoutTimer); this.logoutTimer = undefined; }
+
+    // Mensajería unificada (una sola vez)
     if (reason === 'expired') {
-      try { this.notify.showInfo('Sesión expirada', 'Tu sesión ha expirado. Inicia sesión nuevamente.', 3000); } catch {}
+      const msg = origin === 'external'
+        ? 'Tu sesión se cerró en otra pestaña (token vencido).'
+        : 'Tu sesión ha expirado';
+      try { this.notify.showInfo(msg, origin === 'external' ? 'Sesión cerrada' : 'Inicia sesión nuevamente.', 3000); } catch {}
+    } else if (reason === 'logged_out') {
+      try { this.notify.showInfo('Cerraste sesión correctamente.', '', 2000); } catch {}
     }
-    if (navigate) this.router.navigateByUrl('/login');
+
+    // Avisar a otras pestañas solo si el origen es local o interceptor (no rebote por external)
+    if (origin !== 'external') {
+      try { this.bc?.postMessage({ type: 'logout', reason }); } catch {}
+    }
+    if (navigate) this.router.navigate(['/login'], { queryParams: { reason: reason === 'logged_out' ? 'logged_out' : 'expired' } });
   }
 
   getToken(): string | null {

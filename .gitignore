@@ -10,3 +10,5 @@ obj/
 *.log
 *.tmp
 db-data/
+
+.fake
