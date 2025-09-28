@@ -65,6 +65,63 @@ body.role-user {
   [title="Gestionar jugadores"] {
     display: none !important;
   }
+
+}
+
+/* =========================
+   Bracket (Eliminación directa)
+   ========================= */
+.knockout.bracket {
+  .bracket-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(220px, 1fr));
+    gap: 24px;
+    align-items: start;
+  }
+
+  .stage { margin-bottom: 0; }
+  .stage h3 { margin-bottom: 12px; font-weight: 700; }
+
+  .matches { display: flex; flex-direction: column; gap: 16px; }
+
+  .match {
+    position: relative;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--color-border, rgba(255,255,255,0.12));
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+
+  .team { display: flex; align-items: center; gap: 8px; min-height: 28px; }
+  .vs { text-align: center; opacity: .7; font-size: .9rem; padding: 2px 0; }
+  .controls { margin-top: 6px; }
+
+  /* Connector lines between columns (simple approximation) */
+  .column.qf .match::before,
+  .column.sf .match::before,
+  .column.final .match::before {
+    content: '';
+    position: absolute;
+    left: -24px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 2px;
+    background: var(--color-border, rgba(255,255,255,0.2));
+  }
+
+  /* Stack heights to visually align approximate pairings */
+  .column.r16 .match { min-height: 84px; }
+  .column.qf .match { min-height: 120px; }
+  .column.sf .match { min-height: 180px; }
+  .column.final .match { min-height: 220px; }
+
+  @media (max-width: 992px) {
+    .bracket-grid { grid-template-columns: 1fr; }
+    .column.qf .match::before,
+    .column.sf .match::before,
+    .column.final .match::before { display: none; }
+  }
 }
 
 /* Enlaces marcados como .disabled no deben recibir clics */

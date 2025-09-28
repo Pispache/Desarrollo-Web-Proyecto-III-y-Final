@@ -52,6 +52,31 @@ export class TournamentPageComponent implements OnInit {
     this.api.teamsChanged$.subscribe(() => this.fetchTeams());
     // calcular standings iniciales
     this.refreshStandings();
+    // Inicializar placeholders de llaves (knockout) + cargar de localStorage
+    this.ensureKnockoutInitialized();
+    this.loadKnockoutFromLocal();
+  }
+
+  // === Knockout persistence in localStorage ===
+  private storageKey = 'tournament.knockout';
+  onMatchChange() { this.saveKnockoutToLocal(); }
+  private saveKnockoutToLocal() {
+    try {
+      localStorage.setItem(this.storageKey, JSON.stringify(this.knockout));
+    } catch {}
+  }
+  private loadKnockoutFromLocal() {
+    try {
+      const raw = localStorage.getItem(this.storageKey);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (data && typeof data === 'object') {
+        if (Array.isArray(data.roundOf16)) this.knockout.roundOf16 = data.roundOf16;
+        if (Array.isArray(data.quarterfinals)) this.knockout.quarterfinals = data.quarterfinals;
+        if (Array.isArray(data.semifinals)) this.knockout.semifinals = data.semifinals;
+        if (Array.isArray(data.final)) this.knockout.final = data.final;
+      }
+    } catch {}
   }
 
   addGroup() {
@@ -186,6 +211,91 @@ export class TournamentPageComponent implements OnInit {
       this.allTeams = list;
     });
   }
+
+  // ====== Logo helpers ======
+  getTeamLogo(teamId: number | null | undefined): string | null {
+    if (!teamId) return null;
+    const t = this.allTeams.find(x => x.teamId === teamId);
+    return (t?.logoUrl && t.logoUrl.trim() !== '') ? t.logoUrl : null;
+  }
+
+  teamNameById(teamId: number | null | undefined): string {
+    if (!teamId) return 'Por definir';
+    const t = this.allTeams.find(x => x.teamId === teamId);
+    return t?.name ?? 'Equipo';
+  }
+
+  // ====== Knockout stages (UI scaffolding) ======
+  // Simple placeholder structures to render brackets for Octavos, Cuartos, Semifinal y Final.
+  knockout = {
+    roundOf16: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
+    quarterfinals: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
+    semifinals: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
+    final: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
+  };
+
+  // Initialize default bracket placeholders (8, 4, 2, 1 matches)
+  private ensureKnockoutInitialized() {
+    if (this.knockout.roundOf16.length === 0) this.knockout.roundOf16 = new Array(8).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
+    if (this.knockout.quarterfinals.length === 0) this.knockout.quarterfinals = new Array(4).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
+    if (this.knockout.semifinals.length === 0) this.knockout.semifinals = new Array(2).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
+    if (this.knockout.final.length === 0) this.knockout.final = new Array(1).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
+  }
+
+  // ====== Bracket helpers: advance winners ======
+  advanceFromRound(round: 'roundOf16' | 'quarterfinals' | 'semifinals', matchIndex: number, winner: 'home' | 'away') {
+    const source = this.knockout[round] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
+    const srcMatch = source[matchIndex];
+    if (!srcMatch) return;
+    const winnerId = winner === 'home' ? srcMatch.homeTeamId ?? null : srcMatch.awayTeamId ?? null;
+    if (!winnerId) return;
+
+    if (round === 'roundOf16') {
+      // Mapping: (0,1)->QF0; (2,3)->QF1; (4,5)->QF2; (6,7)->QF3
+      const qfIndex = Math.floor(matchIndex / 2);
+      const isHome = matchIndex % 2 === 0; // even -> home, odd -> away
+      this.setSlot('quarterfinals', qfIndex, isHome ? 'home' : 'away', winnerId);
+      // Clear downstream from quarterfinals slot if both sides not set yet will be handled naturally
+    } else if (round === 'quarterfinals') {
+      // Mapping: (0,1)->SF0; (2,3)->SF1
+      const sfIndex = Math.floor(matchIndex / 2);
+      const isHome = matchIndex % 2 === 0;
+      this.setSlot('semifinals', sfIndex, isHome ? 'home' : 'away', winnerId);
+    } else if (round === 'semifinals') {
+      // Mapping: (0,1)->Final0
+      const isHome = matchIndex % 2 === 0;
+      this.setSlot('final', 0, isHome ? 'home' : 'away', winnerId);
+    }
+    this.saveKnockoutToLocal();
+  }
+
+  private setSlot(targetRound: 'quarterfinals' | 'semifinals' | 'final', matchIndex: number, side: 'home' | 'away', teamId: number) {
+    const target = this.knockout[targetRound] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
+    const match = target[matchIndex];
+    if (!match) return;
+    if (side === 'home') match.homeTeamId = teamId; else match.awayTeamId = teamId;
+
+    // When overwriting an upstream winner, clear deeper rounds that depended on this slot
+    this.clearDownstream(targetRound, matchIndex);
+    this.saveKnockoutToLocal();
+  }
+
+  private clearDownstream(fromRound: 'quarterfinals' | 'semifinals' | 'final', matchIndex: number) {
+    if (fromRound === 'quarterfinals') {
+      const sfIndex = Math.floor(matchIndex / 2);
+      const sfMatch = this.knockout.semifinals[sfIndex];
+      if (sfMatch) { sfMatch.homeTeamId = sfMatch.homeTeamId; sfMatch.awayTeamId = sfMatch.awayTeamId; }
+      // Clear final slot that may depend on semifinals
+      const final = this.knockout.final[0];
+      if (final) { final.homeTeamId = final.homeTeamId; final.awayTeamId = final.awayTeamId; }
+    } else if (fromRound === 'semifinals') {
+      const final = this.knockout.final[0];
+      if (final) { final.homeTeamId = final.homeTeamId; final.awayTeamId = final.awayTeamId; }
+    }
+  }
+
+  // For UI selects
+  allTeamsForSelect(): TeamDto[] { return this.allTeams || []; }
 
   // ====== Role helpers ======
   isAdmin(): boolean { return this.auth.isAdmin(); }

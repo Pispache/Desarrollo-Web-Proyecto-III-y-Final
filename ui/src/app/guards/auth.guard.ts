@@ -6,6 +6,6 @@ export const authGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
   if (auth.isAuthenticated()) return true;
-  router.navigateByUrl('/login');
-  return false;
+  // Redirigir de forma sincrónica con UrlTree para evitar parpadeo de la vista
+  return router.createUrlTree(['/login'], { queryParams: { reason: 'expired' } });
 };

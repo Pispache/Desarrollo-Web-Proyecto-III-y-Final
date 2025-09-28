@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
 @Component({
@@ -17,7 +17,17 @@ export class LoginPageComponent {
   loading = false;
   error = '';
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute) {
+    // Mostrar mensajes según motivo de redirección
+    try {
+      const reason = (this.route.snapshot.queryParamMap.get('reason') || '').toLowerCase();
+      if (reason === 'expired') {
+        this.error = 'Tu sesión expiró. Ingresa nuevamente.';
+      } else if (reason === 'logged_out') {
+        this.error = 'Cerraste sesión correctamente.';
+      }
+    } catch {}
+  }
 
   submit() {
     this.error = '';
