@@ -100,14 +100,15 @@
       </div>
     </div>
 
-    <!-- Mobile Menu Toggle -->
-    <div class="mobile-menu-toggle" (click)="toggleMenu()">
-      <div class="hamburger" [class.active]="isMenuOpen">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-    </div>
+    <!-- Mobile Menu Toggle (Bootstrap Icons for consistency) -->
+    <button
+      class="navbar-toggler mobile-menu-toggle"
+      type="button"
+      aria-label="Toggle navigation"
+      [attr.aria-expanded]="isMenuOpen"
+      (click)="toggleMenu()">
+      <i class="hamburger-icon" [ngClass]="isMenuOpen ? 'bi bi-x-lg' : 'bi bi-list'"></i>
+    </button>
   </div>
 
   <div class="mobile-menu-overlay" 
@@ -115,36 +116,21 @@
        (click)="closeMenu()">
   </div>
 
-  <!-- Mobile Menu -->
-  <div class="mobile-menu" [class.active]="isMenuOpen">
-    <div class="mobile-menu-header">
-      <div class="mobile-brand">
-        <i class="bi bi-trophy-fill"></i>
-        <span>Marcador de Baloncesto</span>
-      </div>
-      <button class="close-btn" (click)="closeMenu()">
-        <i class="bi bi-x-lg"></i>
-      </button>
-    </div>
+  <!-- Mobile Menu as Bootstrap Dropdown -->
+  <div class="mobile-menu dropdown-menu" [class.show]="isMenuOpen">
     <!-- Mobile quick actions -->
     <div class="px-3 py-2 d-flex align-items-center gap-2 border-bottom">
       <button class="btn btn-primary btn-sm w-100" (click)="onRefresh(); closeMenu()">
         <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
       </button>
       <app-theme-toggle size="sm"></app-theme-toggle>
-      <!-- User indicator (mobile) -->
-      <span *ngIf="isAuthenticated" class="badge bg-dark bg-opacity-50 text-light d-flex align-items-center gap-1 px-2 py-2" title="Usuario actual">
-        <i class="bi bi-person-circle"></i>
-        <span class="small">{{ username || 'Usuario' }}</span>
-      </span>
-      <button *ngIf="isAuthenticated" class="btn btn-outline-danger btn-sm w-100" (click)="logout()">
-        <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
-      </button>
+      <!-- Nota: En modo hamburguesa movemos usuario y 'Cerrar sesión' a la sección Cuenta (abajo) para evitar duplicados -->
     </div>
     
     <ul class="mobile-nav">
+      <li class="dropdown-header px-3 text-uppercase small text-muted">Navegación</li>
       <li *ngIf="isAuthenticated">
-        <a routerLink="/control" 
+        <a class="dropdown-item" routerLink="/control" 
            [class.active]="isActiveRoute('/control')"
            (click)="closeMenu()">
           <i class="bi bi-house-fill"></i>
@@ -153,7 +139,7 @@
       </li>
       
       <li *ngIf="isAdmin">
-        <a routerLink="/equipos" 
+        <a class="dropdown-item" routerLink="/equipos" 
            [class.active]="isActiveRoute('/equipos')"
            (click)="closeMenu()">
           <i class="bi bi-people-fill"></i>
@@ -162,14 +148,14 @@
       </li>
       
       <li *ngIf="isAdmin">
-        <a (click)="navigateToPlayers()" [class.active]="isActiveRoute('/jugadores')">
+        <a class="dropdown-item" (click)="navigateToPlayers()" [class.active]="isActiveRoute('/jugadores')">
           <i class="bi bi-people"></i>
           <span>Jugadores</span>
         </a>
       </li>
       
       <li>
-        <a routerLink="/tableros" 
+        <a class="dropdown-item" routerLink="/tableros" 
            [class.active]="isActiveRoute('/tableros')"
            (click)="closeMenu()">
           <i class="bi bi-display"></i>
@@ -178,7 +164,7 @@
       </li>
       
       <li>
-        <a routerLink="/resultados" 
+        <a class="dropdown-item" routerLink="/resultados" 
            [class.active]="isActiveRoute('/resultados')"
            (click)="closeMenu()">
           <i class="bi bi-bar-chart-fill"></i>
@@ -187,16 +173,34 @@
       </li>
       
       <li>
-        <a routerLink="/torneo" 
+        <a class="dropdown-item" routerLink="/torneo" 
            [class.active]="isActiveRoute('/torneo')"
            (click)="closeMenu()">
           <i class="bi bi-bar-chart-fill"></i>
           <span>Torneo</span>
         </a>
       </li>
-      
+
+      <li><hr class="dropdown-divider"></li>
+      <li class="dropdown-header px-3 text-uppercase small text-muted">Cuenta</li>
+
+      <!-- Usuario autenticado: mostrar nombre (sin botón extra de cerrar sesión aquí) -->
+      <li *ngIf="isAuthenticated">
+        <span class="dropdown-item-text text-muted d-flex align-items-center gap-2">
+          <i class="bi bi-person-circle"></i>
+          <span class="small">{{ username || 'Usuario' }}</span>
+        </span>
+      </li>
+      <li *ngIf="isAuthenticated">
+        <a class="dropdown-item text-danger" (click)="logout()">
+          <i class="bi bi-box-arrow-right"></i>
+          <span>Cerrar sesión</span>
+        </a>
+      </li>
+
+      <!-- Usuario no autenticado: opción de iniciar sesión -->
       <li *ngIf="!isAuthenticated">
-        <a routerLink="/login" 
+        <a class="dropdown-item" routerLink="/login" 
            (click)="closeMenu()">
           <i class="bi bi-box-arrow-in-right"></i>
           <span>Iniciar Sesión</span>

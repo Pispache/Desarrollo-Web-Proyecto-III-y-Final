@@ -73,6 +73,26 @@
   --mix-list-hover: 12%;
   --mix-table-head: 4%;
   --mix-table-row-hover: 3%;
+
+  /* ===== LED Display tokens (consolidados) ===== */
+  --led-bg: #1a1a1a;
+  --led-red: #ff6b6b;
+  --led-yellow: #ffd93d;
+  --led-green: #51cf66;
+  --led-blue: #4dabf7;
+  --led-text: #e0e0e0;
+  --led-border: #444;
+
+  /* Mapas auxiliares para compatibilidad con estilos existentes */
+  --dark-card: var(--color-surface);
+  --dark-border: var(--color-border);
+
+  /* Aliases de utilidades para compatibilidad con estilos existentes */
+  --warning-color: var(--color-warning);
+  --success-color: var(--color-success);
+  --danger-color: var(--color-danger);
+  --primary-color: var(--color-primary);
+  --dark-color: #2d2d2d; /* usado en algunos estilos como contraste en badges */
 }
 
 /*
@@ -101,6 +121,26 @@
   --input-placeholder: rgba(0,0,0,0.45);
   --select-option-bg: #ffffff;
   --select-option-text: var(--color-text);
+
+  /* LED Display tokens (en modo claro conservamos estética oscura del marcador) */
+  --led-bg: #1a1a1a;
+  --led-red: #ff6b6b;
+  --led-yellow: #ffd93d;
+  --led-green: #51cf66;
+  --led-blue: #4dabf7;
+  --led-text: #1f2937; /* texto en paneles claros si se usan */
+  --led-border: #d1d5db;
+
+  /* Compatibilidad */
+  --dark-card: var(--color-surface);
+  --dark-border: var(--color-border);
+
+  /* Aliases de utilidades (light) */
+  --warning-color: var(--color-warning);
+  --success-color: var(--color-success);
+  --danger-color: var(--color-danger);
+  --primary-color: var(--color-primary);
+  --dark-color: #111827; /* equivalente "oscuro" en claro */
 }
 
 /*

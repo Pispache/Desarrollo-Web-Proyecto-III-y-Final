@@ -204,11 +204,37 @@
 /* Glass Header (replaces header.bg-black) */
 .glass-header {
   position: sticky;
-  top: 0;
+  /* Siempre pegarse bajo la navbar fija global para evitar solapes a partir de ~760px */
+  top: var(--navbar-height-global);
   z-index: 20;
   backdrop-filter: saturate(120%) blur(8px);
   background: linear-gradient(180deg, rgba(10,10,18,0.85), rgba(10,10,18,0.55));
   border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.12));
+}
+
+/* Barra separadora (negra) bajo la navbar solo en escritorio
+   Reproduce la pequeña franja que ves en móvil, para que en desktop
+   también haya una separación sutil entre la navbar y el header del marcador. */
+@media (min-width: 768px) {
+  .glass-header {
+    position: sticky;
+  }
+  .glass-header::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -6px; /* aparece justo por encima del header pegado, bajo la navbar */
+    height: 6px;
+    background: #0b0f18; /* barra negra sutil */
+    pointer-events: none;
+  }
+}
+
+/* Fine-tune: en 754px–991px la navbar puede ser un poco más alta.
+   Añadimos unos px extra para evitar solape visual. */
+@media (min-width: 754px) and (max-width: 991.98px) {
+  .glass-header { top: calc(var(--navbar-height-global) + 8px); }
 }
 .glass-header .container { padding-top: .4rem; padding-bottom: .4rem; }
 .glass-title {

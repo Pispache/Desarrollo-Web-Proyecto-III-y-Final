@@ -190,12 +190,26 @@
   }
 }
 
-/* Light theme overrides */
-[data-theme="light"] .nav-actions {
-  .btn-refresh,
-  .btn-logout { color: #1f2937; }
-  .btn-logout { color: #b91c1c; }
-  .user-chip { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); color: #111; }
+/* Light theme: mantener texto claro en navbar (fondo oscuro) */
+:host-context(html[data-theme="light"]) .navbar,
+:host-context(html[data-theme="light"]) .navbar .navbar-container,
+:host-context(html[data-theme="light"]) .navbar-menu.desktop-menu .navbar-nav .nav-item .nav-link,
+:host-context(html[data-theme="light"]) .nav-actions .btn-refresh,
+:host-context(html[data-theme="light"]) .nav-actions .btn-logout,
+:host-context(html[data-theme="light"]) .nav-actions .user-chip {
+  color: #fff !important;
+}
+
+:host-context(html[data-theme="light"]) .nav-actions .user-chip {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Light theme: asegurar íconos y texto blancos en nav-links */
+:host-context(html[data-theme="light"]) .navbar-menu.desktop-menu .navbar-nav .nav-item .nav-link i,
+:host-context(html[data-theme="light"]) .navbar-menu.desktop-menu .navbar-nav .nav-item .nav-link span {
+  color: #ffffff !important;
+  opacity: 1 !important;
 }
 
 // Mobile Menu Toggle
@@ -205,6 +219,8 @@
   padding: 0.5rem;
   
   @media (max-width: 767px) {
+  /* Suavizar animaciones en móvil */
+  :root { --nav-anim-duration: 0.3s; }
     display: block;
   }
 
@@ -260,31 +276,28 @@
     }
   }
 }
-
 // Mobile Menu Overlay
 .mobile-menu-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background: rgba(0,0,0,0.4);
   opacity: 0;
   visibility: hidden;
   transition: var(--transition);
-  z-index: 999;
+  z-index: 1001; /* por debajo del menú */
 
+  &.show,
   &.active {
     opacity: 1;
     visibility: visible;
   }
 }
 
-// Mobile Menu
+// Mobile Menu (base)
 .mobile-menu {
   position: fixed;
   top: 0;
-  right: -100%;
+  left: -100%; /* drawer desde la izquierda */
   width: 280px;
   height: 100%;
   /* Dark theme (base) */
@@ -292,11 +305,11 @@
   color: var(--text-light);
   box-shadow: var(--shadow-lg);
   transition: var(--transition);
-  z-index: 1001;
+  z-index: 1002; /* por encima del overlay */
   overflow-y: auto;
 
   &.active {
-    right: 0;
+    left: 0; /* visible desde la izquierda */
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
     color: var(--text-light);
 
@@ -367,24 +380,222 @@
 
 // Responsive Adjustments
 @media (max-width: 767px) {
+  /* Asegurar layout correcto en móvil: marca a la izquierda, hamburguesa a la derecha */
+  .navbar .navbar-container {
+    justify-content: space-between !important;
+  }
+
+  .mobile-menu-toggle {
+    display: flex;
+    align-items: center;
+    margin-left: auto;
+    z-index: 1002; /* sobre el dropdown */
+    border: none;
+    background: transparent;
+    padding: .35rem .55rem;
+    border-radius: 8px;
+    transition: background .2s ease;
+    &:hover, &:focus { background: rgba(255,255,255,.12); outline: none; }
+  }
+
+  /* Ícono del hamburguesa consistente y visible */
+  .mobile-menu-toggle i.bi-list,
+  .mobile-menu-toggle i.hamburger-icon {
+    font-size: 1.6rem;
+    line-height: 1;
+    color: #ffffff !important;
+    transition: transform var(--nav-anim-duration, 0.3s) var(--nav-anim-ease, cubic-bezier(0.4, 0, 0.2, 1)),
+                color var(--nav-anim-duration, 0.3s) var(--nav-anim-ease, cubic-bezier(0.4, 0, 0.2, 1));
+  }
+
+  /* Feedback al toque: leve zoom */
+  .mobile-menu-toggle:active i.hamburger-icon { transform: scale(1.1); }
+
+  /* Tema claro/oscuro: asegurar contraste del ícono en ambos */
+  :host-context(html[data-theme="light"]) .mobile-menu-toggle i.bi-list { color: #ffffff !important; }
+  :host-context(html[data-theme="dark"]) .mobile-menu-toggle i.bi-list { color: #ffffff !important; }
+
+  /* Ocultar menú y acciones de escritorio en móvil */
+  .desktop-menu {
+    display: none !important;
+  }
+  .nav-actions {
+    display: none !important;
+  }
+
+  /* Convertir el menú móvil a dropdown debajo de la navbar */
   .mobile-menu {
+    /* Llenar el viewport bajo la navbar para evitar cortes */
+    position: fixed;
+    /* Usar la variable global real y considerar safe-area-top */
+    top: calc(var(--navbar-height-global) + env(safe-area-inset-top, 0px));
+    bottom: 0;
+    left: 0;
+    right: 0;
     width: 100%;
-    right: -100%;
+    height: 0; /* colapsado */
+    max-height: none;
+    overflow: hidden;
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 14px 28px rgba(0,0,0,.45), 0 8px 12px rgba(0,0,0,.3);
+    /* Fondo opaco para no ver el contenido que hay debajo */
+    background: linear-gradient(180deg, #0f213c 0%, #0b1428 100%) !important;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-top: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    /* Estado colapsado: iniciar levemente arriba para animación suave */
+    transform: translateY(-8px);
+    opacity: 0;
+    visibility: hidden;
+    display: block; /* asegurar que dropdown-menu no colapse por estilos base */
+    z-index: 1100; /* por encima de overlay y navbar */
+    will-change: transform, opacity, height; /* hint al compositor */
+
+    /* Sutil acento en el borde superior del dropdown */
+    &::before {
+      content: '';
+      position: absolute;
+      left: 0; right: 0; top: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-color), var(--accent-2), transparent);
+      opacity: .75;
+      pointer-events: none;
+    }
+  }
+
+  /* Usar la convención de Bootstrap: .dropdown-menu.show (o .active por compat) */
+  .mobile-menu.show,
+  .mobile-menu.active {
+    /* Desplegado: ocupa todo el alto disponible bajo la navbar, con scroll interno */
+    height: calc(100vh - var(--navbar-height-global) - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px));
+    max-height: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* Mejorar legibilidad de elementos dentro del dropdown */
+  .mobile-menu .mobile-nav {
+    padding: 0.5rem 0;
+  }
+  .mobile-menu .mobile-nav li a {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .6rem .9rem;
+    color: #e7e9f0;
+    white-space: normal; /* evitar que se corte el texto */
+  }
+  .mobile-menu .mobile-nav li a:hover {
+    background: rgba(255,255,255,0.06);
+    color: #ffffff;
+  }
+
+  /* Primera opción con botón de cerrar a la derecha */
+  .mobile-menu .mobile-nav li.nav-item-with-close {
+    position: relative;
+  }
+  .mobile-menu .mobile-nav li.nav-item-with-close .dropdown-item {
+    padding-right: 3rem; /* dejar espacio para el botón de cierre */
+  }
+  .mobile-menu .mobile-nav li.nav-item-with-close .inline-close {
+    position: absolute;
+    top: 50%;
+    right: .5rem;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    padding: .25rem;
+    border-radius: 6px;
+  }
+  .mobile-menu .mobile-nav li.nav-item-with-close .inline-close:hover { background: rgba(255,255,255,.12); }
+
+  /* Header del dropdown y botón Cerrar visibles siempre */
+  .mobile-menu .mobile-menu-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .5rem;
+    padding: .5rem .75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    position: sticky;
+    top: 0;
+    background: inherit;
+    z-index: 1;
+  }
+  .mobile-menu .mobile-menu-header .header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: .25rem;
+  }
+  .mobile-menu .mobile-menu-header .icon-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    padding: .35rem;
+    border-radius: 8px;
+    line-height: 1;
+  }
+  .mobile-menu .mobile-menu-header .icon-btn:hover { background: rgba(255,255,255,.12); }
+  .mobile-menu .close-btn {
+    background: transparent;
+    border: none;
+    color: #ffffff;
+    font-size: 1.1rem;
+    padding: .35rem;
+    border-radius: 8px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background .2s ease;
+  }
+  .mobile-menu .close-btn:hover,
+  .mobile-menu .close-btn:focus { background: rgba(255,255,255,.12); outline: none; }
+
+  /* ==========================
+     Animaciones configurables
+     ========================== */
+  .mobile-menu,
+  .mobile-menu-overlay {
+    transition-property: opacity, transform, height, max-height, visibility, box-shadow;
+    transition-duration: var(--nav-anim-duration, 0.3s);
+    transition-timing-function: var(--nav-anim-ease, cubic-bezier(0.4, 0, 0.2, 1));
+  }
+
+  /* Desactivar animaciones a voluntad (control por clase/atributo en <html>) */
+  html.nav-anim-off .mobile-menu,
+  html[data-nav-anim="off"] .mobile-menu,
+  html.nav-anim-off .mobile-menu-overlay,
+  html[data-nav-anim="off"] .mobile-menu-overlay {
+    transition: none !important;
+  }
+
+  html.nav-anim-off .mobile-menu.show,
+  html[data-nav-anim="off"] .mobile-menu.show,
+  html.nav-anim-off .mobile-menu.active,
+  html[data-nav-anim="off"] .mobile-menu.active {
+    transform: none !important;
+  }
+
+  /* Respeto a usuarios con reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-menu,
+    .mobile-menu-overlay { transition: none !important; }
+  }
+
+  /* Accesibilidad: focos visibles en opciones */
+  .mobile-menu .dropdown-item:focus-visible,
+  .mobile-menu .dropdown-item:focus {
+    outline: 2px solid var(--accent-2, #00e0ff);
+    outline-offset: 2px;
+    background: rgba(0,224,255,0.08);
   }
 }
-
-// Body padding to account for fixed navbar
-body {
-  /* Espacio global para no tapar encabezados bajo navbar fijo */
-  padding-top: calc(var(--navbar-height) + 12px);
-}
-
-@media (max-width: 767px) {
-  body {
-    /* Un poco más de espacio en móvil por sombras/botones */
-    padding-top: calc(var(--navbar-height) + 18px);
-  }
-}
+  /* Overlay solo para captar clic fuera, mantiene funcionamiento */
+  .mobile-menu-overlay.active { top: calc(var(--navbar-height-global) + env(safe-area-inset-top, 0px)); }
 
 // Animation classes
 .fade-in {

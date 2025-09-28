@@ -1,16 +1,13 @@
 import { Component, OnDestroy, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { interval, Subscription, switchMap, merge, of } from 'rxjs';
-import { map, catchError } from 'rxjs/operators';
 
 import { ApiService, GameDetail, GameStatus } from '../services/api.service';
 import { ClockService, ClockState } from '../services/clock.service';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
 import { ThemeToggleComponent } from '../widgets/theme-toggle.component';
-import { ThemeService, AppTheme } from '../services/theme.service';
-
 type GameEvent = GameDetail['events'][number];
 
 @Component({
@@ -24,8 +21,6 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   detail?: GameDetail;
   lastUpdated: Date = new Date();
   isAdmin: boolean = false; // Cambiar a true para habilitar el panel de control
-  // Tema actual de la UI
-  theme: AppTheme = 'dark';
   // URLs de logos
   homeLogoUrl: string | null = null;
   awayLogoUrl: string | null = null;
@@ -45,6 +40,15 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   // Propiedad para verificar si el juego está suspendido
   get isGameSuspended(): boolean {
     return this.detail?.game.status === 'SUSPENDED';
+  }
+
+  // Navegar de vuelta al listado de tableros
+  goBackToBoards(): void {
+    try {
+      this.router.navigate(['/tableros']);
+    } catch (e) {
+      console.warn('Fallo al navegar a /tableros:', e);
+    }
   }
 
   // Resuelve URL absoluta de un logo (acepta absoluta/data URI o relativa a la API)
@@ -107,11 +111,11 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
 
   constructor(
     private route: ActivatedRoute, 
+    private router: Router,
     private api: ApiService,
     private clock: ClockService,
     private cdr: ChangeDetectorRef,
     private zone: NgZone,
-    private themeSvc: ThemeService
   ) {}
 
   // Métodos para el panel de control
@@ -213,10 +217,6 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Aplicar tema al iniciar
-    this.theme = this.themeSvc.getTheme();
-    this.themeSvc.applyTheme(this.theme);
-
     this.gameId = Number(this.route.snapshot.paramMap.get('id'));
     
     // Suscribirse a los cambios del reloj
@@ -494,11 +494,5 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
     }
     
     return event.eventType;
-  }
-
-  // Cambia entre tema claro y oscuro
-  toggleTheme(): void {
-    this.theme = this.theme === 'light' ? 'dark' : 'light';
-    this.themeSvc.setTheme(this.theme);
   }
 }

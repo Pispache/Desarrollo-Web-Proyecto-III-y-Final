@@ -14,6 +14,30 @@
   display: block;
 }
 
+/* LIGHT THEME: mantener contraste sobre fondos oscuros (glass) */
+:host-context(html[data-theme="light"]) :host {
+  /* Forzar tokens locales claros en esta página */
+  --fg-0: #e7e9f0;
+  --muted: rgba(231,233,255,.7);
+  --stroke: rgba(255,255,255,0.12);
+}
+
+:host-context(html[data-theme="light"]) .container-fluid,
+:host-context(html[data-theme="light"]) .card,
+:host-context(html[data-theme="light"]) .card .card-header,
+:host-context(html[data-theme="light"]) .group-form,
+:host-context(html[data-theme="light"]) .muted,
+:host-context(html[data-theme="light"]) .empty {
+  color: var(--fg-0) !important;
+}
+
+:host-context(html[data-theme="light"]) .form-control,
+:host-context(html[data-theme="light"]) .form-select {
+  background: rgba(255,255,255,0.06) !important;
+  color: var(--fg-0) !important;
+  border-color: var(--stroke) !important;
+}
+
 /* Fondo degradado y grano como Home */
 .container-fluid {
   min-height: 100vh;

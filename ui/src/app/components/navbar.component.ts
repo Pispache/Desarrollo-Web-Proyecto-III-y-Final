@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthService } from '../services/auth.service';
-import { Subscription, filter } from 'rxjs';
+import { Subscription } from 'rxjs';
 import { ThemeToggleComponent } from '../widgets/theme-toggle.component';
 import { UiEventsService } from '../services/ui-events.service';
 
@@ -15,10 +15,12 @@ import { UiEventsService } from '../services/ui-events.service';
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   isMenuOpen = false;
+  /** Preferencia: si el menú móvil tipo hamburguesa está habilitado */
+  mobileMenuEnabled = true;
   isAuthenticated = false;
   isAdmin = false;
-  currentRoute = '';
   username: string | null = null;
+  currentRoute = '';
   private authSubscription?: Subscription;
   private routerSubscription?: Subscription;
 
@@ -38,38 +40,54 @@ export class NavbarComponent implements OnInit, OnDestroy {
       }
     );
 
-    // Suscribirse a cambios de ruta para cerrar el menú móvil
-    this.routerSubscription = this.router.events
-      .pipe(filter(event => event instanceof NavigationEnd))
-      .subscribe((event: NavigationEnd) => {
-        this.currentRoute = event.url;
-        this.isMenuOpen = false;
-      });
-
-    // Obtener ruta inicial
-    this.currentRoute = this.router.url;
-    // Cargar nombre de usuario inicial si ya hay sesión
-    if (this.authService.isAuthenticated()) {
-      this.username = this.authService.getUsername();
-    }
+    // Suscribirse a cambios de ruta para cerrar el menú
+    this.routerSubscription = this.router.events.subscribe(ev => {
+      if (ev instanceof NavigationEnd) {
+        this.currentRoute = ev.urlAfterRedirects;
+        this.closeMenu();
+      }
+    });
   }
 
   ngOnDestroy() {
     this.authSubscription?.unsubscribe();
     this.routerSubscription?.unsubscribe();
+    this.toggleBodyScroll(false);
+  }
+
+  // Cierra el menú móvil si se pasa a escritorio para evitar estados "pegados"
+  @HostListener('window:resize')
+  onWindowResize() {
+    try {
+      if (window.innerWidth >= 768 && this.isMenuOpen) {
+        this.closeMenu();
+      }
+    } catch {}
+  }
+
+  isActiveRoute(route: string): boolean {
+    return this.currentRoute.startsWith(route);
   }
 
   toggleMenu() {
     this.isMenuOpen = !this.isMenuOpen;
+    this.toggleBodyScroll(this.isMenuOpen);
   }
 
   closeMenu() {
     this.isMenuOpen = false;
+    this.toggleBodyScroll(false);
   }
 
-  logout() {
-    this.authService.logout();
-    this.router.navigate(['/login']);
+  // Navegación programática para rutas dinámicas (placeholder si se usa)
+  navigateToDisplay() {
+    this.router.navigate(['/tablero', '1']);
+    this.closeMenu();
+  }
+
+  // Acceso rápido a gestión de jugadores
+  navigateToPlayers() {
+    this.router.navigate(['/jugadores']);
     this.closeMenu();
   }
 
@@ -78,25 +96,40 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.uiEvents.triggerReloadAll();
   }
 
-  isActiveRoute(route: string): boolean {
-    if (route === '/') {
-      return this.currentRoute === '/' || this.currentRoute === '';
-    }
-    return this.currentRoute.startsWith(route);
-  }
-
-  // Navegación programática para rutas dinámicas
-  navigateToDisplay() {
-    // Aquí podrías obtener el ID del juego actual o mostrar un selector
-    // Por ahora navegamos a una ruta genérica
-    this.router.navigate(['/tablero', '1']);
+  logout() {
+    this.authService.logout();
+    this.router.navigate(['/login']);
     this.closeMenu();
   }
 
-  // Acceso rápido a gestión de jugadores
-  navigateToPlayers() {
-    // Siempre dirigir al selector de equipo de jugadores
-    this.router.navigate(['/jugadores']);
-    this.closeMenu();
+  // Bloquea/desbloquea el scroll del body cuando el menú móvil está abierto
+  private toggleBodyScroll(lock: boolean) {
+    try {
+      document.body.classList.toggle('nav-open', !!lock);
+    } catch {}
+  }
+
+  // ================= Preferencia de hamburguesa ON/OFF =================
+  toggleMobileMenuMode() {
+    this.mobileMenuEnabled = !this.mobileMenuEnabled;
+    try { localStorage.setItem('ui.mobileMenu', this.mobileMenuEnabled ? 'on' : 'off'); } catch {}
+    this.applyMobileMenuPref();
+    // Si se desactiva, asegurarse de cerrar el menú
+    if (!this.mobileMenuEnabled) this.closeMenu();
+  }
+
+  private loadMobileMenuPref() {
+    try {
+      const v = (localStorage.getItem('ui.mobileMenu') || 'on').toLowerCase();
+      this.mobileMenuEnabled = (v !== 'off');
+    } catch { this.mobileMenuEnabled = true; }
+    this.applyMobileMenuPref();
+  }
+
+  private applyMobileMenuPref() {
+    try {
+      const root = document.documentElement;
+      root.setAttribute('data-mobile-menu', this.mobileMenuEnabled ? 'on' : 'off');
+    } catch {}
   }
 }

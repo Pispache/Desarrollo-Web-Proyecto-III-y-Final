@@ -1,15 +1,23 @@
 <!-- ==============================================
      DISPLAY PÚBLICO - VISTA PRINCIPAL DEL MARCADOR
      ============================================== -->
+     <br>
 <div class="container-fluid bg-dark text-light min-vh-100 p-0">
   <!-- Encabezado del marcador (Glass) -->
   <header class="glass-header">
     <div class="container">
       <div class="row align-items-center">
         <div class="col-12 d-flex justify-content-between align-items-center">
-          <a routerLink="/tableros" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left"></i> Volver a Tableros
-          </a>
+          <br>  
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm"
+            (click)="goBackToBoards()"
+            aria-label="Volver a Tableros"
+            title="Volver a Tableros">
+            <i class="bi bi-arrow-left"></i>
+            <span class="d-none d-sm-inline ms-1">Volver a Tableros</span>
+          </button>
           <h1 class="h5 mb-0 glass-title">MARCADOR DE BALONCESTO</h1>
           <div class="mt-2">
             <app-theme-toggle size="sm"></app-theme-toggle>

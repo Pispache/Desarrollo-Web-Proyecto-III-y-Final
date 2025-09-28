@@ -27,8 +27,20 @@ const THEME_KEY = 'ui.theme';
 export class ThemeService {
   /** Devuelve el tema persistido o 'dark' por defecto */
   getTheme(): AppTheme {
-    const stored = (localStorage.getItem(THEME_KEY) || '').toLowerCase();
-    return stored === 'light' ? 'light' : 'dark';
+    try {
+      const stored = (localStorage.getItem(THEME_KEY) || '').toLowerCase();
+      if (stored === 'light' || stored === 'dark') return stored as AppTheme;
+    } catch {}
+
+    // Fallback: respetar preferencia del sistema si no hay valor almacenado
+    try {
+      if (typeof window !== 'undefined' && 'matchMedia' in window) {
+        const prefersLight = window.matchMedia('(prefers-color-scheme: light)')?.matches;
+        return prefersLight ? 'light' as AppTheme : 'dark';
+      }
+    } catch {}
+
+    return 'dark';
   }
 
   /** Persiste el tema y lo aplica al documento */

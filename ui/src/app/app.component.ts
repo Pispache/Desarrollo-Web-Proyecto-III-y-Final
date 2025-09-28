@@ -7,20 +7,27 @@ import { SoundService } from './services/sound.service';
 import { AuthService } from './services/auth.service';
 import { Subscription } from 'rxjs';
 import { UiEventsService } from './services/ui-events.service';
+import { ThemeService } from './services/theme.service';
 
 @Component({
   selector: 'app-root',
   standalone: true,
   imports: [CommonModule, RouterOutlet, NotificationDisplayComponent, NavbarComponent],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
   private armed = false;
   showNavbar = false;
   private sub?: Subscription;
   private reloadSub?: Subscription;
-  constructor(private sound: SoundService, private auth: AuthService, private ui: UiEventsService, private router: Router) {}
+  constructor(
+    private sound: SoundService,
+    private auth: AuthService,
+    private ui: UiEventsService,
+    private router: Router,
+    private themeSvc: ThemeService,
+  ) {}
 
   ngOnInit(): void {
     this.sub = this.auth.authed$.subscribe(isAuthed => {
@@ -29,6 +36,12 @@ export class AppComponent implements OnInit, OnDestroy {
     });
     // Aplicar al cargar por si ya hay sesión activa
     this.applyRoleClass();
+
+    // Aplicar el tema al iniciar la aplicación basado en preferencia guardada
+    // Usa variables CSS y atributo data-theme en <html> (ver ThemeService y _theme.scss)
+    try {
+      this.themeSvc.applyTheme(this.themeSvc.getTheme());
+    } catch {}
 
     // Escuchar petición global de "Actualizar" desde la navbar
     this.reloadSub = this.ui.reloadAll$.subscribe(() => {

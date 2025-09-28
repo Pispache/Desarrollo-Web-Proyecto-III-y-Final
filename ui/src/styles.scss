@@ -46,8 +46,9 @@ $pagination-hover-border-color: $dark-border;
 /* Importar design tokens (variables CSS globales) */
 @import './styles/_theme';
 
-/* Importar el tema oscuro personalizado */
-@import './styles/dark-theme';
+/* Nota: eliminamos importación de './styles/dark-theme' porque usábamos otro
+   mecanismo basado en data-theme="light" y variables CSS en _theme.scss.
+   Esto evita conflictos con data-bs-theme y reglas duplicadas. */
 
 /* Fuente LED Digital */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
@@ -153,20 +154,7 @@ body.role-user {
   border-color: var(--input-border);
 }
 
-:root {
-  --led-bg: #1a1a1a;
-  --led-red: #ff6b6b;
-  --led-yellow: #ffd93d;
-  --led-green: #51cf66;
-  --led-blue: #4dabf7;
-  --led-text: #e0e0e0;
-  --led-border: #444;
-  --warning-color: #ffd43b;
-  --success-color: #40c057;
-  --danger-color: #ff6b6b;
-  --primary-color: #4dabf7;
-  --dark-color: #2d2d2d;
-}
+/* LED design tokens ahora viven en _theme.scss bajo :root y :root[data-theme="light"] */
 
 /* Estilos generales */
 body {
@@ -180,6 +168,14 @@ body {
   flex-direction: column;
 }
 
+/* Bloquea el scroll de la página cuando el menú móvil está abierto */
+body.nav-open {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+html, body { background: var(--color-bg); }
+
 /* === Offset global para navbar fijo === */
 :root { --navbar-height-global: 70px; }
 
@@ -189,7 +185,7 @@ body {
 }
 
 @media (max-width: 767px) {
-  body { padding-top: calc(var(--navbar-height-global) + 28px); }
+  body { padding-top: calc(var(--navbar-height-global) + 28px + env(safe-area-inset-top)); }
 }
 
 /* Evitar solape en anclas/scroll posicionando encabezados bajo navbar fijo */
@@ -374,6 +370,71 @@ html[data-theme="light"] .results-page h4.page-title { color:#ffffff !important;
 /* Cover nested spans/icons inside page-title for Results */
 html[data-theme="light"] .results-page .page-title, 
 html[data-theme="light"] .results-page .page-title * { color:#ffffff !important; }
+
+/* =====================================================
+   LIGHT MODE: Ensure glass/transparent panels keep light text
+   Context: In light theme, global --color-text is dark. Our glass
+   panels have dark backgrounds; force local light tokens so content
+   remains readable.
+   Targets: .glass-header, .glass-footer, .led-container, .admin-panel
+   ===================================================== */
+:root[data-theme="light"] .glass-header,
+:root[data-theme="light"] .glass-footer,
+:root[data-theme="light"] .led-container,
+:root[data-theme="light"] .admin-panel {
+  /* Local token overrides scoped to these panels */
+  --color-text: #e7e9f0;
+  --color-border: rgba(255,255,255,0.12);
+  color: var(--color-text) !important;
+}
+
+/* =====================================================
+   LIGHT MODE: Results page readability
+   - El contenedor de resultados usa paneles transparentes con fondo oscuro.
+   - Forzamos tokens locales y colores adecuados para enlaces y texto sutil.
+   ===================================================== */
+:root[data-theme="light"] .results-page {
+  --color-text: #e7e9f0;
+  --color-border: rgba(255,255,255,0.12);
+  color: var(--color-text);
+}
+
+:root[data-theme="light"] .results-page .border.rounded {
+  background: color-mix(in oklab, #0a0a12 35%, transparent);
+  border-color: var(--color-border) !important;
+  color: var(--color-text) !important;
+}
+
+:root[data-theme="light"] .results-page .text-gray-500 { color: rgba(231,233,255,.7) !important; }
+:root[data-theme="light"] .results-page .text-blue-600 { color: #60a5fa !important; }
+
+/* Inputs/selects de filtros dentro de Results (fondo blanco, texto oscuro en AMBOS temas) */
+.results-page input[type="text"],
+.results-page input[type="search"],
+.results-page select,
+.results-page .border.rounded input,
+.results-page .border.rounded select {
+  background: #ffffff !important;
+  color: #111827 !important;
+  border-color: rgba(0,0,0,0.12) !important;
+}
+
+/* Opciones del select legibles en ambos temas */
+.results-page select option,
+.results-page select optgroup {
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+/* Etiquetas y subtítulos dentro de Results */
+:root[data-theme="light"] .results-page label,
+:root[data-theme="light"] .results-page .font-medium,
+:root[data-theme="light"] .results-page .font-semibold,
+:root[data-theme="light"] .results-page .text-lg,
+:root[data-theme="light"] .results-page .text-xs,
+:root[data-theme="light"] .results-page .text-sm {
+  color: var(--color-text) !important;
+}
 
 /* Ajustes para la lista de partidos */
 .list-group-item {
