@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Servicio de notificaciones visuales (toasts/banners) para la UI.
+ * remarks:
+ *   - Expone helpers `showSuccess`, `showInfo`, `showWarning`, `showError`.
+ *   - Centraliza textos y duraciones para mensajes consistentes.
+ *   - Ofrece detonadores visuales (p.ej., efectos de score/foul) si aplica.
+ */
 import { Inject, Injectable, PLATFORM_ID } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { BehaviorSubject, Observable, Subject } from 'rxjs';

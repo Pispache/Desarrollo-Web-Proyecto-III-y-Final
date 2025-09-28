@@ -1,9 +1,34 @@
+/* ===============================================================
+   LOGIN PAGE BACKGROUND — ESTILO DE FONDO PARA LA VISTA DE INICIO
+   ---------------------------------------------------------------
+   Propósito:
+   - Generar un fondo visual atractivo para la pantalla de login.
+   - Mantener la identidad de la app (colores morado y negro, tema baloncesto).
+   - Cubrir todo el viewport, permitiendo scroll si el contenido lo requiere.
+
+   Composición visual:
+   - Degradados radiales y lineales que mezclan tonos morados y oscuros.
+   - Patrón sutil de balones de baloncesto en la capa ::before (SVG repetido).
+   - Opacidad baja para no distraer y mantener legibilidad sobre el fondo.
+
+   Accesibilidad / UX:
+   - Contraste alto entre el fondo y los elementos de primer plano.
+   - Patrón decorativo no interactivo (pointer-events: none).
+   - Permite scroll si el contenido de login sobrepasa la altura visible.
+
+   Mantenimiento:
+   - Si se cambia el tema de la app, ajustar únicamente colores y opacidad.
+   - Mantener la posición fixed e inset:0 para cubrir toda la pantalla.
+
+================================================================ */
+
+
 :host {
   display: block;
-  position: fixed;      /* cubrir todo el viewport */
+  position: fixed;    
   inset: 0;
   overflow: auto;       /* permitir scroll si es necesario */
-  /* Fondo morado/negro con degradados superpuestos */
+  /* Fondo morado/negro*/
   background:
     radial-gradient(1200px 800px at -10% -20%, rgba(102, 51, 153, 0.35) 0%, rgba(102, 51, 153, 0.15) 40%, transparent 70%),
     radial-gradient(900px 700px at 110% 110%, rgba(30, 27, 75, 0.60) 0%, rgba(30, 27, 75, 0.25) 50%, transparent 75%),

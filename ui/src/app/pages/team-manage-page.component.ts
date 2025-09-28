@@ -1,3 +1,11 @@
+/// <summary>
+/// Página para administrar los jugadores de un equipo.
+/// </summary>
+/// <remarks>
+/// - Permite subir/actualizar el logo del equipo.
+/// - Agrega, edita y elimina jugadores con validaciones básicas.
+/// - Incluye búsqueda rápida y tabla con acciones por fila.
+/// </remarks>
 import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

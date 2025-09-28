@@ -2,14 +2,52 @@ using Dapper;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 
+/// <summary>
+/// Datos para establecer la duración del reloj de juego, el cuarto
+/// </summary>
+/// <remarks>
+/// Permite definir la cantidad de minutos que durará el período actual.
+/// </remarks>
 public class ClockDurationDto
 {
+    /// <summary>Cantidad de minutos para el cuarto o período.</summary>
     public int Minutes { get; set; }
 }
 
+/// <summary>
+/// Endpoints relacionados con el control del reloj de los juegos.
+/// </summary>
+/// <remarks>
+/// Este módulo gestiona el tiempo de los partidos:  
+/// - Consulta del estado actual del reloj (tiempo restante y ejecución).  
+/// - Configuración de la duración del cuarto.  
+/// - Control para iniciar, pausar y reiniciar el cronómetro.  
+///
+/// Se basa en SQL Server y Dapper para actualizar el estado del reloj en la base de datos.  
+/// Todos los endpoints están protegidos con la política de autorización <c>ADMIN_OR_USER</c>.
+/// </remarks>
 public static class ClockEndpoints
 {
-    const string T = "MarcadorDB.dbo.";
+    /// <summary>
+    /// Prefijo de esquema y base de datos usado en las consultas SQL.
+    /// </summary>
+    private const string T = "MarcadorDB.dbo.";
+
+    /// <summary>
+    /// Registra los endpoints para controlar el reloj de juego.
+    /// </summary>
+    /// <param name="app">Aplicación web donde se mapean las rutas.</param>
+    /// <param name="cs">Función que devuelve la cadena de conexión a la base de datos.</param>
+    /// <remarks>
+    /// Rutas principales:  
+    /// - <c>GET /api/games/{id}/clock</c>: consulta el estado del reloj.  
+    /// - <c>POST /api/games/{id}/clock/duration</c>: define la duración del cuarto.  
+    /// - <c>POST /api/games/{id}/clock/start</c>: inicia o reanuda el cronómetro.  
+    /// - <c>POST /api/games/{id}/clock/pause</c>: pausa el cronómetro.  
+    /// - <c>POST /api/games/{id}/clock/reset</c>: reinicia el cronómetro (con duración opcional).  
+    ///
+    /// Las respuestas devuelven datos como el tiempo restante, estado de ejecución y actualizaciones del reloj.
+    /// </remarks>
     public static void MapClockEndpoints(this WebApplication app, Func<string> cs)
     {
         // helpers mínimos
@@ -65,7 +103,7 @@ public static class ClockEndpoints
             return ok > 0 ? Results.Ok() : Results.NotFound();
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
-        // POST start (idempotente)
+        // POST start
         app.MapPost("/api/games/{id:int}/clock/start", async (int id) =>
         {
             using var c = new SqlConnection(cs());

@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Servicio de sonidos para la UI (clicks, anotaciones, faltas, fin de juego).
+ * remarks:
+ *   - Pre-carga y reproduce efectos; incluye `unlock()` para móviles.
+ *   - Ofrece métodos semánticos (`play('score3')`, `play('foul')`, etc.).
+ *   - Se integra con componentes para feedback instantáneo.
+ */
 import { Injectable } from '@angular/core';
 
 /**

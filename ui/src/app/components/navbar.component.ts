@@ -1,3 +1,13 @@
+﻿/// <summary>
+/// Barra de navegación principal de la aplicación.
+/// </summary>
+/// <remarks>
+/// - Muestra enlaces para navegar a las secciones clave según el rol del usuario.
+/// - Adapta su contenido si el usuario está autenticado o es administrador.
+/// - Permite mostrar/ocultar un menú móvil tipo hamburguesa para pantallas pequeñas.
+/// - Se actualiza dinámicamente al cambiar de ruta y al recibir eventos globales de la interfaz.
+/// </remarks>
+
 import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';

@@ -1,3 +1,11 @@
+/// <summary>
+/// Página para organizar torneos por grupos.
+/// </summary>
+/// <remarks>
+/// - Crea y elimina grupos.
+/// - Agrega o quita equipos (máximo 4 por grupo).
+/// - Calcula una tabla simple (PJ, PTS) desde partidos finalizados.
+/// </remarks>
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

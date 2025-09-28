@@ -4,13 +4,56 @@ using Microsoft.Data.SqlClient;
 using System.Linq;
 using System;
 
+/// <summary>
+/// Endpoints para gestionar torneos por grupos.
+/// </summary>
+/// <remarks>
+/// Centraliza operaciones para listar, crear y eliminar grupos, así como agregar o quitar
+/// equipos dentro de cada grupo.  
+///
+/// Comportamiento general:
+/// - Asegura el esquema mínimo en base de datos al iniciar (tablas <c>TournamentGroups</c> y <c>TournamentGroupTeams</c>).  
+/// - Usa el nombre de la base actual (obtenido desde la conexión) para armar el esquema <c>dbo</c>.  
+/// - Limita a 4 el número de equipos por grupo.  
+/// - Respuestas coherentes: 201 al crear, 204 al borrar/actualizar, 404 si no existe, 409 en duplicados.
+/// </remarks>
 public static class TournamentEndpoints
 {
     // Nota: no usamos el prefijo fijo aquí; tomamos el nombre de base desde la conexión.
 
+    /// <summary>
+    /// Fila de grupo de torneo.
+    /// </summary>
+    /// <remarks>
+    /// Representa un grupo con su identificador, nombre y fecha de creación.
+    /// </remarks>
     public record GroupRow(int GroupId, string Name, DateTime CreatedAt);
+
+    /// <summary>
+    /// Fila que relaciona un grupo con un equipo.
+    /// </summary>
+    /// <remarks>
+    /// Incluye el identificador del grupo, el del equipo y el nombre del equipo.
+    /// </remarks>
     public record GroupTeamRow(int GroupId, int TeamId, string Name);
 
+    /// <summary>
+    /// Registra los endpoints de torneos (grupos y membresías).
+    /// </summary>
+    /// <param name="app">Aplicación web donde se mapean las rutas.</param>
+    /// <param name="cs">Función que devuelve la cadena de conexión.</param>
+    /// <remarks>
+    /// Rutas principales:  
+    /// - <c>GET  /api/tournaments/default/groups</c> — Lista grupos con sus equipos.  
+    /// - <c>POST /api/tournaments/default/groups</c> — Crea un grupo.  
+    /// - <c>DELETE /api/tournaments/default/groups/{groupId}</c> — Elimina un grupo y sus equipos.  
+    /// - <c>POST /api/tournaments/default/groups/{groupId}/teams</c> — Agrega un equipo al grupo (máx. 4).  
+    /// - <c>DELETE /api/tournaments/default/groups/{groupId}/teams/{teamId}</c> — Quita un equipo del grupo.  
+    ///
+    /// Seguridad:
+    /// - Lectura: <c>ADMIN_OR_USER</c>.  
+    /// - Cambios (crear/eliminar/agregar/quitar): <c>ADMIN</c>.
+    /// </remarks>
     public static void MapTournamentEndpoints(this WebApplication app, Func<string> cs)
     {
         var g = app.MapGroup("/api");
@@ -145,6 +188,15 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
         }).RequireAuthorization("ADMIN").WithOpenApi();
 
         static SqlConnection Open(string cs) { var c = new SqlConnection(cs); c.Open(); return c; }
+
+        /// <summary>
+        /// Garantiza que existan las tablas necesarias para grupos y sus equipos.
+        /// </summary>
+        /// <param name="c">Conexión SQL Server abierta.</param>
+        /// <remarks>
+        /// Crea las tablas <c>TournamentGroups</c> y <c>TournamentGroupTeams</c> si no existen.  
+        /// Se ejecuta de forma segura y puede llamarse varias veces sin efectos secundarios.
+        /// </remarks>
         static async Task EnsureSchemaAsync(SqlConnection c)
         {
             var TT = $"{c.Database}.dbo.";
@@ -170,5 +222,19 @@ END;";
     }
 }
 
+/// <summary>
+/// Datos para crear un grupo de torneo.
+/// </summary>
+/// <remarks>
+/// Solo requiere un nombre. Se valida que no esté vacío ni repetido.
+/// </remarks>
 public record GroupCreateDto(string Name);
+
+/// <summary>
+/// Datos para agregar un equipo a un grupo.
+/// </summary>
+/// <remarks>
+/// Recibe el identificador del equipo que se incorporará al grupo.  
+/// Se limita a 4 equipos por grupo y no se permiten duplicados.
+/// </remarks>
 public record GroupAddTeamDto(int TeamId);

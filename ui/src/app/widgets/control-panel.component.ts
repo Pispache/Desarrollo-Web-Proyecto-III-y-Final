@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Widget de Panel de Control del marcador (anotaciones, faltas y acciones de juego).
+ * remarks:
+ *   - Permite sumar/restar puntos, registrar faltas por jugador y ajustar puntuaciones.
+ *   - Expone acciones administrativas: iniciar/suspender/retomar/finalizar, tiempo extra y reinicio global.
+ *   - Se integra con servicios (API, Clock, Sound, Notification) y emite eventos `changed` y `resetRequested`.
+ */
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

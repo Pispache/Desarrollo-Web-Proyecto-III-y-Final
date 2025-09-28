@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Servicio de reloj compartido para partidas (estado, duración y expiración).
+ * remarks:
+ *   - Expone un stream por juego con `running`, `remainingMs` y `quarterMs`.
+ *   - Ofrece métodos para iniciar, pausar, resetear y ajustar duración.
+ *   - Emite `expired` cuando se agota el tiempo y coordina con componentes.
+ */
 import { Injectable, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import {

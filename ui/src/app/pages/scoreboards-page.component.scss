@@ -1,3 +1,11 @@
+/// <summary>
+/// Estilos para la vista de tableros con filtros y paginación.
+/// </summary>
+/// <remarks>
+/// - Fondo degradado y textura sutil, coherente con Home.
+/// - Cards con efecto glass y encabezado subrayado.
+/// - Inputs y tablas ajustadas a tema oscuro/claro.
+/// </remarks>
 .scoreboards-page {
   /* Variables similares a Home */
   --fg-0: var(--color-text, #e7e9ff);

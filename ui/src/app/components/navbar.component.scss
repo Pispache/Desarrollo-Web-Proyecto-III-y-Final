@@ -1,4 +1,15 @@
+/// <summary>
+/// Estilos principales para la barra de navegación (Navbar).
+/// </summary>
+/// <remarks>
+/// - Define variables globales de colores, sombras y tamaños para mantener consistencia visual.
+/// - Aplica un diseño fijo en la parte superior con degradado oscuro y efecto de transparencia (backdrop-filter).
+/// - Mejora la legibilidad usando colores de texto claros sobre fondo oscuro.
+/// - Facilita personalizar colores y tamaños a través de variables CSS.
+/// </remarks>
+
 // Variables
+
 :root {
   --navbar-height: 70px;
   --primary-color: #2563eb;

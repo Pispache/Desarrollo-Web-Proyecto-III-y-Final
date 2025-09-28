@@ -1,3 +1,11 @@
+/// <summary>
+/// Página de resultados y detalle de partidos finalizados o en curso.
+/// </summary>
+/// <remarks>
+/// - Permite filtrar por estado y buscar por nombre de equipos.
+/// - Muestra detalle de un juego: plantillas, eventos y resumen de faltas.
+/// - Calcula totales por cuarto, por tipo de falta y por jugador.
+/// </remarks>
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

@@ -1,20 +1,46 @@
-/*
-  HOME PAGE THEME (morado/azul)
-  Tokens usados globalmente: --color-bg, --color-surface, --color-text, --color-border,
-                             --color-primary, --color-success, --color-warning, --color-danger
-  Fuente de tokens: ui/src/styles/_theme.scss
-  Nota: esta hoja aplica tokens a tarjetas/listas/tablas para soportar claro/oscuro.
-*/
+
+/* ===========================================================
+   HOME PAGE THEME — ESTILOS PRINCIPALES (MORADO / AZUL)
+   -----------------------------------------------------------
+   Propósito:
+   - Define la paleta de colores y efectos visuales del home.
+   - Aplica un esquema compatible con modo claro/oscuro usando design tokens globales.
+   - Mantiene consistencia en formularios, tarjetas, listas y tablas.
+
+   Tokens y variables:
+   - --bg-0, --bg-1, --bg-2: fondos base con tonos oscuros.
+   - --fg-0, --muted: colores de texto principales y secundarios.
+   - --accent, --accent-2: acentos principales (morado y cian).
+   - --danger, --warn, --ok: colores de estado (error, advertencia, éxito).
+   - --glass: fondo translúcido para efecto glass.
+   - --stroke: color de borde base.
+   - --shadow: sombra para tarjetas y contenedores.
+   - --radius: radio de bordes redondeados.
+   - --color-text-on-header: color de texto sobre encabezados oscuros.
+
+   Contexto:
+   - Los valores se integran con el archivo `ui/src/styles/_theme.scss`.
+   - Se puede sobrescribir fácilmente si cambia el diseño general.
+
+   Accesibilidad:
+   - Contrastes definidos para modo oscuro.
+   - Mantiene legibilidad en encabezados y elementos clave.
+
+   Mantenimiento:
+   - Editar solo tokens si se requiere cambio de paleta global.
+   - No alterar selectores estructurales para evitar romper componentes.
+=========================================================== */
+
+
 :host {
-  /* Paleta */
+  /* La paleta */
   --bg-0: #0b0a1a;
   --bg-1: #17142e;
   --bg-2: #24194b;
-  /* Mapear a design tokens globales, con fallback al esquema actual */
   --fg-0: var(--color-text, #e7e9ff);
   --muted: var(--color-muted, #9aa0bd);
   --accent: #9b5cff;    /* morado neón */
-  --accent-2: #00e0ff;  /* cian neón */
+  --accent-2: #00e0ff;  /* cian  */
   --danger: #ff4d6d;
   --warn: #ffd166;
   --ok: #4ade80;
@@ -25,9 +51,7 @@
   display: block;
 }
 
-/* Overrides locales de formularios eliminados: se aplican globalmente en styles.scss */
 
-/* En tema oscuro, por defecto los encabezados en HOME usan texto blanco */
 :host-context(:root:not([data-theme="light"])) {
   --color-text-on-header: #ffffff;
 }
@@ -70,7 +94,6 @@
   --color-text-on-header: #ffffff;
 }
 
-/* Cards con glassmorphism */
 .card {
   /* Superficie acorde a tokens; se mantiene el efecto glass si existe */
   background: var(--color-surface, var(--glass));
@@ -138,7 +161,6 @@
     --bs-table-color: var(--color-text, var(--fg-0));
     th { border-color: var(--color-border, var(--stroke)); color: var(--muted); }
   }
-  /* Fallback por si algún estilo de Bootstrap pisa el thead directamente */
   thead > tr > th {
     background-color: var(--bs-table-bg) !important;
     color: var(--bs-table-color) !important;
