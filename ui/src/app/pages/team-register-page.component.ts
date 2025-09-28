@@ -1,3 +1,11 @@
+/// <summary>
+/// Página para registrar equipos y subir su logo.
+/// </summary>
+/// <remarks>
+/// - Valida el nombre (solo letras y espacios).
+/// - Acepta imagen PNG/JPG/WEBP hasta 2MB para el logo.
+/// - Envía los datos como formulario y muestra avisos de éxito o error.
+/// </remarks>
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

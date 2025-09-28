@@ -6,12 +6,28 @@ using System.Collections.Generic;
 using System.Linq;
 using System.IO;
 
+/// <summary>
+/// Conjunto de endpoints relacionados con juegos, equipos y jugadores del marcador de baloncesto.
+/// </summary>
+/// <remarks>
+/// Este módulo centraliza la API de back
+/// - Maneja la creación, inicio, avance de cuartos, suspensión, finalización y reinicio de juegos.
+/// - Administra equipos y jugadores, el famoso (CRUD).
+/// - Gestiona puntuaciones, ajustes, deshacer eventos y registro de faltas.
+/// - Ofrece endpoints públicos para logos de equipos.
+///
+/// Se basa en SQL Server y Dapper para la persistencia.
+/// Todos los endpoints se protegen con políticas de autorización como ADMIN
+/// </remarks>
+
 public class AdjustScoreDto
 {
     public int HomeDelta { get; set; }
     public int AwayDelta { get; set; }
 }
-
+/// <summary>
+/// Comando de anotación o ajuste por equipo y jugador.
+/// </summary>
 public class ScoreDto
 {
     public string Team { get; set; } = "";
@@ -19,7 +35,9 @@ public class ScoreDto
     public int? PlayerId { get; set; }
     public int? PlayerNumber { get; set; }
 }
-
+/// <summary>
+/// Datos de falta cometida por el jugadoraso
+/// </summary>
 public class FoulDto
 {
     public string? Team { get; set; }
@@ -29,7 +47,9 @@ public class FoulDto
     public string? Type { get; set; }
     public string? foul_type { get; set; }
 }
-
+/// <summary>
+/// Resumen de faltas por equipo y cuarto.
+/// </summary>
 public class FoulSummaryTeamRow 
 { 
     public int Quarter { get; set; } 
@@ -37,7 +57,9 @@ public class FoulSummaryTeamRow
     public int Fouls { get; set; }
     public string? FoulType { get; set; } 
 }
-
+/// <summary>
+/// Resumen de faltas por jugador y cuarto.
+/// </summary>
 public class FoulSummaryPlayerRow 
 { 
     public int Quarter { get; set; } 
@@ -45,6 +67,10 @@ public class FoulSummaryPlayerRow
     public int PlayerId { get; set; } 
     public int Fouls { get; set; } 
 }
+
+/// <summary>
+/// Endpoints de juego.
+/// </summary>
 
 public static class GameEndpoints
 {
@@ -210,7 +236,9 @@ END;";
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
 
-        // ===== Helpers mínimos =====
+        /// <summary>
+        /// ===== Helpers mínimos =====
+        /// </summary>
         static SqlConnection Open(string cs) { var c = new SqlConnection(cs); c.Open(); return c; }
         static Task<T> One<T>(SqlConnection c, string sql, object? p = null, SqlTransaction? tx = null)
             => c.QuerySingleOrDefaultAsync<T>(sql, p, tx);
@@ -225,7 +253,9 @@ END;";
             return (!string.IsNullOrEmpty(candidate) && allowed.Contains(candidate)) ? candidate : "PERSONAL";
         }
 
-        // ===== Teams =====
+        /// <summary>
+        /// Listar equipos.
+        /// </summary>
         g.MapGet("/teams", async (
             [FromQuery] string? q,
             [FromQuery] string? city,
@@ -323,8 +353,10 @@ END;";
             return Results.Ok(updated);
         }).RequireAuthorization("ADMIN").WithOpenApi();
 
-        // Crear equipo con logo en un solo paso (multipart/form-data)
-        // Campos esperados: name, city (opcional), file (opcional)
+        
+        /// <summary>
+        /// Crear equipo con logo en un solo paso (multipart/form-data).
+        /// </summary>
         g.MapPost("/teams/form", async (HttpRequest request) =>
         {
             if (!request.HasFormContentType)
@@ -399,7 +431,9 @@ END;";
             return Results.NoContent();
         }).RequireAuthorization("ADMIN").WithOpenApi();
 
-        // Upload team logo (guarda en BD)
+        /// <summary>
+        /// Upload team logo (guarda en BD).
+        /// </summary>
         g.MapPost("/teams/{id:int}/logo", async (int id, HttpRequest request) =>
         {
             if (!request.HasFormContentType)
@@ -421,7 +455,9 @@ END;";
             var exists = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {T}Teams WHERE TeamId=@id;", new { id });
             if (exists == 0) return Results.NotFound(new { error = "Equipo no existe" });
 
-            // Guardar bytes en BD (tabla Logos) y actualizar URL pública a endpoint API
+            /// <summary>
+            /// Guardar bytes en BD (tabla Logos) y actualizar URL pública a endpoint API.
+            /// </summary>
             byte[] data;
             using (var ms = new MemoryStream())
             {
@@ -429,7 +465,9 @@ END;";
                 data = ms.ToArray();
             }
 
-            // Eliminar logos previos del equipo antes de insertar el nuevo
+            /// <summary>
+            /// Eliminar logos previos del equipo antes de insertar el nuevo.
+            /// </summary>
             await c.ExecuteAsync($"DELETE FROM {T}Logos WHERE TeamId=@teamId;", new { teamId = id });
 
             var logoId = await c.ExecuteScalarAsync<int>($@"
@@ -445,7 +483,9 @@ END;";
             return Results.Ok(team);
         }).RequireAuthorization("ADMIN").DisableAntiforgery().WithOpenApi();
 
-        // Serve logo bytes from DB by id (público)
+        /// <summary>
+        /// Serve logo bytes from DB by id (público).
+        /// </summary>
         g.MapGet("/logos/{logoId:int}", async (int logoId) =>
         {
             using var c = Open(cs());
@@ -454,7 +494,9 @@ END;";
             return Results.File(row.Data, row.ContentType);
         }).AllowAnonymous().WithOpenApi();
 
-        // ===== Games =====
+        /// <summary>
+        /// Listar partidos.
+        /// </summary>
         g.MapGet("/games", async () =>
         {
             using var c = Open(cs());
@@ -692,7 +734,10 @@ END;";
                 return Results.BadRequest(new { error = "No se pudo reanudar. El partido debe estar suspendido." }); 
             }
             
-            // Update clock - set Running=1 and ensure StartedAt is set if NULL
+            
+            /// <summary>
+            /// Reanudar un partido suspendido.
+            /// </summary>
             await Exec(c, 
                 $"UPDATE {T}GameClocks SET " +
                 "Running=1, " +
@@ -706,6 +751,9 @@ END;";
         }).RequireAuthorization("ADMIN").WithOpenApi();
         
         // ===== Score / Foul / Undo =====
+        /// <summary>
+        /// Anotar puntos o ajustar marcador.
+        /// </summary>
         g.MapPost("/games/{id:int}/score", async (int id, [FromBody] ScoreDto dto) =>
         {
             if (dto is null || dto.Points is not (1 or 2 or 3)) 
@@ -746,6 +794,9 @@ END;";
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // Endpoint para restar un punto
+        /// <summary>
+        /// Restar un punto.
+        /// </summary>
         g.MapPost("/games/{id:int}/subtract-point", async (int id, [FromBody] ScoreDto dto) =>
         {
             if (dto is null || string.IsNullOrEmpty(dto.Team))
@@ -805,12 +856,18 @@ END;";
 
             using var c = Open(cs());
 
-            // Validar estado del juego
+            
+            /// <summary>
+            /// Validar estado del juego.
+            /// </summary>
             var st = await One<string>(c, $"SELECT Status FROM {T}Games WHERE GameId=@id;", new { id });
             if (!string.Equals(st, "IN_PROGRESS", StringComparison.OrdinalIgnoreCase))
                 return Results.BadRequest(new { error = "Juego no IN_PROGRESS." });
 
             // (Opcional) rechazar faltas para jugador ya descalificado
+            /// <summary>
+            /// Validar estado del juego.
+            /// </summary>
             if (b?.PlayerId is int pidCheck)
             {
                 var dqExists = await One<int>(c,
@@ -824,6 +881,9 @@ END;";
             var foulType = NormalizeFoulType(rawFromQuery ?? rawFromBody);
 
             // Insertar la falta con su tipo
+            /// <summary>
+            /// Insertar la falta con su tipo.
+            /// </summary>
             var inserted = await c.ExecuteAsync($@"
                 INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType, PlayerNumber, PlayerId, FoulType, CreatedAt)
                 SELECT @id, Quarter, @team, 'FOUL', @pnum, @pid, @ftype, SYSUTCDATETIME()
@@ -841,12 +901,18 @@ END;";
                 return Results.BadRequest(new { error = "No se pudo registrar." });
 
             // Si no hay jugador asociado, terminamos (la falta suma a equipo igualmente)
+            /// <summary>
+            /// Validar estado del juego.
+            /// </summary>
             if (b?.PlayerId is null)
                 return Results.NoContent();
 
             var pid = b.PlayerId.Value;
 
             // Recuento por tipo para el jugador (PERSONAL/T/U/D)
+            /// <summary>
+            /// Recuento por tipo para el jugador (PERSONAL/T/U/D).
+            /// </summary>
             var byType = await c.QueryAsync<(string FoulType, int Cnt)>($@"
                 SELECT COALESCE(FoulType,'PERSONAL') AS FoulType, COUNT(*) AS Cnt
                 FROM {T}GameEvents
@@ -867,10 +933,16 @@ END;";
             }
 
             // Lógica FIBA de descalificación
+            /// <summary>
+            /// Lógica FIBA de descalificación.
+            /// </summary>
             bool isDQ = false;
             string? reason = null;
 
             // D directo
+            /// <summary>
+            /// D directo.
+            /// </summary>
             if (disq >= 1) { isDQ = true; reason = "DISQUALIFYING (D)"; }
             // 2T, 2U, T+U
             else if (tech >= 2)           { isDQ = true; reason = "2 TECHNICAL (T+T)"; }
@@ -878,10 +950,16 @@ END;";
             else if (tech >= 1 && uns>=1) { isDQ = true; reason = "T + U"; }
 
             // Foul out por acumulación (cuentan P + T + U + D)
+            /// <summary>
+            /// Foul out por acumulación (cuentan P + T + U + D).
+            /// </summary>
             int totalPersonalsLike = personals + tech + uns + disq;
             bool isFoulOut = totalPersonalsLike >= 5;
 
             // Obtener quarter actual para el evento complementario
+            /// <summary>
+            /// Obtener quarter actual para el evento complementario.
+            /// </summary>
             var quarter = await One<int>(c, $"SELECT Quarter FROM {T}Games WHERE GameId=@id;", new { id });
 
             if (isDQ)
@@ -917,6 +995,10 @@ END;";
             return Results.NoContent();
         }).WithOpenApi();
 
+        // Endpoint para deshacer un evento
+        /// <summary>
+        /// Deshacer un evento.
+        /// </summary>
         g.MapPost("/games/{id:int}/undo", async (int id) =>
         {
             using var c = Open(cs());
@@ -933,6 +1015,9 @@ END;";
             if (ev is null) { tx.Rollback(); return Results.BadRequest(new { error = "No hay evento para deshacer." }); }
 
             // Handle different event types
+            /// <summary>
+            /// Handle different event types.
+            /// </summary>
             switch (((string)ev.EventType).ToUpperInvariant())
             {
                 case string et when et.StartsWith("POINT_"):
@@ -953,6 +1038,9 @@ END;";
 
                 case "ADJUST":
                     // Para eventos ADJUST, aplicamos los deltas negativos
+                    /// <summary>
+                    /// Para eventos ADJUST, aplicamos los deltas negativos.
+                    /// </summary>
                     var adjustQuery = @$"
                         UPDATE {T}Games 
                         SET HomeScore = CASE WHEN HomeScore + @homeDelta >= 0 THEN HomeScore + @homeDelta ELSE 0 END,
@@ -973,12 +1061,15 @@ END;";
                     }
                     break;
 
-                // FOUL events don't need score adjustment, just remove the event
+                // FOUL events don't need score adjustment, just remove the event   
                 case "FOUL":
                     break;
             }
 
             // Registrar la acción UNDO y eliminar el evento original
+            /// <summary>
+            /// Registrar la acción UNDO y eliminar el evento original.
+            /// </summary>
             var undoQuery = @$"
                 INSERT INTO {T}GameEvents(GameId, Quarter, Team, EventType) 
                 VALUES(@id, @q, @team, 'UNDO');
@@ -995,12 +1086,18 @@ END;";
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // ===== Overtime =====
+        /// <summary>
+        /// Iniciar tiempo extra.
+        /// </summary>
         g.MapPost("/games/{gameId}/overtime", async (int gameId) =>
         {
             using var c = Open(cs());
             using var tx = c.BeginTransaction();
 
             // Verificar que el juego existe y está en progreso
+            /// <summary>
+            /// Verificar que el juego existe y está en progreso.
+            /// </summary>
             var game = await c.QueryFirstOrDefaultAsync<dynamic>(
                 $"""
                 SELECT g.GameId, g.Status, g.HomeScore, g.AwayScore, g.Quarter, 
@@ -1020,7 +1117,9 @@ END;";
             if (game.Quarter < 4)
                 return Results.BadRequest(new { error = "El tiempo extra solo está permitido después del 4to cuarto." });
 
-            // Verificar si ya hay un tiempo extra en curso
+            /// <summary>
+            /// Verificar si ya hay un tiempo extra en curso.
+            /// </summary>
             int nextQuarter = game.Quarter + 1;
             var existingOvertime = await c.QueryFirstOrDefaultAsync<dynamic>(
                 $"SELECT 1 FROM {T}GameClocks WHERE GameId = @GameId AND Quarter = @NextQuarter",
@@ -1030,7 +1129,10 @@ END;";
             if (existingOvertime != null)
                 return Results.BadRequest(new { error = "Ya hay un tiempo extra en curso." });
 
-            // Crear un nuevo tiempo extra (5 minutos)
+            
+            /// <summary>
+            /// Crear un nuevo tiempo extra (5 minutos).
+            /// </summary>
             int overtimeMs = 5 * 60 * 1000; // 5 minutos en milisegundos
             
             await c.ExecuteAsync(
@@ -1078,6 +1180,9 @@ END;";
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // ===== Teams & Players =====
+        /// <summary>
+        /// Asignar equipos a un juego.
+        /// </summary>
         g.MapPost("/games/pair", async ([FromBody] PairDto body) =>
         {
             if (body.HomeTeamId <= 0 || body.AwayTeamId <= 0 || body.HomeTeamId == body.AwayTeamId)
@@ -1160,13 +1265,17 @@ END;";
             return ok > 0 ? Results.NoContent() : Results.NotFound();
         }).WithOpenApi();
 
-        // ===== Ajuste directo de puntuación =====
+        /// <summary>
+        /// Ajuste directo de puntuación.
+        /// </summary>
         g.MapPatch("/games/{id:int}/score/adjust", async (int id, [FromBody] AdjustScoreDto dto) =>
         {
             using var c = Open(cs());
             using var tx = c.BeginTransaction();
 
-            // Validar que el juego existe y está en progreso
+            /// <summary>
+            /// Validar que el juego existe y está en progreso.
+            /// </summary>
             var game = await c.QueryFirstOrDefaultAsync<dynamic>(
                 $"SELECT Status FROM {T}Games WHERE GameId=@id;", 
                 new { id }, transaction: tx);
@@ -1177,7 +1286,9 @@ END;";
             if (game.Status != "IN_PROGRESS") 
                 return Results.BadRequest(new { error = "El juego no está en progreso." });
 
-            // Actualizar puntuación
+            /// <summary>
+            /// Actualizar puntuación.
+            /// </summary>
             var updateSql = @$"
                 UPDATE {T}Games SET 
                     HomeScore = CASE WHEN (HomeScore + @homeDelta) >= 0 THEN HomeScore + @homeDelta ELSE 0 END,
@@ -1186,7 +1297,9 @@ END;";
 
             await c.ExecuteAsync(updateSql, new { id, homeDelta = dto.HomeDelta, awayDelta = dto.AwayDelta }, transaction: tx);
 
-            // Registrar evento de ajuste
+            /// <summary>
+            /// Registrar evento de ajuste.
+            /// </summary>
             var quarter = await c.QueryFirstOrDefaultAsync<byte>(
                 $"SELECT Quarter FROM {T}Games WHERE GameId=@id;", 
                 new { id }, transaction: tx);
@@ -1202,7 +1315,9 @@ END;";
             return Results.NoContent();
         }).WithOpenApi();
 
-        // ===== Rosters por juego y resumen de faltas =====
+        /// <summary>
+        /// Rosters por juego y resumen de faltas.
+        /// </summary>
         g.MapGet("/games/{id:int}/players/{side}", async (int id, string side) =>
         {
             var s = (side ?? "").ToUpperInvariant();
@@ -1258,14 +1373,18 @@ END;";
             return Results.Ok(new { team, players });
         }).WithOpenApi();
 
-        // ===== Reset Global =====
+        /// <summary>
+        /// Reset Global.
+        /// </summary>
         g.MapPost("/games/{id:int}/reset-all", async (int id) =>
         {
             using var c = Open(cs());
             
             try 
             {
-                // Verificar si el juego existe
+                /// <summary>
+                /// Verificar si el juego existe.
+                /// </summary>
                 var gameExists = await c.ExecuteScalarAsync<int>(
                     $"SELECT 1 FROM {T}Games WHERE GameId = @id", 
                     new { id });
@@ -1277,13 +1396,17 @@ END;";
                 
                 try 
                 {
-                    // 1. Registrar evento de reinicio
+                    /// <summary>
+                    /// Registrar evento de reinicio.
+                    /// </summary>
                     await c.ExecuteAsync(
                         $"INSERT INTO {T}GameEvents (GameId, Quarter, Team, EventType, CreatedAt) " +
                         "VALUES (@id, 1, 'SYSTEM', 'RESET', SYSUTCDATETIME())", 
                         new { id }, tx);
 
-                    // 2. Resetear marcador
+                    /// <summary>
+                    /// Resetear marcador.
+                    /// </summary>
                     await c.ExecuteAsync(
                         $"UPDATE {T}Games SET HomeScore=0, AwayScore=0, Quarter=1, Status='IN_PROGRESS' " +
                         "WHERE GameId=@id", 
@@ -1295,7 +1418,7 @@ END;";
                         $"DELETE FROM {T}GameClocks WHERE GameId = @id", 
                         new { id }, tx);
                         
-                    // Luego insertamos un nuevo registro para el primer cuarto
+                    // Luego insertamos un nuevo registro para el primer cuarto 
                     await c.ExecuteAsync(
                         $"INSERT INTO {T}GameClocks (GameId, Quarter, QuarterMs, RemainingMs, Running, StartedAt, UpdatedAt) " +
                         "VALUES (@id, 1, 600000, 600000, 0, NULL, SYSUTCDATETIME())", 

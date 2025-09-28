@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Widget de reloj del partido para mostrar y controlar el tiempo de juego.
+ * remarks:
+ *   - Recibe estado, cuarto, puntajes y permisos para habilitar controles.
+ *   - Puede usar el servicio de reloj (sincronizado con backend) cuando hay gameId.
+ *   - Emite eventos para avanzar de cuarto y reiniciar el juego; guarda preferencias (auto-advance, duración).
+ */
 import { Component, Input, OnChanges, SimpleChanges, OnDestroy, Output, EventEmitter, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

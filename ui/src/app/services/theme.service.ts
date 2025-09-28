@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Servicio de tema de la aplicación (claro/oscuro) con persistencia.
+ * remarks:
+ *   - Lee/escribe la preferencia en localStorage (clave THEME_KEY).
+ *   - Aplica `data-theme` en <html> para activar estilos del tema seleccionado.
+ *   - Ofrece `getTheme()` y `setTheme()`; respeta preferencia del sistema si no hay valor.
+ */
 import { Injectable } from '@angular/core';
 
 /**

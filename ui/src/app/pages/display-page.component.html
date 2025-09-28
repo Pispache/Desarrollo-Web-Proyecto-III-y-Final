@@ -1,9 +1,16 @@
-<!-- ==============================================
-     DISPLAY PÚBLICO - VISTA PRINCIPAL DEL MARCADOR
-     ============================================== -->
+<!--
+/// <summary>
+/// Vista pública del marcador (display) para un partido.
+/// </summary>
+/// <remarks>
+/// - Muestra equipos, tanteador, cuarto y reloj en estilo LED.
+/// - Indica estado del juego y BONUS por faltas.
+/// - Incluye panel de control visible solo para administradores.
+/// </remarks>
+-->
      <br>
 <div class="container-fluid bg-dark text-light min-vh-100 p-0">
-  <!-- Encabezado del marcador (Glass) -->
+  <!-- Encabezado del marcador -->
   <header class="glass-header">
     <div class="container">
       <div class="row align-items-center">
@@ -43,7 +50,7 @@
     </div>
   </header>
 
-  <!-- Indicador de carga (LED pulsing) -->
+  <!-- Indicador de carga (LED) -->
   <div *ngIf="!detail" class="d-flex justify-content-center align-items-center vh-100">
     <div class="text-center">
       <div class="led-loader" aria-label="Cargando...">

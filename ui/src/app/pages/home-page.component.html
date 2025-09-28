@@ -1,3 +1,15 @@
+<!--
+/// <summary>
+/// Panel principal para crear partidos y administrar equipos.
+/// </summary>
+/// <remarks>
+/// - Muestra aviso si no hay sesión y acceso al login.
+/// - Ofrece creación de partidos, listado de juegos y accesos a módulos.
+/// - Integra widgets: marcador, reloj y rosters según selección.
+/// </remarks>
+-->
+
+
 <div class="container-fluid py-4">
   <!-- Aviso cuando no hay sesión -->
   <div class="row mb-3" *ngIf="!isAuthed()">
@@ -14,9 +26,8 @@
     </div>
   </div>
 
-  <!-- Layout -->
+  <!-- Aca el Layout -->
   <div class="row">
-    <!-- ===== SIDEBAR (sticky) ===== -->
     <div class="col-lg-4 col-xl-3 mb-4">
       <div class="position-sticky d-flex flex-column gap-3" style="top:16px; z-index:10;">
         <!-- 1) NUEVO PARTIDO (FIJO) -->
@@ -48,7 +59,6 @@
           </div>
         </div>
 
-        <!-- 3) ESTADO (COMPACTO) -->
         <div *ngIf="detail as d" class="card shadow-sm">
           <div class="card-header header-contrast-high d-flex justify-content-between align-items-center">
             <h6 class="mb-0"><i class="bi bi-activity me-2"></i>Estado del Partido</h6>
@@ -105,13 +115,12 @@
             </div>
           </div>
         </div>
-        <!-- OJO: ya no renderizamos app-control-panel en el sidebar; ahora va ancho en el main -->
       </div>
     </div>
 
-    <!-- ===== MAIN CONTENT ===== -->
+    <!-- ===== MAIN  ===== -->
     <div class="col-lg-8 col-xl-9">
-      <!-- Juegos activos / programados -->
+      <!-- Juegos activos y programados -->
       <div class="row mb-4" *ngIf="activeGames.length > 0">
         <div class="col-12">
             <div class="card shadow-sm border-0">
@@ -401,4 +410,3 @@
     </div>
   </div>
 </div>
-<!-- ===== /DETALLE ===== -->

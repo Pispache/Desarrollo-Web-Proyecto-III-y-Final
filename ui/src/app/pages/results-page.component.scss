@@ -1,3 +1,11 @@
+/// <summary>
+/// Estilos para la vista de resultados y detalle de partido.
+/// </summary>
+/// <remarks>
+/// - Tema oscuro con variantes para inputs y tablas.
+/// - Contenedores con bordes suaves y scrollbars personalizados.
+/// - Soporte para modo claro con colores ajustados.
+/// </remarks>
 // Estilos para la página de resultados - Tema oscuro
 .p-4 {
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%) !important;

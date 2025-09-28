@@ -1,3 +1,11 @@
+/// <summary>
+/// Página para elegir un equipo y administrar sus jugadores.
+/// </summary>
+/// <remarks>
+/// - Permite buscar equipos por nombre o ciudad.
+/// - Incluye paginación y tamaño de página configurable.
+/// - Al seleccionar un equipo, navega a la gestión de jugadores.
+/// </remarks>
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

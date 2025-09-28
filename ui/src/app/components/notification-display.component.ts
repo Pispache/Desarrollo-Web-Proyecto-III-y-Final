@@ -1,3 +1,13 @@
+﻿/// <summary>
+/// Componente de visualización de notificaciones (toasts) y efectos visuales.
+/// </summary>
+/// <remarks>
+/// - Suscrito al servicio `NotificationService` para mostrar notificaciones dinámicas tipo toast (éxito, info, advertencia, error).
+/// - Permite cerrar manualmente cada toast y elimina automáticamente según la lógica interna del servicio.
+/// - Incluye una capa para mostrar efectos visuales temporales (confeti, brillos, etc.) controlados por `VisualEffect`.
+/// - Se autodesuscribe con `takeUntil` para evitar fugas de memoria al destruir el componente.
+/// </remarks>
+
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Subject, takeUntil } from 'rxjs';

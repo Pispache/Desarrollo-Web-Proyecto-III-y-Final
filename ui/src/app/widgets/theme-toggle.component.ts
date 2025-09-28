@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Widget para alternar el tema de la aplicación (claro/oscuro).
+ * remarks:
+ *   - Usa `ThemeService` para leer/guardar la preferencia global.
+ *   - Acepta `size` para renderizar un botón compacto o normal.
+ *   - Cambia icono y etiqueta según el tema actual.
+ */
 import { Component, Input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ThemeService, AppTheme } from '../services/theme.service';

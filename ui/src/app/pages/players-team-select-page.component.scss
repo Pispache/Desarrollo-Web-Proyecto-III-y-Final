@@ -1,4 +1,13 @@
-/* Fondo estilo HOME: degradado morado/azul con grano sutil */
+/// <summary>
+/// Estilos de fondo para la página de selección de equipos.
+/// </summary>
+/// <remarks>
+/// - Crea un fondo visual coherente con el tema principal (morado/azul).
+/// - Usa degradados radiales y lineales para profundidad y contraste.
+/// - Agrega una textura sutil con patrón en la pseudo-capa ::after.
+/// - Mantiene contraste legible para texto y elementos interactivos.
+/// </remarks>
+
 .players-team-select-page {
   min-height: 100vh;
   color: var(--color-text, #e7e9ff);

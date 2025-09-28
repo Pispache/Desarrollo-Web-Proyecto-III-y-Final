@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Servicio para administrar torneos por grupos.
+ * remarks:
+ *   - Opera sobre `/api/tournaments/default/*` (listar, crear y eliminar grupos).
+ *   - Agrega y quita equipos por grupo (máximo 4 por grupo, sin duplicados).
+ *   - Devuelve DTOs tipados que usan los componentes de la vista de Torneo.
+ */
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';

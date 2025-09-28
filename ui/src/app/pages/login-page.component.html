@@ -1,3 +1,26 @@
+<!-- ===============================================================
+     LOGIN WRAPPER — VISTA DE AUTENTICACIÓN DE USUARIOS
+     ---------------------------------------------------------------
+     Propósito:
+     - Permitir que el usuario ingrese sus credenciales (usuario y contraseña)
+       para acceder a las funciones administrativas del sistema.
+     - Proteger las áreas internas (crear partidos, administrar equipos,
+       controlar marcador) restringiéndolas a usuarios autenticados.
+
+     Comportamiento:
+     - Usa enlace [(ngModel)] para enlazar los campos de usuario y contraseña.
+     - Valida campos requeridos antes de enviar el formulario.
+     - Llama al método submit() para procesar el login.
+     - Muestra un mensaje de error si las credenciales son inválidas.
+     - Cambia el texto del botón a “Entrando…” mientras procesa el inicio
+       de sesión (estado loading).
+
+     Accesibilidad / UX:
+     - Campo usuario con autofocus para agilizar el login.
+     - Botón deshabilitado mientras se envía la petición.
+     - Mensajes claros y breves ante errores.
+================================================================ -->
+
 <div class="login-wrapper">
   <h2>Iniciar sesión</h2>
 

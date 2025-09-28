@@ -1,3 +1,25 @@
+/**
+ * Esta página permite autenticar a un usuario para acceder a funciones protegidas.
+ * - Recoge credenciales (usuario y contraseña) y las envía al servicio de autenticación.
+ * - Gestiona el estado de carga y mensajes de error.
+ * - Detecta razones de redirección (sesión expirada, cierre de sesión) y muestra avisos.
+ *
+ * Funcionalidad clave:
+ * - Usa `AuthService` para validar credenciales y almacenar el token JWT.
+ * - Redirige al tablero principal al iniciar sesión correctamente.
+ * - Maneja parámetros de query (`reason`) para informar al usuario.
+ *
+ * UX / Accesibilidad:
+ * - Mensajes claros en caso de error o sesión caducada.
+ * - Botón de envío con indicador de carga para feedback visual.
+ * - Soporte para autofocus en el campo usuario (definido en el template).
+ *
+ * Mantenimiento:
+ * - Centralizar la lógica de autenticación en `AuthService`.
+ * - Mantener mensajes de error simples y comprensibles para el usuario final.
+ */
+
+
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

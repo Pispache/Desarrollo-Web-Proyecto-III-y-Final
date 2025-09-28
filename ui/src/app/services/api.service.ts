@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Servicio HTTP central para consumir la API del marcador.
+ * remarks:
+ *   - Expone métodos tipados para juegos, equipos, jugadores y torneos.
+ *   - Maneja rutas `/api/*` y notifica cambios globales (ej. `teamsChanged$`).
+ *   - Se integra con el interceptor para adjuntar el token JWT automáticamente.
+ */
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Observable, Subject, throwError } from 'rxjs';

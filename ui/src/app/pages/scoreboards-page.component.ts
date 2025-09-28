@@ -1,3 +1,11 @@
+/// <summary>
+/// Listado de tableros/partidos con filtros y paginación.
+/// </summary>
+/// <remarks>
+/// - Filtra por estado (en juego, programado, finalizado, etc.).
+/// - Permite buscar por nombres de equipos.
+/// - Pagina resultados y ordena priorizando partidos en juego.
+/// </remarks>
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

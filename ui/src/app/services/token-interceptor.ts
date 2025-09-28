@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Interceptor HTTP para adjuntar el token JWT y manejar 401 globalmente.
+ * remarks:
+ *   - Inyecta `Authorization: Bearer <token>` en cada petición si existe.
+ *   - Ante 401 fuerza logout y redirige a `/login?reason=expired`.
+ *   - Evita duplicar notificaciones y respeta el estado actual de sesión.
+ */
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthService } from './auth.service';

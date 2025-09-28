@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Widget de roster por equipo: lista y gestiona jugadores vinculados al juego.
+ * remarks:
+ *   - Carga jugadores por `gameId` y `side` (HOME/AWAY).
+ *   - Modo lectura por defecto; con `canEdit` permite agregar, editar y eliminar.
+ *   - Valida número duplicado, edad y estatura; usa `ApiService` para persistir.
+ */
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

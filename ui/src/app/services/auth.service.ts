@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Servicio de autenticación (login, estado, cierre de sesión y roles).
+ * remarks:
+ *   - Gestiona el token JWT y su expiración (auto-logout programado).
+ *   - Sincroniza cierre de sesión entre pestañas con BroadcastChannel y `storage`.
+ *   - Expone estado reactivo `authed$`, helpers de rol/usuario y maneja navegación.
+ */
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';

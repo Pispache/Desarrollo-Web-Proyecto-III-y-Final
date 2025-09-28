@@ -1,3 +1,16 @@
+/**
+ * @file display-page.component.ts
+ * @summary Componente de la vista pública del marcador de baloncesto.
+ * @remarks
+ * Esta página muestra el detalle de un partido en tiempo real:
+ * 
+ * - Visualiza puntajes, estado del juego, reloj, faltas y ganador.
+ * - Permite a usuarios administradores acceder a un panel de control.
+ * - Integra servicios los servicios API y de reloj para mantener datos actualizados.
+
+ */
+
+
 import { Component, OnDestroy, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 
 import { CommonModule } from '@angular/common';
@@ -20,7 +33,7 @@ type GameEvent = GameDetail['events'][number];
 export class DisplayPageComponent implements OnInit, OnDestroy {
   detail?: GameDetail;
   lastUpdated: Date = new Date();
-  isAdmin: boolean = false; // Cambiar a true para habilitar el panel de control
+  isAdmin: boolean = false; 
   // URLs de logos
   homeLogoUrl: string | null = null;
   awayLogoUrl: string | null = null;

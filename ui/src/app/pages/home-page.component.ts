@@ -1,3 +1,30 @@
+/**
+ * @file home-page.component.ts
+ * @summary Página principal (dashboard) para crear y administrar los partidos.
+ * @remarks
+ * Esta vista actúa como hub de administración:
+ * - Muestra herramientas para crear partidos y gestionar equipos/plantillas.
+ * - Condiciona acciones administrativas a que el usuario tenga sesión iniciada.
+ * - Coordina widgets clave: marcador, reloj y plantillas de equipos.
+ *
+ * Servicios implicados:
+ * - AuthService: estado de sesión y permisos.
+ * - ApiService: operaciones con juegos, equipos y detalles.
+ * - ClockService: control y lectura del reloj del partido.
+ * - NotificationService: avisos no intrusivos (toasts / banners).
+ * - SoundService: efectos de audio (encestes, faltas, etc.).
+ * - UiEventsService: bus de eventos de UI para desacoplar componentes.
+ *
+ * UX/Accesibilidad:
+ * - El template muestra un aviso claro cuando no hay sesión y enlaza a /login.
+ * - Los componentes visuales (scoreboard/clock/roster) son independientes y reutilizables.
+ *
+ * Notas de mantenimiento:
+ * - Mantener la lógica de autenticación estrictamente en AuthService.
+ * - Evitar lógica pesada en el componente: orquestar y delegar en servicios.
+ */
+
+
 import { Component, OnInit, OnDestroy, Inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { CommonModule } from '@angular/common';

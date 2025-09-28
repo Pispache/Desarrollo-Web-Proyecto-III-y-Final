@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Widget administrativo para gestionar la plantilla (roster) de un equipo.
+ * remarks:
+ *   - Carga equipos, lista jugadores y permite crear/eliminar.
+ *   - Incluye validaciones simples (edad, estatura, número).
+ *   - Se refresca al cambiar el equipo seleccionado o tras operaciones.
+ */
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';

@@ -1,3 +1,11 @@
+/**
+ * summary:
+ *   Widget de marcador (scoreboard) compacto para mostrar puntaje, cuarto y eventos.
+ * remarks:
+ *   - Recibe el juego y su lista de eventos; muestra logos y estado del reloj.
+ *   - Permite abrir un modal para ajustar puntuación (si hay permisos) y emite `adjustScore`.
+ *   - Se sincroniza con el ClockService para habilitar acciones solo cuando el reloj corre.
+ */
 import { Component, Input, Output, EventEmitter, ElementRef, ViewChild, OnInit, OnChanges, SimpleChanges, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Game, GameDetail } from '../services/api.service';
