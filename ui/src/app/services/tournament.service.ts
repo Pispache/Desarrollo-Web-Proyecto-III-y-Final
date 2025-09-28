@@ -38,4 +38,9 @@ export class TournamentService {
   removeTeam(groupId: number, teamId: number): Observable<void> {
     return this.http.delete<void>(`${this.base}/groups/${groupId}/teams/${teamId}`);
   }
+
+  saveGroupSchedule(groupId: number, rounds: Array<Array<{ homeTeamId: number; awayTeamId: number }>>): Observable<{ created: number }> {
+    const payload = { rounds: rounds.map(r => r.map(m => ({ homeTeamId: m.homeTeamId, awayTeamId: m.awayTeamId }))) };
+    return this.http.post<{ created: number }>(`${this.base}/groups/${groupId}/schedule`, payload);
+  }
 }

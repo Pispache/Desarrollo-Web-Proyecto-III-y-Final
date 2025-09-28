@@ -144,6 +144,67 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
             return Results.NoContent();
         }).RequireAuthorization("ADMIN").WithOpenApi();
 
+        // Persist a generated schedule for a group as Games
+        g.MapPost("/tournaments/default/groups/{groupId:int}/schedule", async (int groupId, [FromBody] GroupScheduleDto body) =>
+        {
+            if (body == null || body.Rounds == null)
+                return Results.BadRequest(new { error = "Rounds es requerido" });
+
+            using var c = Open(cs());
+            var TT = $"{c.Database}.dbo.";
+
+            // Validate group exists
+            var exists = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {TT}TournamentGroups WHERE GroupId=@groupId;", new { groupId });
+            if (exists == 0) return Results.NotFound(new { error = "Grupo no existe" });
+
+            using var tx = c.BeginTransaction();
+            try
+            {
+                int created = 0;
+                for (int r = 0; r < body.Rounds.Count; r++)
+                {
+                    var matches = body.Rounds[r] ?? new List<PairDto>();
+                    foreach (var m in matches)
+                    {
+                        if (m is null) continue;
+                        var homeId = m.HomeTeamId;
+                        var awayId = m.AwayTeamId;
+                        if (homeId <= 0 || awayId <= 0) continue;
+
+                        // Optionally ensure both teams belong to some group (or to this group)
+                        var allowed = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {TT}TournamentGroupTeams WHERE GroupId=@groupId AND TeamId IN (@homeId, @awayId);", new { groupId, homeId, awayId }, tx);
+                        if (allowed < 2) continue;
+
+                        var names = await c.QueryAsync<(string Name, int TeamId)>($"SELECT Name, TeamId FROM {TT}Teams WHERE TeamId IN (@homeId, @awayId);", new { homeId, awayId }, tx);
+                        var homeName = names.FirstOrDefault(x => x.TeamId == homeId).Name;
+                        var awayName = names.FirstOrDefault(x => x.TeamId == awayId).Name;
+                        if (string.IsNullOrWhiteSpace(homeName) || string.IsNullOrWhiteSpace(awayName)) continue;
+
+                        var gameId = await c.ExecuteScalarAsync<int>(
+                            $@"INSERT INTO {TT}Games(HomeTeam, AwayTeam, HomeTeamId, AwayTeamId, Status, Quarter)
+                               OUTPUT INSERTED.GameId
+                               VALUES(@homeName, @awayName, @homeId, @awayId, 'SCHEDULED', 1);",
+                            new { homeName, awayName, homeId, awayId }, tx);
+
+                        // Ensure default GameClocks row
+                        await c.ExecuteAsync($@"IF NOT EXISTS(SELECT 1 FROM {TT}GameClocks WHERE GameId=@gameId)
+                                                 INSERT INTO {TT}GameClocks(GameId, Quarter, QuarterMs, RemainingMs, Running, StartedAt, UpdatedAt)
+                                                 VALUES(@gameId, 1, 600000, 600000, 0, NULL, SYSUTCDATETIME());",
+                                                 new { gameId }, tx);
+
+                        created++;
+                    }
+                }
+                tx.Commit();
+                return Results.Ok(new { created });
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                return Results.Problem($"Error guardando calendario: {ex.Message}", statusCode: 500);
+            }
+        }).RequireAuthorization("ADMIN").WithOpenApi();
+
         static SqlConnection Open(string cs) { var c = new SqlConnection(cs); c.Open(); return c; }
         static async Task EnsureSchemaAsync(SqlConnection c)
         {
@@ -172,3 +233,4 @@ END;";
 
 public record GroupCreateDto(string Name);
 public record GroupAddTeamDto(int TeamId);
+public record GroupScheduleDto(List<List<PairDto>> Rounds);
