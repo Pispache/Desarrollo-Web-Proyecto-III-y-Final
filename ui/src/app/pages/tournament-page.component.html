@@ -74,7 +74,15 @@
             </thead>
             <tbody>
               <tr *ngFor="let t of g.teams">
-                <td>{{ t.name }}</td>
+                <td>
+                  <ng-container *ngIf="getTeamLogo(t.teamId) as logo; else noLogo">
+                    <img [src]="logo" alt="logo" style="width:24px;height:24px;object-fit:contain;border-radius:4px;margin-right:8px;vertical-align:middle;" />
+                    <span>{{ t.name }}</span>
+                  </ng-container>
+                  <ng-template #noLogo>
+                    {{ t.name }}
+                  </ng-template>
+                </td>
                 <td>{{ getPJ(t) }}</td>
                 <td>{{ getPTS(t) }}</td>
                 <td>{{ t.g }}</td>
@@ -100,4 +108,167 @@
       <p>No has agregado ningún grupo.</p>
     </div>
   </div>
+
+  <!-- Knockout stages -->
+  <section class="knockout bracket mt-4">
+    <h2 class="page-subtitle"><i class="bi bi-diagram-3"></i> Eliminación directa</h2>
+    <div class="bracket-grid">
+
+    <!-- Octavos de final -->
+    <div class="stage column r16">
+      <h3>Octavos de final</h3>
+      <div class="matches">
+        <div class="match" *ngFor="let m of knockout.roundOf16; let i = index">
+          <div class="team">
+            <ng-container *ngIf="m.homeTeamId as id; else tbd1">
+              <img *ngIf="getTeamLogo(id) as l1" [src]="l1" alt="logo" style="width:20px;height:20px;object-fit:contain;margin-right:6px;" />
+              <span>{{ teamNameById(id) }}</span>
+            </ng-container>
+            <ng-template #tbd1>Por definir</ng-template>
+          </div>
+          <div class="controls" *ngIf="isAdmin()">
+            <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="r16-h-{{i}}">
+              <option [ngValue]="null">Seleccionar equipo local</option>
+              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+            </select>
+          </div>
+          <div class="vs">vs</div>
+          <div class="team">
+            <ng-container *ngIf="m.awayTeamId as id2; else tbd2">
+              <img *ngIf="getTeamLogo(id2) as l2" [src]="l2" alt="logo" style="width:20px;height:20px;object-fit:contain;margin-right:6px;" />
+              <span>{{ teamNameById(id2) }}</span>
+            </ng-container>
+            <ng-template #tbd2>Por definir</ng-template>
+          </div>
+          <div class="controls" *ngIf="isAdmin()">
+            <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="r16-a-{{i}}">
+              <option [ngValue]="null">Seleccionar equipo visita</option>
+              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+            </select>
+            <div class="mt-1 d-flex gap-2">
+              <button class="btn btn-sm btn-success" (click)="advanceFromRound('roundOf16', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
+              <button class="btn btn-sm btn-success" (click)="advanceFromRound('roundOf16', i, 'away')" [disabled]="!m.awayTeamId">Avanza visita</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cuartos de final -->
+    <div class="stage">
+      <h3>Cuartos de final</h3>
+      <div class="matches">
+        <div class="match" *ngFor="let m of knockout.quarterfinals; let i = index">
+          <div class="team">
+            <ng-container *ngIf="m.homeTeamId as id; else tbd3">
+              <img *ngIf="getTeamLogo(id) as l1" [src]="l1" alt="logo" style="width:20px;height:20px;object-fit:contain;margin-right:6px;" />
+              <span>{{ teamNameById(id) }}</span>
+            </ng-container>
+            <ng-template #tbd3>Por definir</ng-template>
+          </div>
+          <div class="controls" *ngIf="isAdmin()">
+            <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="qf-h-{{i}}">
+              <option [ngValue]="null">Seleccionar equipo local</option>
+              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+            </select>
+          </div>
+          <div class="vs">vs</div>
+          <div class="team">
+            <ng-container *ngIf="m.awayTeamId as id2; else tbd4">
+              <img *ngIf="getTeamLogo(id2) as l2" [src]="l2" alt="logo" style="width:20px;height:20px;object-fit:contain;margin-right:6px;" />
+              <span>{{ teamNameById(id2) }}</span>
+            </ng-container>
+            <ng-template #tbd4>Por definir</ng-template>
+          </div>
+          <div class="controls" *ngIf="isAdmin()">
+            <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="qf-a-{{i}}">
+              <option [ngValue]="null">Seleccionar equipo visita</option>
+              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+            </select>
+            <div class="mt-1 d-flex gap-2">
+              <button class="btn btn-sm btn-success" (click)="advanceFromRound('quarterfinals', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
+              <button class="btn btn-sm btn-success" (click)="advanceFromRound('quarterfinals', i, 'away')" [disabled]="!m.awayTeamId">Avanza visita</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Semifinal -->
+    <div class="stage">
+      <h3>Semifinal</h3>
+      <div class="matches">
+        <div class="match" *ngFor="let m of knockout.semifinals; let i = index">
+          <div class="team">
+            <ng-container *ngIf="m.homeTeamId as id; else tbd5">
+              <img *ngIf="getTeamLogo(id) as l1" [src]="l1" alt="logo" style="width:20px;height:20px;object-fit:contain;margin-right:6px;" />
+              <span>{{ teamNameById(id) }}</span>
+            </ng-container>
+            <ng-template #tbd5>Por definir</ng-template>
+          </div>
+          <div class="controls" *ngIf="isAdmin()">
+            <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="sf-h-{{i}}">
+              <option [ngValue]="null">Seleccionar equipo local</option>
+              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+            </select>
+          </div>
+          <div class="vs">vs</div>
+          <div class="team">
+            <ng-container *ngIf="m.awayTeamId as id2; else tbd6">
+              <img *ngIf="getTeamLogo(id2) as l2" [src]="l2" alt="logo" style="width:20px;height:20px;object-fit:contain;margin-right:6px;" />
+              <span>{{ teamNameById(id2) }}</span>
+            </ng-container>
+            <ng-template #tbd6>Por definir</ng-template>
+          </div>
+          <div class="controls" *ngIf="isAdmin()">
+            <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="sf-a-{{i}}">
+              <option [ngValue]="null">Seleccionar equipo visita</option>
+              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+            </select>
+            <div class="mt-1 d-flex gap-2">
+              <button class="btn btn-sm btn-success" (click)="advanceFromRound('semifinals', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
+              <button class="btn btn-sm btn-success" (click)="advanceFromRound('semifinals', i, 'away')" [disabled]="!m.awayTeamId">Avanza visita</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final -->
+    <div class="stage">
+      <h3>Final</h3>
+      <div class="matches">
+        <div class="match" *ngFor="let m of knockout.final; let i = index">
+          <div class="team">
+            <ng-container *ngIf="m.homeTeamId as id; else tbd7">
+              <img *ngIf="getTeamLogo(id) as l1" [src]="l1" alt="logo" style="width:20px;height:20px;object-fit:contain;margin-right:6px;" />
+              <span>{{ teamNameById(id) }}</span>
+            </ng-container>
+            <ng-template #tbd7>Por definir</ng-template>
+          </div>
+          <div class="controls" *ngIf="isAdmin()">
+            <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="f-h-{{i}}">
+              <option [ngValue]="null">Seleccionar equipo local</option>
+              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+            </select>
+          </div>
+          <div class="vs">vs</div>
+          <div class="team">
+            <ng-container *ngIf="m.awayTeamId as id2; else tbd8">
+              <img *ngIf="getTeamLogo(id2) as l2" [src]="l2" alt="logo" style="width:20px;height:20px;object-fit:contain;margin-right:6px;" />
+              <span>{{ teamNameById(id2) }}</span>
+            </ng-container>
+            <ng-template #tbd8>Por definir</ng-template>
+          </div>
+          <div class="controls" *ngIf="isAdmin()">
+            <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="f-a-{{i}}">
+              <option [ngValue]="null">Seleccionar equipo visita</option>
+              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+    </div>
+  </section>
 </div>
