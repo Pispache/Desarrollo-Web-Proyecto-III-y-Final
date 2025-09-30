@@ -159,7 +159,7 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
 
   // ===== Controles del reloj (no hacen advance de cuarto por su cuenta) =====
   toggle() {
-    if (this.status === 'FINISHED' || this.status === 'CANCELLED') return;
+    if (this.status === 'FINISHED' || this.status === 'CANCELLED' || this.status === 'SUSPENDED') return;
     // El estado visual se reflejará desde el servicio
     this.vmSnap.running = !this.vmSnap.running;
 
@@ -179,6 +179,7 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
   }
 
   resetQuarter() {
+    if (this.status === 'SUSPENDED') return;
     this.vmSnap.running = false;
     this.vmSnap.remainingMs = this.vmSubject.value.quarterMs;
     this.sound.play('buzzer_long');
@@ -195,6 +196,7 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
   }
 
   setDuration(evt: Event) {
+    if (this.status === 'SUSPENDED') return;
     // Ahora el <select> entrega milisegundos directamente (e.g., 20000, 300000, 600000)
     const ms = Number((evt.target as HTMLSelectElement).value);
     const qms = Math.max(1000, ms); // mínimo 1s por seguridad
@@ -223,6 +225,7 @@ export class ClockComponent implements OnChanges, OnDestroy, OnInit {
 
   // Manejar cambio en el switch de avance automático
   onAutoAdvanceChange(isChecked: boolean) {
+    if (this.status === 'SUSPENDED') return;
     // Solo actualizar si el valor cambió
     if (this._autoAdvance !== isChecked) {
       this.autoAdvance = isChecked; // Actualiza el estado local y el VM

@@ -34,7 +34,7 @@
         <button class="btn btn-sm"
                 [class.btn-success]="!vmSnap.running"
                 [class.btn-warning]="vmSnap.running"
-                [disabled]="!canEdit || busy || !gameId || status === 'FINISHED'"
+                [disabled]="!canEdit || busy || !gameId || status === 'FINISHED' || status === 'SUSPENDED'"
                 (click)="toggle()">
           <i class="bi" [class.bi-play-fill]="!vmSnap.running" [class.bi-pause-fill]="vmSnap.running"></i>
           {{ vmSnap.running ? ' Pausar' : ' Iniciar' }}
@@ -42,7 +42,7 @@
         
         <!-- Botón de Reiniciar -->
         <button class="btn btn-sm btn-secondary"
-                [disabled]="!canEdit || busy || !gameId"
+                [disabled]="!canEdit || busy || !gameId || status === 'SUSPENDED'"
                 (click)="resetQuarter()">
           <i class="bi bi-arrow-clockwise"></i>
           Reiniciar
@@ -63,7 +63,7 @@
             <select class="form-select form-select-sm"
                     [value]="vm.quarterMs"
                     (change)="setDuration($event)"
-                    [disabled]="!canEdit">
+                    [disabled]="!canEdit || status === 'SUSPENDED'">
               <option value="10000">10 segundos (pruebas)</option>
               <option value="300000">5 minutos</option>
               <option value="480000">8 minutos</option>
@@ -88,7 +88,7 @@
                    role="switch"
                    [checked]="autoAdvance"
                    (change)="onAutoAdvanceChange(autoAdvanceCheckbox.checked)"
-                   [disabled]="!canEdit">
+                   [disabled]="!canEdit || status === 'SUSPENDED'">
           </div>
         </div>
         
