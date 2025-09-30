@@ -63,7 +63,6 @@ public record PairDto(int HomeTeamId, int AwayTeamId);
 /// Información para agregar un nuevo jugador a un equipo.
 /// </summary>
 /// <remarks>
-/// Incluye datos como nombre, número de camiseta, posición, estatura, edad y nacionalidad.
 /// </remarks>
 public record CreatePlayerDto(
     string Name,
@@ -74,4 +73,34 @@ public record CreatePlayerDto(
     string? Nationality
 );
 
-///
+
+/// <summary>
+/// Datos opcionales para reiniciar el reloj del juego.
+/// </summary>
+/// <remarks>
+/// Si <c>QuarterMs</c> se especifica, se usa como nueva duración del cuarto (en milisegundos).
+/// Si es <c>null</c>, se mantiene la duración actual.
+/// </remarks>
+public class ClockResetDto
+{
+    /// <summary>Duración del cuarto en milisegundos (opcional).</summary>
+    public int? QuarterMs { get; set; }
+}
+
+
+/// <summary>
+/// Datos para actualizar parcialmente un usuario.
+/// </summary>
+/// <remarks>
+/// Todos los campos son opcionales; solo se actualizan los que tengan valor.
+/// </remarks>
+public class UpdatePlayerDto
+{
+    public byte? Number { get; set; }
+    public string? Name { get; set; }
+    public string? Position { get; set; }
+    public int? HeightCm { get; set; }
+    public int? Age { get; set; }
+    public string? Nationality { get; set; }
+    public bool? Active { get; set; }
+}
