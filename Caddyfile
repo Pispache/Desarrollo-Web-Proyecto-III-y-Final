@@ -15,6 +15,22 @@ tobarumg.lat {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 	}
 
+	# Forzar UTF-8 para contenidos textuales servidos por la UI
+	@html path *.html
+	header @html Content-Type "text/html; charset=utf-8"
+
+	@css path *.css
+	header @css Content-Type "text/css; charset=utf-8"
+
+	@js path *.js
+	header @js Content-Type "application/javascript; charset=utf-8"
+
+	@json path *.json
+	header @json Content-Type "application/json; charset=utf-8"
+
+	@svg path *.svg
+	header @svg Content-Type "image/svg+xml; charset=utf-8"
+
 	# Enrutar API directo para evitar doble proxy (Caddy -> Nginx(UI) -> API)
 	handle /api/* {
 		reverse_proxy api:8080
