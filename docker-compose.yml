@@ -9,7 +9,7 @@ services:
       - MSSQL_SA_PASSWORD=${SA_PASSWORD}
       - MSSQL_TCP_PORT=1435
     ports:
-      - "1435:1435"
+      - "127.0.0.1:1435:1435"
     volumes:
       - ./db:/db
     healthcheck:
@@ -59,7 +59,7 @@ services:
       # Opción sencilla: archivo JSON montado dentro del contenedor
       - ADMIN_USERS_FILE=/app/users.json
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     volumes:
       - ./users.json:/app/users.json:ro
       - ./api/wwwroot:/app/wwwroot
@@ -76,5 +76,5 @@ services:
         condition: service_started   # espera a que el contenedor api esté arrancado
     restart: unless-stopped          # si falla por DNS al principio, se reinicia solo
     ports:
-      - "4200:80"
+      - "127.0.0.1:4200:80"
     profiles: ["ui", "all"]
