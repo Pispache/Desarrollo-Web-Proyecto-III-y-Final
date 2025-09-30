@@ -1,8 +1,8 @@
 {
 	# Opcional: correo para notificaciones de certificados
 	# email cesar@example.com
-	# Habilitar logs globales si lo deseas
-t  # admin off
+	# Habilitar opciones globales
+	admin off
 }
 
 tobarumg.lat {
