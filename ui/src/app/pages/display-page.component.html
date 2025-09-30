@@ -9,7 +9,7 @@
 /// </remarks>
 -->
      <br>
-<div class="container-fluid bg-dark text-light min-vh-100 p-0">
+<div class="container-fluid min-vh-100 p-0">
   <!-- Encabezado del marcador -->
   <header class="glass-header">
     <div class="container">
@@ -26,9 +26,7 @@
             <span class="d-none d-sm-inline ms-1">Volver a Tableros</span>
           </button>
           <h1 class="h5 mb-0 glass-title">MARCADOR DE BALONCESTO</h1>
-          <div class="mt-2">
-            <app-theme-toggle size="sm"></app-theme-toggle>
-          </div>
+          
           <div *ngIf="detail" class="glass-status mt-1"
                [ngClass]="{
                  'in-progress': detail.game.status === 'IN_PROGRESS',

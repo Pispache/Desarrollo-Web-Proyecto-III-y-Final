@@ -65,15 +65,15 @@
 
 /* Logos centrales del marcador: tamaño moderado y responsivo */
 .scoreboard-logo-lg {
-  height: clamp(24px, 5vw, 40px);
-  width: clamp(24px, 5vw, 40px);
+  height: clamp(36px, 6vw, 64px);
+  width: clamp(36px, 6vw, 64px);
   object-fit: contain;
   border-radius: 6px;
   background: rgba(0,0,0,0.25);
 }
 
 /* Ajuste de separación para no empujar demasiado el contenido */
-.scoreboard-body .row.align-items-center .d-flex.flex-column { gap: .25rem !important; }
+.scoreboard-body .row.align-items-center .d-flex.flex-column { gap: .4rem !important; }
 
 /* Botón de Ajustar Puntuación con design tokens */
 .adjust-btn {

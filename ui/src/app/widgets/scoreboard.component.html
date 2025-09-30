@@ -30,7 +30,6 @@
     <div class="row align-items-center mb-3">
       <div class="col-5 text-end">
         <div class="fw-bold text-truncate d-inline-flex align-items-center gap-2" [title]="game.homeTeam">
-          <img *ngIf="homeLogoUrl" [src]="homeLogoUrl" alt="home logo" style="height:22px;width:22px;object-fit:contain;border-radius:2px;" class="border border-secondary">
           <span>{{ game.homeTeam }}</span>
         </div>
       </div>
@@ -43,7 +42,6 @@
       </div>
       <div class="col-5">
         <div class="fw-bold text-truncate d-inline-flex align-items-center gap-2" [title]="game.awayTeam">
-          <img *ngIf="awayLogoUrl" [src]="awayLogoUrl" alt="away logo" style="height:22px;width:22px;object-fit:contain;border-radius:2px;" class="border border-secondary">
           <span>{{ game.awayTeam }}</span>
         </div>
       </div>

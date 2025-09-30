@@ -18,13 +18,12 @@ import { interval, Subscription, switchMap, merge, of } from 'rxjs';
 import { ApiService, GameDetail, GameStatus } from '../services/api.service';
 import { ClockService, ClockState } from '../services/clock.service';
 import { ControlPanelComponent } from '../widgets/control-panel.component';
-import { ThemeToggleComponent } from '../widgets/theme-toggle.component';
 type GameEvent = GameDetail['events'][number];
 
 @Component({
   selector: 'app-display-page',
   standalone: true,
-  imports: [CommonModule, ControlPanelComponent, ThemeToggleComponent],
+  imports: [CommonModule, ControlPanelComponent],
   templateUrl: './display-page.component.html',
   styleUrls: ['./display-page.component.scss']
 })
