@@ -341,14 +341,34 @@ END;";
             var dup = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {T}Teams WHERE Name=@n AND TeamId<>@id;", new { n = dto.Name.Trim(), id });
             if (dup > 0) return Results.Conflict(new { error = "Ya existe un equipo con ese nombre" });
 
-            var rows = await c.ExecuteAsync($"""
-                UPDATE {T}Teams
-                SET Name=@n, City=@city, LogoUrl=@logo
-                WHERE TeamId=@id;
-                """
-                , new { id, n = dto.Name.Trim(), city = string.IsNullOrWhiteSpace(dto.City) ? null : dto.City!.Trim(), logo = string.IsNullOrWhiteSpace(dto.LogoUrl) ? null : dto.LogoUrl!.Trim() });
+            using var tx = c.BeginTransaction();
+            try
+            {
+                // 1) Actualizar el equipo
+                var rows = await c.ExecuteAsync($"""
+                    UPDATE {T}Teams
+                    SET Name=@n, City=@city, LogoUrl=@logo
+                    WHERE TeamId=@id;
+                    """
+                    , new { id, n = dto.Name.Trim(), city = string.IsNullOrWhiteSpace(dto.City) ? null : dto.City!.Trim(), logo = string.IsNullOrWhiteSpace(dto.LogoUrl) ? null : dto.LogoUrl!.Trim() }, tx);
 
-            if (rows == 0) return Results.NotFound();
+                if (rows == 0) { tx.Rollback(); return Results.NotFound(); }
+
+                // 2) Propagar nombre a snapshot de partidos existentes
+                await c.ExecuteAsync($"UPDATE {T}Games SET HomeTeam=@n WHERE HomeTeamId=@id;",
+                    new { id, n = dto.Name.Trim() }, tx);
+                await c.ExecuteAsync($"UPDATE {T}Games SET AwayTeam=@n WHERE AwayTeamId=@id;",
+                    new { id, n = dto.Name.Trim() }, tx);
+
+                tx.Commit();
+            }
+            catch (Exception ex)
+            {
+                try { tx.Rollback(); } catch { }
+                Console.WriteLine($"Error propagando nombre de equipo: {ex}");
+                return Results.Problem("No se pudo actualizar el equipo", statusCode: 500);
+            }
+
             var updated = await c.QuerySingleAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
             return Results.Ok(updated);
         }).RequireAuthorization("ADMIN").WithOpenApi();
