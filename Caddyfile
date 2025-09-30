@@ -16,7 +16,7 @@ tobarumg.lat {
 	}
 
 	# Enrutar API directo para evitar doble proxy (Caddy -> Nginx(UI) -> API)
-	handle_path /api/* {
+	handle /api/* {
 		reverse_proxy api:8080
 	}
 	# UI (Angular+Nginx en el servicio ui, puerto 80)
