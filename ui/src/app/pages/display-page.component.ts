@@ -7,9 +7,7 @@
  * - Visualiza puntajes, estado del juego, reloj, faltas y ganador.
  * - Permite a usuarios administradores acceder a un panel de control.
  * - Integra servicios los servicios API y de reloj para mantener datos actualizados.
-
  */
-
 
 import { Component, OnDestroy, OnInit, ChangeDetectorRef, NgZone } from '@angular/core';
 
@@ -37,11 +35,13 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   // URLs de logos
   homeLogoUrl: string | null = null;
   awayLogoUrl: string | null = null;
+  // Cache para evitar refetch y reasignaciones innecesarias (evita parpadeo)
+  private lastHomeTeamId: number | null = null;
+  private lastAwayTeamId: number | null = null;
   // Base de la API para servir archivos estáticos en dev
   private readonly apiBase = (location.port === '4200')
     ? `${location.protocol}//${location.hostname}:8080`
     : '';
-
   private gameId!: number;
   private sub?: Subscription;
   private clockSub?: Subscription;
@@ -78,24 +78,41 @@ export class DisplayPageComponent implements OnInit, OnDestroy {
   // Carga las URLs de los logos para el equipo local y visitante
   private loadTeamLogos(): void {
     const g = this.detail?.game;
-    if (!g) { this.homeLogoUrl = this.awayLogoUrl = null; return; }
+    if (!g) { this.homeLogoUrl = this.awayLogoUrl = null; this.lastHomeTeamId = this.lastAwayTeamId = null; return; }
     const { homeTeamId, awayTeamId } = g;
 
-    // Inicializa como null por si no hay ID o no hay logo
-    this.homeLogoUrl = null;
-    this.awayLogoUrl = null;
+    // Solo cargar si cambió el equipo; mantener la URL actual si no cambió
+    const newHomeId = homeTeamId ?? null;
+    const newAwayId = awayTeamId ?? null;
 
-    if (homeTeamId) {
-      this.api.getTeam(homeTeamId).subscribe({
-        next: t => this.homeLogoUrl = this.getLogoUrl(t.logoUrl),
-        error: () => this.homeLogoUrl = null
-      });
+    if (newHomeId !== this.lastHomeTeamId) {
+      this.lastHomeTeamId = newHomeId;
+      if (newHomeId) {
+        this.api.getTeam(newHomeId).subscribe({
+          next: t => {
+            const u = this.getLogoUrl(t.logoUrl);
+            if (u !== this.homeLogoUrl) this.homeLogoUrl = u;
+          },
+          error: () => { this.homeLogoUrl = null; }
+        });
+      } else {
+        this.homeLogoUrl = null;
+      }
     }
-    if (awayTeamId) {
-      this.api.getTeam(awayTeamId).subscribe({
-        next: t => this.awayLogoUrl = this.getLogoUrl(t.logoUrl),
-        error: () => this.awayLogoUrl = null
-      });
+
+    if (newAwayId !== this.lastAwayTeamId) {
+      this.lastAwayTeamId = newAwayId;
+      if (newAwayId) {
+        this.api.getTeam(newAwayId).subscribe({
+          next: t => {
+            const u = this.getLogoUrl(t.logoUrl);
+            if (u !== this.awayLogoUrl) this.awayLogoUrl = u;
+          },
+          error: () => { this.awayLogoUrl = null; }
+        });
+      } else {
+        this.awayLogoUrl = null;
+      }
     }
   }
 
