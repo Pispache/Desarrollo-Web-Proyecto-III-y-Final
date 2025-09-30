@@ -1,0 +1,31 @@
+{
+	# Opcional: correo para notificaciones de certificados
+	# email cesar@example.com
+	# Habilitar logs globales si lo deseas
+t  # admin off
+}
+
+tobarumg.lat {
+	encode zstd gzip
+	# X-Forwarded y otras cabeceras útiles
+	headers {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+	# UI (Angular+Nginx en el servicio ui, puerto 80)
+	reverse_proxy ui:80
+}
+
+api.tobarumg.lat {
+	encode zstd gzip
+	headers {
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	}
+	# API ASP.NET en el servicio api, puerto 8080
+	reverse_proxy api:8080
+}

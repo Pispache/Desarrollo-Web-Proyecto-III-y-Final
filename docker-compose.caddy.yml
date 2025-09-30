@@ -1,0 +1,22 @@
+services:
+  caddy:
+    image: caddy:2.8
+    container_name: marcador_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      ui:
+        condition: service_started
+      api:
+        condition: service_started
+    # Estará en la misma red por defecto que el resto de servicios al usar compose con ambos archivos
+
+volumes:
+  caddy_data:
+  caddy_config:
