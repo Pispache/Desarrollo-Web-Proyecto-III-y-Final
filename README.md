@@ -253,15 +253,3 @@ Bryan Manuel Pineda Orozco 7690-16-8869
 
 Grupo #8
 
-Tabla de trabajo:
-
-**## Distribución de Trabajo
-
-| Integrante                    | Responsabilidades                                                                                                        | Porcentaje |
-
-| **Cesar Alberto Tecún Leiva** | Implementación de **Login con JWT**, autenticación, retoques y corrección de bugs en el frontend (Angular).              | 33.3% |
-| **Jose Daniel Tobar Reyes**   | Desarrollo de torneos (frontend y backend), funciones de backend para editar y agregar jugadores, configuración del VPS. | 33.3% |
-| **Bryan Manuel Pineda Orozco**| Implementación y diseño **navbar responsive**, corrección de bugs en frontend, módulos de jugadores y equipos.           | 33.3% |
-
-
-**
