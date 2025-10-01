@@ -1,4 +1,6 @@
 # Marcador de Baloncesto — Angular + .NET 8 + SQL Server (Docker)
+LINK DEL LA APLICACION
+https://tobarumg.lat/login
 
 Aplicación web para gestionar un marcador de baloncesto con control de tiempo, cuartos y faltas.  
 La arquitectura utiliza contenedores para la interfaz de usuario (Angular + Nginx), la API (.NET 8) y la base de datos (SQL Server 2022).
