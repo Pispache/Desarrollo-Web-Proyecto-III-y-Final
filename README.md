@@ -2,6 +2,9 @@
 LINK DEL LA APLICACION
 https://tobarumg.lat/login
 
+IP clave SSH: ssh -i "C:\Users\josed\.ssh\id_ed25519" root@167.172.214.237
+IP publica: 167.172.214.237
+
 Aplicación web para gestionar un marcador de baloncesto con control de tiempo, cuartos y faltas.  
 La arquitectura utiliza contenedores para la interfaz de usuario (Angular + Nginx), la API (.NET 8) y la base de datos (SQL Server 2022).
 
@@ -248,6 +251,17 @@ Jose Daniel Tobar Reyes 7690-21-13125
 
 Bryan Manuel Pineda Orozco 7690-16-8869
 
-Grupo #10
+Grupo #8
+
+Tabla de trabajo:
+
+**## Distribución de Trabajo
+
+| Integrante                    | Responsabili                                                                                                             | Porcentaje |
+|------------|------------------|------------|
+| **Cesar Alberto Tecún Leiva** | Implementación de **Login con JWT**, autenticación, retoques y corrección de bugs en el frontend (Angular).              | 33.3% |
+| **Jose Daniel Tobar Reyes**   | Desarrollo de torneos (frontend y backend), funciones de backend para editar y agregar jugadores, configuración del VPS. | 33.3% |
+| **Bryan Manuel Pineda Orozco**| Implementación y diseño **navbar responsive**, corrección de bugs en frontend, módulos de jugadores y equipos.           | 33.3% |
+**
 
 ---
