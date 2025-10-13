@@ -78,3 +78,89 @@ services:
     ports:
       - "127.0.0.1:4200:80"
     profiles: ["ui", "all"]
+
+  # ============================
+  # Base de datos Postgres para reportes
+  # ============================
+  postgres:
+    image: postgres:16-alpine
+    container_name: marcador_pg
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-reports_admin}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-reports_admin_pwd}
+      - POSTGRES_DB=${POSTGRES_DB:-reportsdb}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    profiles: ["reports", "all"]
+
+  # ============================
+  # Servicio de reportes (FastAPI)
+  # ============================
+  report-service:
+    build:
+      context: ./reports
+      dockerfile: Dockerfile
+    container_name: marcador_reports
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_ISSUER=${JWT_ISSUER}
+      - JWT_AUDIENCE=${JWT_AUDIENCE}
+      - SYSTEM_LOGO_URL=${SYSTEM_LOGO_URL:-http://localhost:8080/uploads/logos/system.png}
+      - POSTGRES_CS=host=postgres port=5432 dbname=${POSTGRES_DB:-reportsdb} user=${POSTGRES_USER:-reports_admin} password=${POSTGRES_PASSWORD:-reports_admin_pwd}
+    ports:
+      - "127.0.0.1:8081:8081"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    profiles: ["reports", "all"]
+
+  # ============================
+  # Renderizador de PDF (Node + Express + Puppeteer placeholder)
+  # ============================
+  pdf-renderer:
+    build:
+      context: ./pdf-renderer
+      dockerfile: Dockerfile
+    container_name: marcador_pdf
+    ports:
+      - "127.0.0.1:3001:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    profiles: ["reports", "all"]
+
+  # ============================
+  # ETL incremental (placeholder)
+  # ============================
+  etl:
+    build:
+      context: ./etl
+      dockerfile: Dockerfile
+    container_name: marcador_etl
+    depends_on:
+      db:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      - ETL_INTERVAL_SECONDS=${ETL_INTERVAL_SECONDS:-120}
+      - MSSQL_CS=Server=db,1435;Database=${DB_NAME};User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+      - POSTGRES_CS=host=postgres port=5432 dbname=${POSTGRES_DB:-reportsdb} user=${POSTGRES_USER:-reports_admin} password=${POSTGRES_PASSWORD:-reports_admin_pwd}
+    profiles: ["reports", "all"]
+
+volumes:
+  pg_data:
