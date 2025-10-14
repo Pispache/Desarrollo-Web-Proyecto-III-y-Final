@@ -253,3 +253,55 @@ Bryan Manuel Pineda Orozco 7690-16-8869
 
 Grupo #8
 
+---
+
+## 📊 Sistema de Reportes (Fase 1)
+
+### Arquitectura
+
+Sistema de reportes con base de datos Postgres y ETL incremental desde SQL Server.
+
+**Componentes:**
+- **Postgres**: Data mart para reportes
+- **ETL**: Sincronizacion automatica desde SQL Server
+- **Report Service**: API FastAPI (pendiente Fase 3)
+- **PDF Renderer**: Servicio Node.js con Puppeteer (pendiente Fase 3)
+
+### Inicio Rapido
+
+```bash
+# Levantar servicios
+docker compose --profile reports up -d
+
+# Verificar sincronizacion
+./scripts/verify-etl.sh
+
+# Ver logs
+docker logs -f marcador_etl
+```
+
+### Tablas Sincronizadas
+
+| SQL Server | Postgres | Descripcion |
+|------------|----------|-------------|
+| `dbo.Teams` | `teams` | Equipos |
+| `dbo.Players` | `players` | Jugadores |
+| `dbo.Games` | `games` | Partidos |
+| `dbo.GameEvents` | `game_events` | Eventos de juego |
+
+### Archivos
+
+- **ADR**: `docs/ADR-reports.md`
+- **Schema**: `db/pg/ddl.sql` y `db/pg/init.sql`
+- **ETL**: `etl/main.py`
+- **Verificacion**: `scripts/verify-etl.sh`
+
+### Variables
+
+```env
+POSTGRES_USER=reports_admin
+POSTGRES_PASSWORD=reports_admin_pwd
+POSTGRES_DB=reportsdb
+ETL_INTERVAL_SECONDS=120
+```
+

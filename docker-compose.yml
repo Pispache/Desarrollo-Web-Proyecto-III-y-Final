@@ -4,6 +4,7 @@ services:
   # Imagen oficial de SQL Server 2022; requiere SA_PASSWORD fuerte en .env
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: marcador_db
+    restart: unless-stopped
     environment:
       - ACCEPT_EULA=Y
       - MSSQL_SA_PASSWORD=${SA_PASSWORD}
@@ -93,6 +94,7 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./db/pg/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -158,7 +160,7 @@ services:
         condition: service_healthy
     environment:
       - ETL_INTERVAL_SECONDS=${ETL_INTERVAL_SECONDS:-120}
-      - MSSQL_CS=Server=db,1435;Database=${DB_NAME};User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
+      - MSSQL_CS=DRIVER={ODBC Driver 18 for SQL Server};Server=db,1435;Database=${DB_NAME};UID=sa;PWD=${SA_PASSWORD};TrustServerCertificate=yes;
       - POSTGRES_CS=host=postgres port=5432 dbname=${POSTGRES_DB:-reportsdb} user=${POSTGRES_USER:-reports_admin} password=${POSTGRES_PASSWORD:-reports_admin_pwd}
     profiles: ["reports", "all"]
 

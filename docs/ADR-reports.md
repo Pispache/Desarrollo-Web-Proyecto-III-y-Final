@@ -38,9 +38,54 @@ El repositorio actual orquesta SQL Server, API .NET y UI Angular. Se requiere de
 - `docker compose --profile reports up -d` levanta `postgres` y `report-service`.
 - `GET http://localhost:8081/health` responde 200.
 
+## Fase 1: Esquemas y ETL (Implementado)
+
+### DDL Postgres
+- Archivos: `db/pg/ddl.sql` y `db/pg/init.sql`
+- Tablas: `teams`, `players`, `games`, `game_events`, `game_roster_entries`, `etl_state`
+- Indices: `games(status, created_at)`, `game_events(game_id, event_type)`, `players(team_id)`
+- Roles: `report_ro` (lectura), `etl_writer` (escritura), `reports_admin` (admin)
+
+### ETL
+- Archivo: `etl/main.py`
+- Sincroniza Teams, Players, Games, GameEvents desde SQL Server
+- Upsert por clave primaria (ON CONFLICT DO UPDATE)
+- Checkpoints en tabla `etl_state`
+- Logs con conteos y duracion
+- Intervalo configurable (default 120s)
+
+### Inicializacion
+- Script `db/pg/init.sql` se ejecuta automaticamente
+- Crea tablas, indices, roles y checkpoints
+- Montado en `/docker-entrypoint-initdb.d/`
+
+### Variables
+```env
+POSTGRES_USER=reports_admin
+POSTGRES_PASSWORD=reports_admin_pwd
+POSTGRES_DB=reportsdb
+ETL_INTERVAL_SECONDS=120
+```
+
+### Verificacion
+```bash
+# Levantar servicios
+docker compose --profile reports up -d
+
+# Ver logs
+docker logs -f marcador_etl
+
+# Verificar datos
+./scripts/verify-etl.sh
+```
+
 ## Riesgos y Mitigaciones
 - Coste de Chromium: aislar en `pdf-renderer` para evitar impactar al report-service.
-- Sincronización: ETL con checkpoints por tabla.
+- Sincronización: ETL con checkpoints por tabla (implementado).
+- Volumen de datos: Índices optimizados para consultas de reportes.
+- Errores de conexión: Logs detallados y reintentos automáticos.
 
 ## Referencias
 - JWT existente en `.NET`: `api/AuthEndpoints.cs`, `api/Program.cs`.
+- SQL Server schema: `db/init.sql`
+- ETL implementation: `etl/main.py`
