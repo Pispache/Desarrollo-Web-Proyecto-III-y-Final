@@ -113,12 +113,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      pdf-renderer:
+        condition: service_healthy
     environment:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ISSUER=${JWT_ISSUER}
       - JWT_AUDIENCE=${JWT_AUDIENCE}
       - SYSTEM_LOGO_URL=${SYSTEM_LOGO_URL:-http://localhost:8080/uploads/logos/system.png}
       - POSTGRES_CS=host=postgres port=5432 dbname=${POSTGRES_DB:-reportsdb} user=${POSTGRES_USER:-reports_admin} password=${POSTGRES_PASSWORD:-reports_admin_pwd}
+      - PDF_RENDERER_URL=http://pdf-renderer:3000
     ports:
       - "127.0.0.1:8081:8081"
     healthcheck:

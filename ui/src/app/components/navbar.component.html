@@ -73,6 +73,16 @@
           </a>
         </li>
 
+        <li class="nav-item" *ngIf="isAdmin">
+          <a routerLink="/reportes" 
+             class="nav-link" 
+             [class.active]="isActiveRoute('/reportes')"
+             (click)="closeMenu()">
+            <i class="bi bi-file-earmark-pdf-fill"></i>
+            <span>REPORTES</span>
+          </a>
+        </li>
+
         <li class="nav-item">
           <a routerLink="/torneo" 
              class="nav-link" 
@@ -182,6 +192,15 @@
            (click)="closeMenu()">
           <i class="bi bi-bar-chart-fill"></i>
           <span>Resultados</span>
+        </a>
+      </li>
+      
+      <li *ngIf="isAdmin">
+        <a class="dropdown-item" routerLink="/reportes" 
+           [class.active]="isActiveRoute('/reportes')"
+           (click)="closeMenu()">
+          <i class="bi bi-file-earmark-pdf-fill"></i>
+          <span>Reportes</span>
         </a>
       </li>
       

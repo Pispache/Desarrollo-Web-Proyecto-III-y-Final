@@ -1,0 +1,196 @@
+<div class="reports-page">
+  <div class="container-fluid py-4">
+    <div class="row mb-4">
+      <div class="col">
+        <h1 class="page-title">
+          <i class="bi bi-file-earmark-pdf-fill me-2"></i>
+          Reportes PDF
+        </h1>
+        <p class="text-muted">Genera reportes en formato PDF con filtros personalizados</p>
+      </div>
+    </div>
+
+    <!-- Error Alert -->
+    <div class="row mb-3" *ngIf="error">
+      <div class="col">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>
+          {{ error }}
+          <button type="button" class="btn-close" (click)="clearError()"></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="row mb-3" *ngIf="loading">
+      <div class="col">
+        <div class="alert alert-info">
+          <div class="d-flex align-items-center">
+            <div class="spinner-border spinner-border-sm me-2" role="status">
+              <span class="visually-hidden">Cargando...</span>
+            </div>
+            <span>Generando reporte...</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RF-REP-01: Reporte de Equipos -->
+    <div class="row mb-4">
+      <div class="col-lg-8 col-xl-6">
+        <div class="card report-card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-people-fill me-2"></i>
+              RF-REP-01: Reporte de Equipos
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-3">
+              Genera un PDF con la lista de equipos registrados. Puedes filtrar por nombre o ciudad.
+            </p>
+            
+            <div class="mb-3">
+              <label for="teamSearch" class="form-label">Buscar por nombre</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="teamSearch"
+                [(ngModel)]="teamSearchQuery"
+                placeholder="Ej: Lakers, Bulls...">
+            </div>
+
+            <div class="mb-3">
+              <label for="teamCity" class="form-label">Filtrar por ciudad</label>
+              <input 
+                type="text" 
+                class="form-control" 
+                id="teamCity"
+                [(ngModel)]="teamCityFilter"
+                placeholder="Ej: Los Angeles, Chicago...">
+            </div>
+
+            <button 
+              class="btn btn-primary w-100"
+              (click)="downloadTeamsPDF()"
+              [disabled]="loading">
+              <i class="bi bi-download me-2"></i>
+              Descargar PDF de Equipos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RF-REP-02: Reporte de Jugadores por Equipo -->
+    <div class="row mb-4">
+      <div class="col-lg-8 col-xl-6">
+        <div class="card report-card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-person-badge-fill me-2"></i>
+              RF-REP-02: Reporte de Jugadores por Equipo
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-3">
+              Genera un PDF con el roster completo de un equipo, incluyendo número, nombre, posición, edad, estatura y nacionalidad.
+            </p>
+            
+            <div class="mb-3">
+              <label for="teamSelect" class="form-label">Seleccionar equipo</label>
+              <select 
+                class="form-select" 
+                id="teamSelect"
+                [(ngModel)]="selectedTeamId">
+                <option [ngValue]="null">-- Selecciona un equipo --</option>
+                <option *ngFor="let team of teams" [ngValue]="team.team_id">
+                  {{ team.name }} <span *ngIf="team.city">({{ team.city }})</span>
+                </option>
+              </select>
+            </div>
+
+            <button 
+              class="btn btn-primary w-100"
+              (click)="downloadPlayersPDF()"
+              [disabled]="loading || !selectedTeamId">
+              <i class="bi bi-download me-2"></i>
+              Descargar PDF de Jugadores
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RF-REP-03: Reporte de Historial de Partidos -->
+    <div class="row mb-4">
+      <div class="col-lg-8 col-xl-6">
+        <div class="card report-card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-calendar-event-fill me-2"></i>
+              RF-REP-03: Historial de Partidos
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-3">
+              Genera un PDF con el historial de partidos. Puedes filtrar por rango de fechas y estado.
+            </p>
+            
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <label for="gamesFrom" class="form-label">Desde</label>
+                <input 
+                  type="date" 
+                  class="form-control" 
+                  id="gamesFrom"
+                  [(ngModel)]="gamesFromDate">
+              </div>
+              <div class="col-md-6">
+                <label for="gamesTo" class="form-label">Hasta</label>
+                <input 
+                  type="date" 
+                  class="form-control" 
+                  id="gamesTo"
+                  [(ngModel)]="gamesToDate">
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label for="gamesStatus" class="form-label">Estado del partido</label>
+              <select 
+                class="form-select" 
+                id="gamesStatus"
+                [(ngModel)]="gamesStatusFilter">
+                <option value="">Todos los estados</option>
+                <option value="SCHEDULED">Programado</option>
+                <option value="IN_PROGRESS">En progreso</option>
+                <option value="FINISHED">Finalizado</option>
+                <option value="CANCELLED">Cancelado</option>
+              </select>
+            </div>
+
+            <button 
+              class="btn btn-primary w-100"
+              (click)="downloadGamesPDF()"
+              [disabled]="loading">
+              <i class="bi bi-download me-2"></i>
+              Descargar PDF de Partidos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info Footer -->
+    <div class="row">
+      <div class="col">
+        <div class="alert alert-info">
+          <i class="bi bi-info-circle-fill me-2"></i>
+          <strong>Nota:</strong> Los reportes se generan en tiempo real desde la base de datos de reportes (PostgreSQL). 
+          La sincronización con la base transaccional ocurre cada 2 minutos.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

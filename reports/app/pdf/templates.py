@@ -1,0 +1,400 @@
+"""
+Templates HTML para generación de reportes PDF.
+Utiliza estilos inline para compatibilidad con Puppeteer.
+"""
+
+from datetime import datetime
+from typing import List, Dict, Optional
+
+def get_base_styles() -> str:
+    """Estilos CSS base para todos los reportes."""
+    return """
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #333;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 3px solid #667eea;
+        }
+        .header-logo {
+            max-width: 80px;
+            max-height: 80px;
+            margin-bottom: 10px;
+        }
+        .header-title {
+            font-size: 24pt;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        .header-subtitle {
+            font-size: 14pt;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .header-meta {
+            font-size: 10pt;
+            color: #999;
+        }
+        .filters {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .filters-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #667eea;
+        }
+        .filter-item {
+            display: inline-block;
+            margin-right: 20px;
+            font-size: 10pt;
+        }
+        .filter-label {
+            font-weight: 600;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 10pt;
+        }
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        th {
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #667eea;
+        }
+        td {
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tbody tr:hover {
+            background-color: #e9ecef;
+        }
+        .text-center {
+            text-align: center;
+        }
+        .text-right {
+            text-align: right;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 9pt;
+            font-weight: 600;
+        }
+        .badge-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .badge-warning {
+            background-color: #ffc107;
+            color: #333;
+        }
+        .badge-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .badge-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .badge-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 15px;
+            border-top: 2px solid #ddd;
+            text-align: center;
+            font-size: 9pt;
+            color: #999;
+        }
+        .logo-mini {
+            max-width: 30px;
+            max-height: 30px;
+            vertical-align: middle;
+        }
+        .no-data {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+    """
+
+def render_teams_html(teams: List[Dict], filters: Dict, logo_url: Optional[str] = None) -> str:
+    """Genera HTML para reporte de equipos."""
+    now = datetime.now().strftime("%d/%m/%Y %H:%M")
+    
+    # Construir filtros aplicados
+    filters_html = ""
+    if filters.get("q"):
+        filters_html += f'<span class="filter-item"><span class="filter-label">Búsqueda:</span> {filters["q"]}</span>'
+    if filters.get("city"):
+        filters_html += f'<span class="filter-item"><span class="filter-label">Ciudad:</span> {filters["city"]}</span>'
+    if not filters_html:
+        filters_html = '<span class="filter-item">Sin filtros aplicados</span>'
+    
+    # Construir filas de tabla
+    rows_html = ""
+    if teams:
+        for idx, team in enumerate(teams, 1):
+            logo_cell = ""
+            if team.get("logo_url"):
+                logo_cell = f'<img src="{team["logo_url"]}" class="logo-mini" alt="Logo">'
+            
+            rows_html += f"""
+            <tr>
+                <td class="text-center">{idx}</td>
+                <td class="text-center">{logo_cell}</td>
+                <td>{team.get("name", "N/A")}</td>
+                <td>{team.get("city", "N/A")}</td>
+                <td class="text-center">{team.get("created_at", "N/A")[:10] if team.get("created_at") else "N/A"}</td>
+            </tr>
+            """
+    else:
+        rows_html = '<tr><td colspan="5" class="no-data">No se encontraron equipos</td></tr>'
+    
+    logo_img = f'<img src="{logo_url}" class="header-logo" alt="Logo">' if logo_url else ""
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        {get_base_styles()}
+    </head>
+    <body>
+        <div class="header">
+            {logo_img}
+            <div class="header-title">Reporte de Equipos</div>
+            <div class="header-subtitle">Sistema de Marcador de Baloncesto</div>
+            <div class="header-meta">Generado el {now}</div>
+        </div>
+        
+        <div class="filters">
+            <div class="filters-title">Filtros Aplicados</div>
+            {filters_html}
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 8%;">#</th>
+                    <th class="text-center" style="width: 10%;">Logo</th>
+                    <th style="width: 40%;">Nombre</th>
+                    <th style="width: 30%;">Ciudad</th>
+                    <th class="text-center" style="width: 12%;">Fecha Registro</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows_html}
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            Total de equipos: {len(teams)} | Marcador BB &copy; 2025
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+def render_players_html(players: List[Dict], team_name: str, logo_url: Optional[str] = None) -> str:
+    """Genera HTML para reporte de jugadores por equipo."""
+    now = datetime.now().strftime("%d/%m/%Y %H:%M")
+    
+    # Construir filas de tabla
+    rows_html = ""
+    if players:
+        for player in players:
+            number = player.get("number") if player.get("number") is not None else "S/N"
+            position = player.get("position") or "N/A"
+            height = f'{player.get("height_cm")} cm' if player.get("height_cm") else "N/A"
+            age = player.get("age") if player.get("age") else "N/A"
+            nationality = player.get("nationality") or "N/A"
+            active_badge = '<span class="badge badge-success">Activo</span>' if player.get("active") else '<span class="badge badge-secondary">Inactivo</span>'
+            
+            rows_html += f"""
+            <tr>
+                <td class="text-center"><strong>{number}</strong></td>
+                <td>{player.get("name", "N/A")}</td>
+                <td class="text-center">{position}</td>
+                <td class="text-center">{height}</td>
+                <td class="text-center">{age}</td>
+                <td class="text-center">{nationality}</td>
+                <td class="text-center">{active_badge}</td>
+            </tr>
+            """
+    else:
+        rows_html = '<tr><td colspan="7" class="no-data">No se encontraron jugadores</td></tr>'
+    
+    logo_img = f'<img src="{logo_url}" class="header-logo" alt="Logo">' if logo_url else ""
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        {get_base_styles()}
+    </head>
+    <body>
+        <div class="header">
+            {logo_img}
+            <div class="header-title">Roster de Jugadores</div>
+            <div class="header-subtitle">{team_name}</div>
+            <div class="header-meta">Generado el {now}</div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 10%;">Dorsal</th>
+                    <th style="width: 30%;">Nombre</th>
+                    <th class="text-center" style="width: 12%;">Posición</th>
+                    <th class="text-center" style="width: 12%;">Estatura</th>
+                    <th class="text-center" style="width: 10%;">Edad</th>
+                    <th class="text-center" style="width: 16%;">Nacionalidad</th>
+                    <th class="text-center" style="width: 10%;">Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows_html}
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            Total de jugadores: {len(players)} | Marcador BB &copy; 2025
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+def render_games_html(games: List[Dict], filters: Dict, logo_url: Optional[str] = None) -> str:
+    """Genera HTML para reporte de historial de partidos."""
+    now = datetime.now().strftime("%d/%m/%Y %H:%M")
+    
+    # Construir filtros aplicados
+    filters_html = ""
+    if filters.get("from"):
+        filters_html += f'<span class="filter-item"><span class="filter-label">Desde:</span> {filters["from"]}</span>'
+    if filters.get("to"):
+        filters_html += f'<span class="filter-item"><span class="filter-label">Hasta:</span> {filters["to"]}</span>'
+    if filters.get("status"):
+        filters_html += f'<span class="filter-item"><span class="filter-label">Estado:</span> {filters["status"]}</span>'
+    if not filters_html:
+        filters_html = '<span class="filter-item">Sin filtros aplicados</span>'
+    
+    # Mapeo de estados a badges
+    status_badges = {
+        "SCHEDULED": '<span class="badge badge-info">Programado</span>',
+        "IN_PROGRESS": '<span class="badge badge-warning">En Progreso</span>',
+        "FINISHED": '<span class="badge badge-success">Finalizado</span>',
+        "CANCELLED": '<span class="badge badge-danger">Cancelado</span>'
+    }
+    
+    # Construir filas de tabla
+    rows_html = ""
+    if games:
+        for idx, game in enumerate(games, 1):
+            status = game.get("status", "N/A")
+            status_badge = status_badges.get(status, f'<span class="badge badge-secondary">{status}</span>')
+            
+            score_html = ""
+            if status == "FINISHED":
+                score_html = f'{game.get("home_score", 0)} - {game.get("away_score", 0)}'
+            else:
+                score_html = "-"
+            
+            created_at = game.get("created_at", "N/A")[:16] if game.get("created_at") else "N/A"
+            quarter = game.get("quarter", "N/A")
+            
+            rows_html += f"""
+            <tr>
+                <td class="text-center">{idx}</td>
+                <td>{game.get("home_team", "N/A")}</td>
+                <td>{game.get("away_team", "N/A")}</td>
+                <td class="text-center">{score_html}</td>
+                <td class="text-center">{quarter}</td>
+                <td class="text-center">{status_badge}</td>
+                <td class="text-center">{created_at}</td>
+            </tr>
+            """
+    else:
+        rows_html = '<tr><td colspan="7" class="no-data">No se encontraron partidos</td></tr>'
+    
+    logo_img = f'<img src="{logo_url}" class="header-logo" alt="Logo">' if logo_url else ""
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        {get_base_styles()}
+    </head>
+    <body>
+        <div class="header">
+            {logo_img}
+            <div class="header-title">Historial de Partidos</div>
+            <div class="header-subtitle">Sistema de Marcador de Baloncesto</div>
+            <div class="header-meta">Generado el {now}</div>
+        </div>
+        
+        <div class="filters">
+            <div class="filters-title">Filtros Aplicados</div>
+            {filters_html}
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th class="text-center" style="width: 8%;">#</th>
+                    <th style="width: 28%;">Equipo Local</th>
+                    <th style="width: 28%;">Equipo Visitante</th>
+                    <th class="text-center" style="width: 12%;">Marcador</th>
+                    <th class="text-center" style="width: 8%;">Cuarto</th>
+                    <th class="text-center" style="width: 12%;">Estado</th>
+                    <th class="text-center" style="width: 14%;">Fecha/Hora</th>
+                </tr>
+            </thead>
+            <tbody>
+                {rows_html}
+            </tbody>
+        </table>
+        
+        <div class="footer">
+            Total de partidos: {len(games)} | Marcador BB &copy; 2025
+        </div>
+    </body>
+    </html>
+    """
+    return html

@@ -21,8 +21,12 @@ export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError(err => {
       if (err?.status === 401) {
-        // Solo forzar logout si actualmente hay sesión válida
-        if (auth.isAuthenticated()) {
+        // NO cerrar sesión si el error viene de la API de reportes
+        // (puede ser un problema de configuración temporal)
+        const isReportsApi = req.url.includes('localhost:8081') || req.url.includes('/v1/reports');
+        
+        if (!isReportsApi && auth.isAuthenticated()) {
+          // Solo forzar logout para errores 401 de la API principal
           auth.logout(true, 'expired', 'interceptor');
         }
       }
