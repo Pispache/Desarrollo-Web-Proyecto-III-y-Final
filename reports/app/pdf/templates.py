@@ -228,6 +228,81 @@ def render_teams_html(teams: List[Dict], filters: Dict, logo_url: Optional[str] 
     """
     return html
 
+def render_roster_html(game: Dict, home_players: List[Dict], away_players: List[Dict], logo_url: Optional[str] = None, home_logo_url: Optional[str] = None, away_logo_url: Optional[str] = None) -> str:
+    now = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    max_rows = max(len(home_players), len(away_players))
+    def row_html(idx: int) -> str:
+        left = home_players[idx] if idx < len(home_players) else None
+        right = away_players[idx] if idx < len(away_players) else None
+        def fmt(p: Optional[Dict]) -> str:
+            if not p:
+                return ""
+            number = p.get("number") if p.get("number") is not None else "S/N"
+            name = p.get("name", "N/A")
+            pos = p.get("position") or "-"
+            age = p.get("age")
+            height = p.get("height_cm") or p.get("heightCm")
+            nat = p.get("nationality") or p.get("Nationality")
+            extra = []
+            if height is not None:
+                extra.append(f"Est: {height} cm")
+            if age is not None:
+                extra.append(f"Edad: {age}")
+            if nat:
+                extra.append(f"Nac: {nat}")
+            extra_html = ("<div style='color:#777;font-size:11px;margin-top:2px'>" + " | ".join(extra) + "</div>") if extra else ""
+            return f"<div><strong>{number}</strong> - {name} <span style='color:#666'>( {pos} )</span>{extra_html}</div>"
+        return f"""
+        <tr>
+            <td>{fmt(left)}</td>
+            <td>{fmt(right)}</td>
+        </tr>
+        """
+
+    body_rows = "".join(row_html(i) for i in range(max_rows)) if max_rows > 0 else '<tr><td colspan="2" class="no-data">No hay roster asignado</td></tr>'
+
+    # Encabezado con 2 logos (si existen) y VS
+    left_logo = f'<img src="{home_logo_url}" class="header-logo" alt="Logo Local">' if home_logo_url else ""
+    right_logo = f'<img src="{away_logo_url}" class="header-logo" alt="Logo Visitante">' if away_logo_url else ""
+    duel = f"<div style='display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:8px'>" \
+           f"{left_logo}<div style='font-size:18px;color:#666;font-weight:700'>VS</div>{right_logo}</div>"
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        {get_base_styles()}
+    </head>
+    <body>
+        <div class="header">
+            {duel}
+            <div class="header-title">Roster por Partido</div>
+            <div class="header-subtitle">{game.get('home_team','Local')} vs {game.get('away_team','Visitante')}</div>
+            <div class="header-meta">Generado el {now}</div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 50%;">Local: {game.get('home_team','-')}</th>
+                    <th style="width: 50%;">Visitante: {game.get('away_team','-')}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {body_rows}
+            </tbody>
+        </table>
+
+        <div class="footer">
+            Total local: {len(home_players)} | Total visitante: {len(away_players)} | Marcador BB &copy; 2025
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
 def render_players_html(players: List[Dict], team_name: str, logo_url: Optional[str] = None) -> str:
     """Genera HTML para reporte de jugadores por equipo."""
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
@@ -241,21 +316,19 @@ def render_players_html(players: List[Dict], team_name: str, logo_url: Optional[
             height = f'{player.get("height_cm")} cm' if player.get("height_cm") else "N/A"
             age = player.get("age") if player.get("age") else "N/A"
             nationality = player.get("nationality") or "N/A"
-            active_badge = '<span class="badge badge-success">Activo</span>' if player.get("active") else '<span class="badge badge-secondary">Inactivo</span>'
             
             rows_html += f"""
             <tr>
-                <td class="text-center"><strong>{number}</strong></td>
                 <td>{player.get("name", "N/A")}</td>
+                <td class="text-center"><strong>{number}</strong></td>
                 <td class="text-center">{position}</td>
-                <td class="text-center">{height}</td>
                 <td class="text-center">{age}</td>
+                <td class="text-center">{height}</td>
                 <td class="text-center">{nationality}</td>
-                <td class="text-center">{active_badge}</td>
             </tr>
             """
     else:
-        rows_html = '<tr><td colspan="7" class="no-data">No se encontraron jugadores</td></tr>'
+        rows_html = '<tr><td colspan="6" class="no-data">No se encontraron jugadores</td></tr>'
     
     logo_img = f'<img src="{logo_url}" class="header-logo" alt="Logo">' if logo_url else ""
     
@@ -277,13 +350,12 @@ def render_players_html(players: List[Dict], team_name: str, logo_url: Optional[
         <table>
             <thead>
                 <tr>
-                    <th class="text-center" style="width: 10%;">Dorsal</th>
-                    <th style="width: 30%;">Nombre</th>
-                    <th class="text-center" style="width: 12%;">Posición</th>
-                    <th class="text-center" style="width: 12%;">Estatura</th>
+                    <th style="width: 34%;">Nombre completo</th>
+                    <th class="text-center" style="width: 10%;">Número</th>
+                    <th class="text-center" style="width: 14%;">Posición</th>
                     <th class="text-center" style="width: 10%;">Edad</th>
-                    <th class="text-center" style="width: 16%;">Nacionalidad</th>
-                    <th class="text-center" style="width: 10%;">Estado</th>
+                    <th class="text-center" style="width: 14%;">Estatura</th>
+                    <th class="text-center" style="width: 18%;">Nacionalidad</th>
                 </tr>
             </thead>
             <tbody>

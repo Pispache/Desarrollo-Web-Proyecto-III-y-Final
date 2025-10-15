@@ -13,6 +13,13 @@ interface Team {
   created_at: string;
 }
 
+interface GameLite {
+  game_id: number;
+  home_team: string;
+  away_team: string;
+  created_at: string | null;
+}
+
 @Component({
   selector: 'app-reports-page',
   standalone: true,
@@ -32,9 +39,59 @@ export class ReportsPageComponent implements OnInit {
   
   // Filtro para jugadores
   private _selectedTeamId: number | null = null;
+  // Filtro para roster por partido
+  rosterGameId: number | null = null;
   
   get selectedTeamId(): number | null {
     return this._selectedTeamId;
+  }
+
+  loadGamesList() {
+    // Cargar lista de partidos desde report-service (sin filtros para selector)
+    this.http.get<{ items: any[] }>(`${this.reportsBaseUrl}/games`, {
+      headers: this.getHeaders()
+    }).subscribe({
+      next: (response) => {
+        this.games = (response.items || []).map(g => ({
+          game_id: g.game_id,
+          home_team: g.home_team,
+          away_team: g.away_team,
+          created_at: g.created_at || null,
+        }));
+      },
+      error: (err) => {
+        console.error('Error loading games list:', err);
+      }
+    });
+  }
+
+  downloadRosterPDF() {
+    const gameId = this.selectedGameId ?? this.rosterGameId;
+    if (!gameId) {
+      this.error = 'Selecciona un partido o ingresa el ID de partido';
+      return;
+    }
+    this.loading = true;
+    this.error = '';
+    const url = `${this.reportsBaseUrl}/games/${gameId}/roster.pdf`;
+    this.http.get(url, {
+      headers: this.getHeaders(),
+      responseType: 'blob',
+      withCredentials: true
+    }).pipe(
+      catchError((err: HttpErrorResponse) => {
+        console.error('Error downloading roster PDF:', err);
+        this.error = this.getErrorMessage(err);
+        this.loading = false;
+        return throwError(() => err);
+      })
+    ).subscribe({
+      next: (blob) => {
+        this.downloadBlob(blob, `reporte-roster-partido-${gameId}-${this.getDateString()}.pdf`);
+        this.loading = false;
+      },
+      error: () => {}
+    });
   }
   
   set selectedTeamId(value: number | null) {
@@ -43,6 +100,8 @@ export class ReportsPageComponent implements OnInit {
   }
   
   teams: Team[] = [];
+  games: GameLite[] = [];
+  selectedGameId: number | null = null;
   
   loading = false;
   error = '';
@@ -57,6 +116,7 @@ export class ReportsPageComponent implements OnInit {
 
   ngOnInit() {
     this.loadTeams();
+    this.loadGamesList();
   }
 
   onTeamChange(event: Event) {
@@ -78,11 +138,17 @@ export class ReportsPageComponent implements OnInit {
     this.error = '';
     
     // Cargar equipos desde la API principal (con paginación grande para obtener todos)
-    this.http.get<{ items: Team[], total: number }>(`${this.apiBaseUrl}/teams?pageSize=1000`, {
+    this.http.get<{ items: any[], total: number }>(`${this.apiBaseUrl}/teams?pageSize=1000`, {
       headers: this.getHeaders()
     }).subscribe({
       next: (response) => {
-        this.teams = response.items;
+        this.teams = (response.items || []).map((t: any) => ({
+          team_id: t.team_id ?? t.teamId ?? t.TeamId,
+          name: t.name ?? t.Name,
+          city: t.city ?? t.City ?? '',
+          logo_url: t.logo_url ?? t.logoUrl ?? null,
+          created_at: t.created_at ?? t.createdAt ?? ''
+        })) as Team[];
         console.log(`Loaded ${this.teams.length} teams`, this.teams);
         if (this.teams.length > 0) {
           console.log('First team object:', this.teams[0]);
@@ -128,7 +194,8 @@ export class ReportsPageComponent implements OnInit {
   }
 
   downloadPlayersPDF() {
-    if (!this.selectedTeamId) {
+    const teamId = this.selectedTeamId;
+    if (!teamId) {
       this.error = 'Selecciona un equipo primero';
       return;
     }
@@ -137,7 +204,7 @@ export class ReportsPageComponent implements OnInit {
     this.loading = true;
     this.error = '';
     
-    const url = `${this.reportsBaseUrl}/teams/${this.selectedTeamId}/players.pdf`;
+    const url = `${this.reportsBaseUrl}/teams/${teamId}/players.pdf`;
     console.log('[DEBUG] Requesting URL:', url);
     
     this.http.get(url, {
@@ -153,7 +220,7 @@ export class ReportsPageComponent implements OnInit {
       })
     ).subscribe({
       next: (blob) => {
-        const teamName = this.teams.find(t => t.team_id === this.selectedTeamId)?.name || 'equipo';
+        const teamName = this.teams.find(t => t.team_id === teamId)?.name || 'equipo';
         this.downloadBlob(blob, `reporte-jugadores-${teamName}-${this.getDateString()}.pdf`);
         this.loading = false;
       },

@@ -8,6 +8,7 @@
         </h1>
         <p class="text-muted">Genera reportes en formato PDF con filtros personalizados</p>
       </div>
+
     </div>
 
     <!-- Error Alert -->
@@ -102,9 +103,9 @@
               <select 
                 class="form-select" 
                 id="teamSelect"
-                (change)="onTeamChange($event)">
-                <option value="">-- Selecciona un equipo --</option>
-                <option *ngFor="let team of teams" [value]="team.team_id">
+                [(ngModel)]="selectedTeamId">
+                <option [ngValue]="null">-- Selecciona un equipo --</option>
+                <option *ngFor="let team of teams" [ngValue]="team.team_id">
                   {{ team.name }} <span *ngIf="team.city">({{ team.city }})</span>
                 </option>
               </select>
@@ -114,7 +115,7 @@
             <button 
               class="btn btn-primary w-100"
               (click)="downloadPlayersPDF()"
-              [disabled]="loading || !selectedTeamId">
+              [disabled]="loading || selectedTeamId == null">
               <i class="bi bi-download me-2"></i>
               Descargar PDF de Jugadores
             </button>
@@ -158,6 +159,57 @@
               [disabled]="loading">
               <i class="bi bi-download me-2"></i>
               Descargar PDF de Partidos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RF-REP-04: Reporte de Roster por Partido (al final) -->
+    <div class="row mb-4">
+      <div class="col-lg-8 col-xl-6">
+        <div class="card report-card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-people me-2"></i>
+              RF-REP-04: Roster por Partido
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-3">
+              Genera un PDF con el roster asignado por partido para ambos equipos.
+            </p>
+
+            <div class="mb-3">
+              <label for="gameSelect" class="form-label">Seleccionar partido</label>
+              <select
+                class="form-select"
+                id="gameSelect"
+                [(ngModel)]="selectedGameId">
+                <option [ngValue]="null">-- Selecciona un partido --</option>
+                <option *ngFor="let g of games" [ngValue]="g.game_id">
+                  {{ g.home_team }} vs {{ g.away_team }}
+                </option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <label for="rosterGameId" class="form-label">O ingresa ID del partido</label>
+              <input 
+                type="number" 
+                class="form-control" 
+                id="rosterGameId"
+                [(ngModel)]="rosterGameId"
+                placeholder="Ej: 1">
+              <small class="text-muted">Útil si el listado de partidos está vacío.</small>
+            </div>
+
+            <button 
+              class="btn btn-primary w-100"
+              (click)="downloadRosterPDF()"
+              [disabled]="loading || (!selectedGameId && !rosterGameId)">
+              <i class="bi bi-download me-2"></i>
+              Descargar PDF de Roster
             </button>
           </div>
         </div>

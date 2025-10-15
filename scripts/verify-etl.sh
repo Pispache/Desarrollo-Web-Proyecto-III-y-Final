@@ -1,4 +1,4 @@
-#!/bin/bash
+docker-compose --profile all up --build#!/bin/bash
 # Verificacion del ETL - compara conteos entre SQL Server y Postgres
 
 set -e

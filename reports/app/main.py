@@ -1,13 +1,13 @@
 import os
 from typing import Optional
 from datetime import datetime
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from .auth import require_admin
 from .db import get_connection
 from .pdf.base import render_html_to_pdf
-from .pdf.templates import render_teams_html, render_players_html, render_games_html
+from .pdf.templates import render_teams_html, render_players_html, render_games_html, render_roster_html
 
 # /// <summary>
 # /// Punto de entrada del microservicio de reportes.
@@ -73,6 +73,171 @@ def ping_db(_=Depends(require_admin)):
                 cur.execute("SELECT 1")
                 cur.fetchone()
         return {"db": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# /// <summary>
+# /// RF-REP-04: Reporte de roster por partido en PDF.
+# /// </summary>
+# /// <remarks>
+# /// - Muestra los jugadores asignados por cada equipo (local/visitante) según `game_roster_entries`.
+# /// - 404 si el partido no existe.
+# /// </remarks>
+@router.get("/games/{gameId}/roster.pdf")
+async def roster_pdf(
+    gameId: int,
+    request: Request,
+    _=Depends(require_admin)
+):
+    print(f"[INFO] Generating roster PDF for game {gameId}")
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Obtener datos del partido
+                cur.execute(
+                    """
+                    SELECT game_id, home_team, away_team, home_team_id, away_team_id
+                    FROM games
+                    WHERE game_id = %s
+                    """,
+                    (gameId,)
+                )
+                g = cur.fetchone()
+                if not g:
+                    raise HTTPException(status_code=404, detail="Game not found")
+                game = {
+                    "game_id": g[0],
+                    "home_team": g[1],
+                    "away_team": g[2],
+                    "home_team_id": g[3],
+                    "away_team_id": g[4],
+                }
+
+                # Obtener roster con join a players
+                cur.execute(
+                    """
+                    SELECT r.team_side, p.player_id, p.team_id, p.number, p.name, p.position
+                    FROM game_roster_entries r
+                    JOIN players p ON p.player_id = r.player_id
+                    WHERE r.game_id = %s
+                    ORDER BY r.team_side ASC, p.number NULLS LAST, p.name ASC
+                    """,
+                    (gameId,)
+                )
+                rows = cur.fetchall()
+
+        home_players = []
+        away_players = []
+        for r in rows:
+            item = {
+                "player_id": r[1],
+                "team_id": r[2],
+                "number": r[3],
+                "name": r[4],
+                "position": r[5],
+            }
+            if r[0] == "HOME":
+                home_players.append(item)
+            else:
+                away_players.append(item)
+
+        # Fallback: si no hay roster en Postgres, consultar a la API por jugadores de HOME/AWAY
+        if not home_players and not away_players:
+            try:
+                import json
+                from urllib import request as urlreq
+
+                auth_header = request.headers.get("authorization")
+                # Actualizar nombres de equipos desde API para evitar desincronización
+                try:
+                    g_req = urlreq.Request(f"http://api:8080/api/games/{gameId}")
+                    if auth_header:
+                        g_req.add_header("Authorization", auth_header)
+                    with urlreq.urlopen(g_req, timeout=10) as resp_g:
+                        g_data = json.loads(resp_g.read())
+                        g_obj = g_data.get("game") if isinstance(g_data, dict) else None
+                        if g_obj:
+                            game["home_team"] = g_obj.get("HomeTeam") or game["home_team"]
+                            game["away_team"] = g_obj.get("AwayTeam") or game["away_team"]
+                except Exception as ex_names:
+                    print(f"[WARN] Could not refresh game names from API: {ex_names}")
+
+                def fetch_side(side: str):
+                    url = f"http://api:8080/api/games/{gameId}/players/{side}"
+                    req = urlreq.Request(url)
+                    if auth_header:
+                        req.add_header("Authorization", auth_header)
+                    with urlreq.urlopen(req, timeout=10) as resp:
+                        data = resp.read()
+                        return json.loads(data)
+
+                home_json = fetch_side("HOME")
+                away_json = fetch_side("AWAY")
+
+                def map_player(p: dict):
+                    return {
+                        "player_id": p.get("PlayerId") or p.get("playerId") or p.get("player_id"),
+                        "team_id": p.get("TeamId") or p.get("teamId") or p.get("team_id"),
+                        "number": p.get("Number") if p.get("Number") is not None else p.get("number"),
+                        "name": p.get("Name") or p.get("name"),
+                        "position": p.get("Position") or p.get("position"),
+                        "height_cm": p.get("HeightCm") or p.get("heightCm") or p.get("height_cm"),
+                        "age": p.get("Age") or p.get("age"),
+                        "nationality": p.get("Nationality") or p.get("nationality"),
+                    }
+
+                home_players = [map_player(p) for p in (home_json or [])]
+                away_players = [map_player(p) for p in (away_json or [])]
+            except Exception as ex:
+                print(f"[WARN] Fallback API roster fetch failed: {ex}")
+
+        # Obtener logos de equipos desde API si hay IDs
+        home_logo_abs = None
+        away_logo_abs = None
+        try:
+            import json
+            from urllib import request as urlreq
+            auth_header = request.headers.get("authorization")
+
+            def absolute_logo(u: Optional[str]):
+                if not u:
+                    return None
+                s = str(u)
+                if s.startswith("http://") or s.startswith("https://"):
+                    return s
+                if s.startswith("/"):
+                    return f"http://api:8080{s}"
+                return s
+
+            def team_logo(team_id: Optional[int]):
+                if team_id is None:
+                    return None
+                req = urlreq.Request(f"http://api:8080/api/teams/{team_id}")
+                if auth_header:
+                    req.add_header("Authorization", auth_header)
+                with urlreq.urlopen(req, timeout=10) as resp:
+                    tdata = json.loads(resp.read())
+                    url = (tdata.get("LogoUrl") or tdata.get("logoUrl") or tdata.get("logo_url")) if isinstance(tdata, dict) else None
+                    return absolute_logo(url)
+
+            home_logo_abs = team_logo(game.get("home_team_id"))
+            away_logo_abs = team_logo(game.get("away_team_id"))
+        except Exception as _:
+            pass
+
+        html = render_roster_html(game, home_players, away_players, None, home_logo_abs, away_logo_abs)
+        pdf_bytes = await render_html_to_pdf(html)
+
+        today = datetime.now().strftime("%Y%m%d")
+        filename = f"reporte-roster-partido-{gameId}-{today}.pdf"
+
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -290,47 +455,119 @@ async def teams_pdf(
 @router.get("/teams/{teamId}/players.pdf")
 async def players_pdf(
     teamId: int,
+    request: Request,
     _=Depends(require_admin)
 ):
     print(f"[INFO] Generating players PDF for team {teamId}")
     try:
-        with get_connection() as conn:
-            with conn.cursor() as cur:
-                # Obtener nombre del equipo
-                cur.execute("SELECT name FROM teams WHERE team_id = %s", (teamId,))
-                team_row = cur.fetchone()
-                if not team_row:
-                    raise HTTPException(status_code=404, detail="Team not found")
-                team_name = team_row[0]
-                
-                # Obtener jugadores
-                cur.execute(
-                    """SELECT player_id, team_id, number, name, position, active, created_at
-                       FROM players WHERE team_id = %s ORDER BY number NULLS LAST, name ASC""",
-                    (teamId,),
-                )
-                rows = [
-                    {
-                        "player_id": r[0],
-                        "team_id": r[1],
-                        "number": r[2],
-                        "name": r[3],
-                        "position": r[4],
-                        "active": r[5],
-                        "created_at": r[6].isoformat() if r[6] else None,
-                        "height_cm": None,  # TODO: agregar si existe en schema
-                        "age": None,
-                        "nationality": None
-                    }
-                    for r in cur.fetchall()
-                ]
-        
+        # 1) Intentar obtener desde API (fuente prioritaria para nombres actuales y campos extendidos)
+        api_team_name: Optional[str] = None
+        api_team_logo_url: Optional[str] = None
+        api_players: Optional[list] = None
+        try:
+            import json
+            from urllib import request as urlreq
+            auth_header = request.headers.get("authorization")
+
+            # Nombre del equipo actual desde API
+            team_req = urlreq.Request(f"http://api:8080/api/teams/{teamId}")
+            if auth_header:
+                team_req.add_header("Authorization", auth_header)
+            with urlreq.urlopen(team_req, timeout=10) as resp_t:
+                tdata = json.loads(resp_t.read())
+                if isinstance(tdata, dict):
+                    api_team_name = (tdata.get("Name") or tdata.get("name"))
+                    api_team_logo_url = (tdata.get("LogoUrl") or tdata.get("logoUrl") or tdata.get("logo_url"))
+
+            # Jugadores del equipo desde API
+            players_req = urlreq.Request(f"http://api:8080/api/teams/{teamId}/players")
+            if auth_header:
+                players_req.add_header("Authorization", auth_header)
+            with urlreq.urlopen(players_req, timeout=15) as resp_p:
+                pdata = json.loads(resp_p.read())
+                api_players = pdata if isinstance(pdata, list) else []
+        except Exception as ex_api:
+            print(f"[WARN] RF-REP-02 API fallback failed: {ex_api}")
+
+        # 2) Respaldo: Postgres (si API no disponible)
+        pg_team_name: Optional[str] = None
+        pg_team_logo_url: Optional[str] = None
+        pg_rows: list = []
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT name, logo_url FROM teams WHERE team_id = %s", (teamId,))
+                    trow = cur.fetchone()
+                    if trow:
+                        pg_team_name = trow[0]
+                        pg_team_logo_url = trow[1]
+                    cur.execute(
+                        """SELECT player_id, team_id, number, name, position, active, created_at
+                               FROM players WHERE team_id = %s ORDER BY number NULLS LAST, name ASC""",
+                        (teamId,),
+                    )
+                    pg_rows = [
+                        {
+                            "player_id": r[0],
+                            "team_id": r[1],
+                            "number": r[2],
+                            "name": r[3],
+                            "position": r[4],
+                            "active": r[5],
+                            "created_at": r[6].isoformat() if r[6] else None,
+                        }
+                        for r in cur.fetchall()
+                    ]
+        except Exception as ex_pg:
+            print(f"[WARN] RF-REP-02 PG read failed: {ex_pg}")
+
+        # 3) Elegir fuente: API primero; si no disponible, Postgres
+        team_name = api_team_name or pg_team_name
+        if not team_name:
+            raise HTTPException(status_code=404, detail="Team not found")
+
+        def map_api_player(p: dict):
+            return {
+                "player_id": p.get("PlayerId") or p.get("playerId") or p.get("player_id"),
+                "team_id": p.get("TeamId") or p.get("teamId") or p.get("team_id"),
+                "number": p.get("Number") if p.get("Number") is not None else p.get("number"),
+                "name": p.get("Name") or p.get("name"),
+                "position": p.get("Position") or p.get("position"),
+                "active": bool(p.get("Active") if p.get("Active") is not None else p.get("active", True)),
+                "created_at": None,
+                "height_cm": p.get("HeightCm") or p.get("heightCm") or p.get("height_cm"),
+                "age": p.get("Age") or p.get("age"),
+                "nationality": p.get("Nationality") or p.get("nationality"),
+            }
+
+        rows = [map_api_player(p) for p in (api_players or [])] if api_players is not None else []
         if not rows:
-            raise HTTPException(status_code=404, detail="No players found for this team")
+            # usar Postgres sin campos extendidos
+            rows = [
+                {
+                    **r,
+                    "height_cm": None,
+                    "age": None,
+                    "nationality": None,
+                }
+                for r in pg_rows
+            ]
         
         # Generar HTML
-        logo_url = os.getenv("SYSTEM_LOGO_URL")
-        html = render_players_html(rows, team_name, logo_url)
+        def absolute_logo(url: Optional[str]) -> Optional[str]:
+            if not url:
+                return None
+            u = str(url)
+            if u.startswith("http://") or u.startswith("https://"):
+                return u
+            if u.startswith("/"):
+                return f"http://api:8080{u}"
+            return u
+
+        team_logo = absolute_logo(api_team_logo_url or pg_team_logo_url)
+        # Si no hay logo del equipo, usar logo del sistema a ambos lados
+        logo_single = team_logo or os.getenv("SYSTEM_LOGO_URL")
+        html = render_players_html(rows, team_name, logo_single)
         
         # Convertir a PDF
         pdf_bytes = await render_html_to_pdf(html)
