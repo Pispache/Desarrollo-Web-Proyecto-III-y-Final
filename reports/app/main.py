@@ -230,6 +230,7 @@ async def teams_pdf(
     city: Optional[str] = Query(None),
     _=Depends(require_admin)
 ):
+    print(f"[INFO] Generating teams PDF with filters: q={q}, city={city}")
     try:
         where = []
         params = []
@@ -291,6 +292,7 @@ async def players_pdf(
     teamId: int,
     _=Depends(require_admin)
 ):
+    print(f"[INFO] Generating players PDF for team {teamId}")
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:

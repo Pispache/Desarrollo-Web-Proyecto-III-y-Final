@@ -31,7 +31,17 @@ export class ReportsPageComponent implements OnInit {
   gamesStatusFilter = '';
   
   // Filtro para jugadores
-  selectedTeamId: number | null = null;
+  private _selectedTeamId: number | null = null;
+  
+  get selectedTeamId(): number | null {
+    return this._selectedTeamId;
+  }
+  
+  set selectedTeamId(value: number | null) {
+    console.log('[DEBUG] Team selected:', value);
+    this._selectedTeamId = value;
+  }
+  
   teams: Team[] = [];
   
   loading = false;
@@ -49,6 +59,13 @@ export class ReportsPageComponent implements OnInit {
     this.loadTeams();
   }
 
+  onTeamChange(event: Event) {
+    const select = event.target as HTMLSelectElement;
+    const value = select.value;
+    this.selectedTeamId = value ? parseInt(value, 10) : null;
+    console.log('[DEBUG] Team changed to:', this.selectedTeamId);
+  }
+
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();
     return new HttpHeaders({
@@ -60,12 +77,16 @@ export class ReportsPageComponent implements OnInit {
     this.loading = true;
     this.error = '';
     
-    // Cargar equipos desde la API principal, no desde reportes
-    this.http.get<Team[]>(`${this.apiBaseUrl}/teams`, {
+    // Cargar equipos desde la API principal (con paginación grande para obtener todos)
+    this.http.get<{ items: Team[], total: number }>(`${this.apiBaseUrl}/teams?pageSize=1000`, {
       headers: this.getHeaders()
     }).subscribe({
-      next: (teams) => {
-        this.teams = teams;
+      next: (response) => {
+        this.teams = response.items;
+        console.log(`Loaded ${this.teams.length} teams`, this.teams);
+        if (this.teams.length > 0) {
+          console.log('First team object:', this.teams[0]);
+        }
         this.loading = false;
       },
       error: (err) => {
@@ -112,10 +133,12 @@ export class ReportsPageComponent implements OnInit {
       return;
     }
     
+    console.log('[DEBUG] Selected team ID:', this.selectedTeamId);
     this.loading = true;
     this.error = '';
     
     const url = `${this.reportsBaseUrl}/teams/${this.selectedTeamId}/players.pdf`;
+    console.log('[DEBUG] Requesting URL:', url);
     
     this.http.get(url, {
       headers: this.getHeaders(),
@@ -145,8 +168,6 @@ export class ReportsPageComponent implements OnInit {
     this.error = '';
     
     let url = `${this.reportsBaseUrl}/games.pdf?`;
-    if (this.gamesFromDate) url += `from=${this.gamesFromDate}&`;
-    if (this.gamesToDate) url += `to=${this.gamesToDate}&`;
     if (this.gamesStatusFilter) url += `status=${this.gamesStatusFilter}&`;
     
     this.http.get(url, {

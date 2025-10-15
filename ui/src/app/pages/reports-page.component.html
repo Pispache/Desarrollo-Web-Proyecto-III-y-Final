@@ -102,12 +102,13 @@
               <select 
                 class="form-select" 
                 id="teamSelect"
-                [(ngModel)]="selectedTeamId">
-                <option [ngValue]="null">-- Selecciona un equipo --</option>
-                <option *ngFor="let team of teams" [ngValue]="team.team_id">
+                (change)="onTeamChange($event)">
+                <option value="">-- Selecciona un equipo --</option>
+                <option *ngFor="let team of teams" [value]="team.team_id">
                   {{ team.name }} <span *ngIf="team.city">({{ team.city }})</span>
                 </option>
               </select>
+              <small class="text-muted" *ngIf="selectedTeamId">Equipo seleccionado: ID {{ selectedTeamId }}</small>
             </div>
 
             <button 
@@ -134,27 +135,8 @@
           </div>
           <div class="card-body">
             <p class="text-muted mb-3">
-              Genera un PDF con el historial de partidos. Puedes filtrar por rango de fechas y estado.
+              Genera un PDF con el historial de partidos. Puedes filtrar por estado.
             </p>
-            
-            <div class="row mb-3">
-              <div class="col-md-6">
-                <label for="gamesFrom" class="form-label">Desde</label>
-                <input 
-                  type="date" 
-                  class="form-control" 
-                  id="gamesFrom"
-                  [(ngModel)]="gamesFromDate">
-              </div>
-              <div class="col-md-6">
-                <label for="gamesTo" class="form-label">Hasta</label>
-                <input 
-                  type="date" 
-                  class="form-control" 
-                  id="gamesTo"
-                  [(ngModel)]="gamesToDate">
-              </div>
-            </div>
 
             <div class="mb-3">
               <label for="gamesStatus" class="form-label">Estado del partido</label>
