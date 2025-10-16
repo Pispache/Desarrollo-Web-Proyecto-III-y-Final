@@ -22,11 +22,21 @@ export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
     catchError(err => {
       if (err?.status === 401) {
         // NO cerrar sesión si el error viene de la API de reportes
-        // (puede ser un problema de configuración temporal)
         const isReportsApi = req.url.includes('localhost:8081') || req.url.includes('/v1/reports');
         
-        if (!isReportsApi && auth.isAuthenticated()) {
-          // Solo forzar logout para errores 401 de la API principal
+        // NO cerrar sesión si el error viene del Auth Service (OAuth)
+        const isAuthService = req.url.includes('localhost:5001') || req.url.includes('/api/auth');
+        
+        // NO cerrar sesión si el usuario tiene un token de OAuth
+        const user = auth.getCurrentUser();
+        const isOAuthUser = user?.oauth_provider !== null && user?.oauth_provider !== undefined;
+        
+        // Solo forzar logout si:
+        // - NO es la API de reportes
+        // - NO es el Auth Service
+        // - NO es un usuario de OAuth (porque el Game Service no acepta esos tokens)
+        // - El usuario está autenticado
+        if (!isReportsApi && !isAuthService && !isOAuthUser && auth.isAuthenticated()) {
           auth.logout(true, 'expired', 'interceptor');
         }
       }

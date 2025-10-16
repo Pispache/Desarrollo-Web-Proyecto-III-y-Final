@@ -82,6 +82,74 @@ services:
     profiles: ["ui", "all"]
 
   # ============================
+  # Base de datos MySQL para Auth Service
+  # ============================
+  mysql:
+    image: mysql:8.0
+    container_name: marcador_mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-RootAuth2025!}
+      - MYSQL_DATABASE=auth_db
+      - MYSQL_USER=auth_user
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-AuthPass2025!}
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-RootAuth2025!}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+    profiles: ["auth", "all"]
+
+  # ============================
+  # Auth Service (Node.js + OAuth 2.0)
+  # ============================
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: marcador_auth
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=auth_user
+      - DB_PASSWORD=${MYSQL_PASSWORD:-AuthPass2025!}
+      - DB_NAME=auth_db
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=1h
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_CALLBACK_URL=${GOOGLE_CALLBACK_URL:-http://localhost:5001/api/auth/google/callback}
+      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET}
+      - FACEBOOK_CALLBACK_URL=${FACEBOOK_CALLBACK_URL:-http://localhost:5001/api/auth/facebook/callback}
+      - GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID}
+      - GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET}
+      - GITHUB_CALLBACK_URL=${GITHUB_CALLBACK_URL:-http://localhost:5001/api/auth/github/callback}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:4200}
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:4200,https://tobarumg.lat}
+      - SESSION_SECRET=${SESSION_SECRET:-change-this-secret-in-production}
+    ports:
+      - "127.0.0.1:5001:5000"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:5000/api/health', (res) => process.exit(res.statusCode === 200 ? 0 : 1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    profiles: ["auth", "all"]
+
+  # ============================
   # Base de datos Postgres para reportes
   # ============================
   postgres:
@@ -169,4 +237,5 @@ services:
     profiles: ["reports", "all"]
 
 volumes:
+  mysql_data:
   pg_data:

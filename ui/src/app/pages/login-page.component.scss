@@ -111,6 +111,53 @@
   }
 
   .error { color: #f87171; margin-top: 10px; }
+
+  .oauth-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #374151;
+
+    .oauth-divider {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 13px;
+      margin-bottom: 16px;
+    }
+
+    .oauth-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      .oauth-btn {
+        width: 100%;
+        padding: 10px 12px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: opacity 0.2s;
+
+        &:hover { opacity: 0.9; }
+
+        &.google {
+          background: #fff;
+          color: #333;
+          border: 1px solid #ddd;
+        }
+
+        &.facebook {
+          background: #1877f2;
+          color: #fff;
+        }
+
+        &.github {
+          background: #24292e;
+          color: #fff;
+        }
+      }
+    }
+  }
 }
 
 /* ===== Tema claro: coherente con el resto de la app ===== */

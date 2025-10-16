@@ -26,8 +26,8 @@
 
   <form (ngSubmit)="submit()" #f="ngForm" autocomplete="on">
     <div class="form-group">
-      <label>Usuario</label>
-      <input type="text" name="username" [(ngModel)]="username" required autofocus />
+      <label>Email</label>
+      <input type="email" name="email" [(ngModel)]="email" required autofocus />
     </div>
 
     <div class="form-group">
@@ -39,4 +39,22 @@
 
     <div class="error" *ngIf="error">{{ error }}</div>
   </form>
+
+  <div class="oauth-section">
+    <p class="oauth-divider">O inicia sesión con:</p>
+    
+    <div class="oauth-buttons">
+      <button type="button" class="oauth-btn google" (click)="loginWithGoogle()">
+        <span>Google</span>
+      </button>
+      
+      <button type="button" class="oauth-btn facebook" (click)="loginWithFacebook()">
+        <span>Facebook</span>
+      </button>
+      
+      <button type="button" class="oauth-btn github" (click)="loginWithGitHub()">
+        <span>GitHub</span>
+      </button>
+    </div>
+  </div>
 </div>

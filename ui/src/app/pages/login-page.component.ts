@@ -34,13 +34,26 @@ import { AuthService } from '../services/auth.service';
   imports: [CommonModule, FormsModule, RouterModule]
 })
 export class LoginPageComponent {
-  username = '';
+  email = '';
   password = '';
   loading = false;
   error = '';
 
   constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute) {
-    // Mostrar mensajes según motivo de redirección
+    // Manejar callback de OAuth primero (tiene prioridad)
+    const token = this.route.snapshot.queryParamMap.get('token');
+    if (token) {
+      console.log('OAuth token received, processing...');
+      this.auth.handleOAuthCallback(token);
+      // Esperar un momento para que se guarde el token
+      setTimeout(() => {
+        console.log('Redirecting to home...');
+        this.router.navigateByUrl('/');
+      }, 500);
+      return;
+    }
+
+    // Mostrar mensajes según motivo de redirección solo si no hay token
     try {
       const reason = (this.route.snapshot.queryParamMap.get('reason') || '').toLowerCase();
       if (reason === 'expired') {
@@ -53,19 +66,35 @@ export class LoginPageComponent {
 
   submit() {
     this.error = '';
-    const u = this.username.trim();
+    const e = this.email.trim();
     const p = this.password;
-    if (!u || !p) { this.error = 'Ingrese usuario y contraseña'; return; }
+    if (!e || !p) { this.error = 'Ingrese email y contraseña'; return; }
     this.loading = true;
-    this.auth.login(u, p).subscribe({
-      next: () => {
+    this.auth.login(e, p).subscribe({
+      next: (res) => {
         this.loading = false;
-        this.router.navigateByUrl('/');
+        if (res.success) {
+          this.router.navigateByUrl('/');
+        } else {
+          this.error = res.message || 'Error al iniciar sesión';
+        }
       },
       error: (err) => {
         this.loading = false;
-        this.error = (err?.error?.error || 'Credenciales inválidas');
+        this.error = (err?.error?.message || err?.error?.error || 'Credenciales inválidas');
       }
     });
+  }
+
+  loginWithGoogle() {
+    this.auth.loginWithGoogle();
+  }
+
+  loginWithFacebook() {
+    this.auth.loginWithFacebook();
+  }
+
+  loginWithGitHub() {
+    this.auth.loginWithGitHub();
   }
 }
