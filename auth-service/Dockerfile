@@ -2,7 +2,7 @@ FROM node:20-alpine AS deps
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package*.json ./
-RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --no-audit --no-fund
+RUN --mount=type=cache,target=/root/.npm npm install --omit=dev --no-audit --no-fund
 
 FROM node:20-alpine AS runner
 WORKDIR /app
