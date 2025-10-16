@@ -7,14 +7,13 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 # Directorio de trabajo dentro del contenedor para la compilación.
 WORKDIR /src
 
-# Copia todos los archivos del proyecto al contenedor.
+# Restauración cacheable: copiar solo csproj y restaurar
+COPY Api.csproj ./
+RUN dotnet restore ./Api.csproj
+
+# Copiar el resto del código y publicar
 COPY . .
-
-# Restaura dependencias y paquetes NuGet declarados en el proyecto.
-RUN dotnet restore
-
-# Publica la aplicación en modo Release y la deja lista para ejecución en /out.
-RUN dotnet publish -c Release -o /out
+RUN dotnet publish ./Api.csproj -c Release -o /out
 
 # ----------------------------
 # Etapa de ejecución (runtime)
