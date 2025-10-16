@@ -145,6 +145,23 @@ export class AuthService {
     });
   }
 
+  // Admin: actualizar rol de usuario
+  updateUserRole(userId: number, role: 'viewer' | 'operator' | 'admin'): Observable<{ success: boolean; user: any }> {
+    const token = this.getToken();
+    return this.http.patch<{ success: boolean; user: any }>(`${this.base}/users/${userId}/role`, { role }, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    }).pipe(
+      tap(res => {
+        // Si el admin se cambia su propio rol, actualizar cache de usuario
+        const me = this.getCurrentUser();
+        if (res.success && me && me.id === userId) {
+          const updated = { ...me, role: res.user?.role || role };
+          this.safeSetItem(USER_KEY, JSON.stringify(updated));
+        }
+      })
+    );
+  }
+
   // Obtener usuario actual
   getCurrentUser(): any {
     const userStr = this.safeGetItem(USER_KEY);

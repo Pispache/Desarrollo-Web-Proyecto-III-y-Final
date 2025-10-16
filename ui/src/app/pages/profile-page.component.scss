@@ -1,11 +1,44 @@
-.profile-wrapper {
+/* ===== Perfil: tema oscuro por defecto con soporte claro ===== */
+.profile-page {
+  min-height: calc(100vh - var(--navbar-height, 70px));
   padding: 1rem;
+
+  /* Fondo oscuro degradado con textura, consistente con otras páginas */
+  background:
+    radial-gradient(1100px 650px at 20% -180px, rgba(155,92,255,.28), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.20), transparent 60%),
+    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  color: #e7e9ff;
+
+  h2 { color: #ffffff; }
+
+  .table-responsive { overflow-x: auto; }
+
+  table,
+  .table { width: 100%; color: #e7e9ff; background: rgba(255,255,255,0.03); }
+  thead th {
+    background: rgba(255,255,255,0.06);
+    color: #9aa0bd;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+  }
+  tbody td { border-bottom: 1px solid rgba(255,255,255,0.08); }
+
+  .error { color: #ffb4b4; }
 }
 
-.table-responsive {
-  overflow-x: auto;
-}
+/* ===== Tema claro ===== */
+[data-theme="light"] .profile-page {
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
+  color: #111827;
 
-.table {
-  width: 100%;
+  h2 { color: #111827; }
+
+  table,
+  .table { background: #ffffff; color: #111827; }
+  thead th {
+    background: #f3f4f6;
+    color: #6b7280;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+  }
+  tbody td { border-bottom: 1px solid rgba(0,0,0,0.06); }
 }

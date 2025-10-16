@@ -34,23 +34,38 @@
           </a>
         </li>
         
-        <li class="nav-item" *ngIf="isAdmin">
-          <a routerLink="/equipos" 
-             class="nav-link" 
-             [class.active]="isActiveRoute('/equipos')"
-             (click)="closeMenu()">
-            <i class="bi bi-people-fill"></i>
-            <span>EQUIPOS</span>
-          </a>
-        </li>
-        
-        <li class="nav-item" *ngIf="isAdmin">
-          <a (click)="navigateToPlayers()"
-             class="nav-link"
-             [class.active]="isActiveRoute('/jugadores')">
-            <i class="bi bi-people"></i>
-            <span>JUGADORES</span>
-          </a>
+        <!-- Grupo de administración compactado -->
+        <li class="nav-item admin-dropdown" *ngIf="isAdmin" [class.open]="adminOpen">
+          <button class="nav-link dropdown-toggle" type="button" (click)="toggleAdminMenu($event)">
+            <i class="bi bi-gear-fill"></i>
+            <span>ADMINISTRACIÓN</span>
+          </button>
+          <ul class="dropdown-menu">
+            <li>
+              <a routerLink="/equipos" class="dropdown-item" [class.active]="isActiveRoute('/equipos')" (click)="closeMenu()">
+                <i class="bi bi-people-fill"></i>
+                <span>Equipos</span>
+              </a>
+            </li>
+            <li>
+              <a class="dropdown-item" (click)="navigateToPlayers()" [class.active]="isActiveRoute('/jugadores')">
+                <i class="bi bi-people"></i>
+                <span>Jugadores</span>
+              </a>
+            </li>
+            <li>
+              <a routerLink="/reportes" class="dropdown-item" [class.active]="isActiveRoute('/reportes')" (click)="closeMenu()">
+                <i class="bi bi-file-earmark-pdf-fill"></i>
+                <span>Reportes</span>
+              </a>
+            </li>
+            <li>
+              <a routerLink="/administracion/usuarios" class="dropdown-item" [class.active]="isActiveRoute('/administracion/usuarios')" (click)="closeMenu()">
+                <i class="bi bi-people"></i>
+                <span>Usuarios</span>
+              </a>
+            </li>
+          </ul>
         </li>
         
         <li class="nav-item">
@@ -73,15 +88,6 @@
           </a>
         </li>
 
-        <li class="nav-item" *ngIf="isAdmin">
-          <a routerLink="/reportes" 
-             class="nav-link" 
-             [class.active]="isActiveRoute('/reportes')"
-             (click)="closeMenu()">
-            <i class="bi bi-file-earmark-pdf-fill"></i>
-            <span>REPORTES</span>
-          </a>
-        </li>
 
         <li class="nav-item">
           <a routerLink="/torneo" 
@@ -92,15 +98,6 @@
           </a>
         </li>
         
-        <li class="nav-item" *ngIf="isAdmin">
-          <a routerLink="/perfil" 
-             class="nav-link" 
-             [class.active]="isActiveRoute('/perfil')"
-             (click)="closeMenu()">
-            <i class="bi bi-person-gear"></i>
-            <span>PERFIL</span>
-          </a>
-        </li>
         <li class="nav-item" *ngIf="!isAuthenticated">
           <a routerLink="/login" 
              class="nav-link" 
@@ -127,13 +124,18 @@
         <span>Cerrar sesión</span>
       </button>
       <!-- Indicador de usuario al extremo derecho (icono + nombre + rol) -->
-      <div *ngIf="isAuthenticated" class="d-flex align-items-center ms-auto px-2 py-1 text-light user-chip">
-        <i class="bi bi-person-circle me-2"></i>
+      <a *ngIf="isAuthenticated" routerLink="/perfil" class="d-flex align-items-center ms-auto px-2 py-1 text-light user-chip text-decoration-none">
+        <ng-container *ngIf="avatarUrl; else iconFallback">
+          <img [src]="avatarUrl" alt="avatar" class="avatar-img me-2" referrerpolicy="no-referrer" />
+        </ng-container>
+        <ng-template #iconFallback>
+          <i class="bi bi-person-circle me-2"></i>
+        </ng-template>
         <span class="fw-semibold">
           {{ username || 'Usuario' }}
           <small class="ms-2 text-muted" *ngIf="role">({{ role | uppercase }})</small>
         </span>
-      </div>
+      </a>
     </div>
 
     <!-- Mobile Menu Toggle (Bootstrap Icons for consistency) -->

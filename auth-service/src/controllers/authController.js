@@ -95,7 +95,7 @@ exports.register = async (req, res) => {
       message: 'Registration failed',
       error: error.message
     });
-  }
+  };
 };
 
 // Login with email/password
@@ -314,5 +314,53 @@ exports.oauthCallback = (req, res) => {
     console.error('OAuth callback error:', error);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
     res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error.message)}`);
+  }
+};
+
+// Listar usuarios (solo ADMIN)
+exports.listUsers = async (req, res) => {
+  try {
+    const rows = await db.query(
+      `SELECT id, email, username, name, role, active, avatar,
+              COALESCE(DATE_FORMAT(last_login_at, '%Y-%m-%d %H:%i:%s'), NULL) AS last_login_at
+         FROM users
+         ORDER BY created_at DESC, id DESC`
+    );
+    res.json({ success: true, users: rows });
+  } catch (error) {
+    console.error('listUsers error:', error);
+    res.status(500).json({ success: false, message: 'Failed to list users' });
+  }
+};
+
+// Actualizar rol de usuario (solo ADMIN)
+exports.updateUserRole = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const { role } = req.body || {};
+
+    if (!userId || !role) {
+      return res.status(400).json({ success: false, message: 'User id and role are required' });
+    }
+
+    const allowed = ['viewer', 'operator', 'admin'];
+    const newRole = String(role).toLowerCase();
+    if (!allowed.includes(newRole)) {
+      return res.status(400).json({ success: false, message: 'Invalid role' });
+    }
+
+    await db.query('UPDATE users SET role = ? WHERE id = ?', [newRole, userId]);
+
+    const rows = await db.query(
+      'SELECT id, email, username, name, role, active, avatar, last_login_at FROM users WHERE id = ?', [userId]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({ success: true, user: rows[0] });
+  } catch (error) {
+    console.error('updateUserRole error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update user role' });
   }
 };

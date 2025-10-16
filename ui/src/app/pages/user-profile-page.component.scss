@@ -1,0 +1,55 @@
+/* Mi Perfil: consistencia con tema global */
+.user-profile-page {
+  min-height: calc(100vh - var(--navbar-height, 70px));
+  /* Fondo oscuro por defecto */
+  background:
+    radial-gradient(1100px 650px at 20% -180px, rgba(155,92,255,.28), transparent 60%),
+    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.20), transparent 60%),
+    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  color: #e7e9ff;
+
+  h2 { color: #ffffff; }
+
+  .profile-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    padding: 1rem 1.25rem;
+  }
+
+  .avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    i { font-size: 36px; color: #ffffff; }
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    column-gap: 16px; row-gap: 10px;
+  }
+  .label { color: #9aa0bd; }
+  .value { color: #e7e9ff; }
+
+  .badge.role {
+    background: rgba(255,255,255,0.12);
+    color: #fff;
+    padding: .25rem .5rem;
+    border-radius: 999px;
+    font-size: .8rem;
+  }
+}
+
+/* Tema claro */
+[data-theme="light"] .user-profile-page {
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
+  color: #111827;
+  h2 { color: #111827; }
+  .profile-card { background: #fff; border-color: rgba(0,0,0,0.08); }
+  .avatar { background: #f3f4f6; border-color: rgba(0,0,0,0.08); i { color: #111827; } }
+  .label { color: #6b7280; }
+  .value { color: #111827; }
+  .badge.role { background: #111827; color: #fff; }
+}

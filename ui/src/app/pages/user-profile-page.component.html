@@ -1,0 +1,30 @@
+<div class="user-profile-page p-4">
+  <h2 class="mb-4">Mi Perfil</h2>
+
+  <div *ngIf="!user" class="alert alert-warning">No hay información de usuario.</div>
+
+  <div *ngIf="user" class="profile-card">
+    <div class="row g-3 align-items-center">
+      <div class="col-auto">
+        <div class="avatar">
+          <i class="bi bi-person-circle"></i>
+        </div>
+      </div>
+      <div class="col">
+        <div class="grid">
+          <div class="label">Nombre</div>
+          <div class="value">{{ user.name || user.username || '-' }}</div>
+
+          <div class="label">Email</div>
+          <div class="value">{{ user.email }}</div>
+
+          <div class="label">Usuario</div>
+          <div class="value">{{ user.username || '-' }}</div>
+
+          <div class="label">Rol</div>
+          <div class="value"><span class="badge role">{{ (user.role || 'viewer') | uppercase }}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

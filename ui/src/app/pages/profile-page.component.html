@@ -1,4 +1,4 @@
-<div class="profile-wrapper">
+<div class="profile-wrapper profile-page">
   <h2>Perfil — Administración de usuarios</h2>
 
   <div *ngIf="loading">Cargando...</div>
@@ -23,7 +23,17 @@
           <td>{{ u.email }}</td>
           <td>{{ u.name || '-' }}</td>
           <td>{{ u.username || '-' }}</td>
-          <td>{{ u.role | uppercase }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <select class="form-select form-select-sm w-auto"
+                      [disabled]="saving[u.id]"
+                      [ngModel]="u.role"
+                      (ngModelChange)="onRoleChange(u, $event)">
+                <option *ngFor="let r of roles" [ngValue]="r">{{ r | uppercase }}</option>
+              </select>
+              <span *ngIf="saving[u.id]" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+            </div>
+          </td>
           <td>{{ (u.active ? 'Sí' : 'No') }}</td>
           <td>{{ u.last_login_at || '-' }}</td>
         </tr>
