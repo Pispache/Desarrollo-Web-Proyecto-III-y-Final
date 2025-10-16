@@ -120,7 +120,7 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ISSUER=${JWT_ISSUER}
       - JWT_AUDIENCE=${JWT_AUDIENCE}
-      - SYSTEM_LOGO_URL=${SYSTEM_LOGO_URL:-http://localhost:8080/uploads/logos/system.png}
+      - SYSTEM_LOGO_URL=${SYSTEM_LOGO_URL:-http://localhost:8080/uploads/logos/system.svg}
       - POSTGRES_CS=host=postgres port=5432 dbname=${POSTGRES_DB:-reportsdb} user=${POSTGRES_USER:-reports_admin} password=${POSTGRES_PASSWORD:-reports_admin_pwd}
       - PDF_RENDERER_URL=http://pdf-renderer:3000
     ports:

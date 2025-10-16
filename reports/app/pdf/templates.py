@@ -228,6 +228,135 @@ def render_teams_html(teams: List[Dict], filters: Dict, logo_url: Optional[str] 
     """
     return html
 
+def render_player_stats_html(player: Dict, stats: Dict, filters: Dict, logo_url: Optional[str] = None) -> str:
+    """Genera HTML para reporte de estadísticas por jugador.
+    Espera:
+      - player: { name, number, team_name, position, height_cm, age, nationality }
+      - stats: {
+          total_points, points_1, points_2, points_3,
+          total_fouls, fouls_by_type: [{ foul_type, count }],
+          games_count
+        }
+      - filters: { from, to }
+    """
+    now = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    # Filtros
+    filters_html = ""
+    if filters.get("from"):
+        filters_html += f'<span class="filter-item"><span class="filter-label">Desde:</span> {filters["from"]}</span>'
+    if filters.get("to"):
+        filters_html += f'<span class="filter-item"><span class="filter-label">Hasta:</span> {filters["to"]}</span>'
+    if not filters_html:
+        filters_html = '<span class="filter-item">Sin filtros aplicados</span>'
+
+    # Encabezado de jugador
+    meta_rows = []
+    if player.get("number") is not None:
+        meta_rows.append(f"<strong>Número:</strong> {player['number']}")
+    if player.get("team_name"):
+        meta_rows.append(f"<strong>Equipo:</strong> {player['team_name']}")
+    if player.get("position"):
+        meta_rows.append(f"<strong>Posición:</strong> {player['position']}")
+    if player.get("height_cm") is not None:
+        meta_rows.append(f"<strong>Estatura:</strong> {player['height_cm']} cm")
+    if player.get("age") is not None:
+        meta_rows.append(f"<strong>Edad:</strong> {player['age']}")
+    if player.get("nationality"):
+        meta_rows.append(f"<strong>Nacionalidad:</strong> {player['nationality']}")
+    meta_html = " | ".join(meta_rows) if meta_rows else ""
+
+    # Tabla de totales de puntos
+    points_html = f"""
+    <table>
+      <thead>
+        <tr>
+          <th class='text-center' style='width:20%'>Tot. Puntos</th>
+          <th class='text-center' style='width:20%'>De 1</th>
+          <th class='text-center' style='width:20%'>De 2</th>
+          <th class='text-center' style='width:20%'>De 3</th>
+          <th class='text-center' style='width:20%'>Partidos</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class='text-center'><strong>{stats.get('total_points', 0)}</strong></td>
+          <td class='text-center'>{stats.get('points_1', 0)}</td>
+          <td class='text-center'>{stats.get('points_2', 0)}</td>
+          <td class='text-center'>{stats.get('points_3', 0)}</td>
+          <td class='text-center'>{stats.get('games_count', 0)}</td>
+        </tr>
+      </tbody>
+    </table>
+    """
+
+    # Tabla de faltas por tipo (mostrar tipos en español)
+    fouls_rows = ""
+    fouls_by_type = stats.get("fouls_by_type", []) or []
+    foul_map_es = {
+        "PERSONAL": "PERSONAL",
+        "TECHNICAL": "TECNICA",
+        "UNSPORTSMANLIKE": "ANTIDEPORTIVA",
+        "DISQUALIFYING": "DESCALIFICATIVA",
+    }
+    if fouls_by_type:
+        for r in fouls_by_type:
+            raw = (r.get('foul_type') or '').upper()
+            label = foul_map_es.get(raw, raw or '-')
+            fouls_rows += f"<tr><td>{label}</td><td class='text-center'>{r.get('count',0)}</td></tr>"
+    else:
+        fouls_rows = "<tr><td colspan='2' class='no-data'>Sin faltas registradas</td></tr>"
+
+    fouls_html = f"""
+    <table>
+      <thead>
+        <tr>
+          <th style='width:70%'>Tipo de falta</th>
+          <th class='text-center' style='width:30%'>Conteo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {fouls_rows}
+      </tbody>
+    </table>
+    """
+
+    logo_img = f'<img src="{logo_url}" class="header-logo" alt="Logo">' if logo_url else ""
+
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset=\"UTF-8\">
+      {get_base_styles()}
+    </head>
+    <body>
+      <div class=\"header\">
+        {logo_img}
+        <div class=\"header-title\">Estadísticas por Jugador</div>
+        <div class=\"header-subtitle\">{player.get('name','Jugador')}</div>
+        <div class=\"header-meta\">{meta_html}<br/>Generado el {now}</div>
+      </div>
+
+      <div class=\"filters\">
+        <div class=\"filters-title\">Rango de Fechas</div>
+        {filters_html}
+      </div>
+
+      <h3>Resumen de Puntos</h3>
+      {points_html}
+
+      <h3 style=\"margin-top:20px\">Faltas por Tipo (Total: {stats.get('total_fouls',0)})</h3>
+      {fouls_html}
+
+      <div class=\"footer\">
+        Marcador BB &copy; 2025
+      </div>
+    </body>
+    </html>
+    """
+    return html
+
 def render_roster_html(game: Dict, home_players: List[Dict], away_players: List[Dict], logo_url: Optional[str] = None, home_logo_url: Optional[str] = None, away_logo_url: Optional[str] = None) -> str:
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
 

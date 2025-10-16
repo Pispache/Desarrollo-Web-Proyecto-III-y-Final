@@ -31,14 +31,23 @@ export class ReportsPageComponent implements OnInit {
   // Filtros para equipos
   teamSearchQuery = '';
   teamCityFilter = '';
+  teamLimit: number = 200;
+  teamOffset: number = 0;
   
   // Filtros para partidos
   gamesFromDate = '';
   gamesToDate = '';
   gamesStatusFilter = '';
+  gamesLimit: number = 200;
+  gamesOffset: number = 0;
   
   // Filtro para jugadores
   private _selectedTeamId: number | null = null;
+  players: { player_id: number; name: string; number: number | null }[] = [];
+  selectedPlayerId: number | null = null;
+  playerStatsManualId: number | null = null;
+  statsFromDate: string = '';
+  statsToDate: string = '';
   // Filtro para roster por partido
   rosterGameId: number | null = null;
   
@@ -97,6 +106,13 @@ export class ReportsPageComponent implements OnInit {
   set selectedTeamId(value: number | null) {
     console.log('[DEBUG] Team selected:', value);
     this._selectedTeamId = value;
+    // Cargar jugadores del equipo para RF-REP-05
+    if (value != null) {
+      this.loadPlayersForTeam(value);
+    } else {
+      this.players = [];
+      this.selectedPlayerId = null;
+    }
   }
   
   teams: Team[] = [];
@@ -170,6 +186,8 @@ export class ReportsPageComponent implements OnInit {
     let url = `${this.reportsBaseUrl}/teams.pdf?`;
     if (this.teamSearchQuery) url += `q=${encodeURIComponent(this.teamSearchQuery)}&`;
     if (this.teamCityFilter) url += `city=${encodeURIComponent(this.teamCityFilter)}&`;
+    if (this.teamLimit != null) url += `limit=${this.teamLimit}&`;
+    if (this.teamOffset != null) url += `offset=${this.teamOffset}&`;
     
     this.http.get(url, {
       headers: this.getHeaders(),
@@ -236,6 +254,8 @@ export class ReportsPageComponent implements OnInit {
     
     let url = `${this.reportsBaseUrl}/games.pdf?`;
     if (this.gamesStatusFilter) url += `status=${this.gamesStatusFilter}&`;
+    if (this.gamesLimit != null) url += `limit=${this.gamesLimit}&`;
+    if (this.gamesOffset != null) url += `offset=${this.gamesOffset}&`;
     
     this.http.get(url, {
       headers: this.getHeaders(),
@@ -255,6 +275,58 @@ export class ReportsPageComponent implements OnInit {
       },
       error: () => {
         // Error ya manejado en catchError
+      }
+    });
+  }
+
+  // ===== RF-REP-05: Carga de jugadores por equipo y descarga de estadísticas =====
+  private loadPlayersForTeam(teamId: number) {
+    this.http.get<{ items: any[] }>(`${this.reportsBaseUrl}/teams/${teamId}/players`, {
+      headers: this.getHeaders()
+    }).subscribe({
+      next: (resp) => {
+        this.players = (resp.items || []).map(p => ({
+          player_id: p.player_id ?? p.PlayerId ?? p.playerId,
+          name: p.name ?? p.Name,
+          number: p.number ?? p.Number ?? null,
+        }));
+      },
+      error: (err) => {
+        console.error('Error loading players for team', teamId, err);
+        this.players = [];
+      }
+    });
+  }
+
+  downloadPlayerStatsPDF() {
+    const pid = this.selectedPlayerId ?? this.playerStatsManualId;
+    if (!pid) {
+      this.error = 'Selecciona un jugador o ingresa su ID';
+      return;
+    }
+    this.loading = true;
+    this.error = '';
+
+    const url = `${this.reportsBaseUrl}/players/${pid}/stats.pdf`;
+
+    this.http.get(url, {
+      headers: this.getHeaders(),
+      responseType: 'blob',
+      withCredentials: true
+    }).pipe(
+      catchError((err: HttpErrorResponse) => {
+        console.error('Error downloading player stats PDF:', err);
+        this.error = this.getErrorMessage(err);
+        this.loading = false;
+        return throwError(() => err);
+      })
+    ).subscribe({
+      next: (blob) => {
+        this.downloadBlob(blob, `reporte-stats-jugador-${pid}-${this.getDateString()}.pdf`);
+        this.loading = false;
+      },
+      error: () => {
+        // Error ya manejado
       }
     });
   }

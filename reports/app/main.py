@@ -7,7 +7,7 @@ from fastapi.responses import Response
 from .auth import require_admin
 from .db import get_connection
 from .pdf.base import render_html_to_pdf
-from .pdf.templates import render_teams_html, render_players_html, render_games_html, render_roster_html
+from .pdf.templates import render_teams_html, render_players_html, render_games_html, render_roster_html, render_player_stats_html
 
 # /// <summary>
 # /// Punto de entrada del microservicio de reportes.
@@ -267,8 +267,8 @@ def list_teams(
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    f"SELECT team_id, name, city, logo_url, created_at FROM teams{where_sql} ORDER BY name ASC",
-                    params,
+                    f"SELECT team_id, name, city, logo_url, created_at FROM teams{where_sql} ORDER BY name ASC LIMIT %s OFFSET %s",
+                    [*params, limit, offset],
                 )
                 rows = [
                     {
@@ -393,6 +393,8 @@ def list_games(
 async def teams_pdf(
     q: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    limit: int = Query(200, ge=1, le=2000),
+    offset: int = Query(0, ge=0),
     _=Depends(require_admin)
 ):
     print(f"[INFO] Generating teams PDF with filters: q={q}, city={city}")
@@ -425,8 +427,18 @@ async def teams_pdf(
                 ]
         
         # Generar HTML
-        filters = {"q": q, "city": city}
-        logo_url = os.getenv("SYSTEM_LOGO_URL")
+        filters = {"q": q, "city": city, "limit": limit, "offset": offset}
+        def absolute_logo(url: Optional[str]) -> Optional[str]:
+            if not url:
+                return None
+            u = str(url)
+            if u.startswith("http://") or u.startswith("https://"):
+                # Si viene con localhost, reescribir al servicio 'api' dentro de la red docker
+                return u.replace("http://localhost:8080", "http://api:8080")
+            if u.startswith("/"):
+                return f"http://api:8080{u}"
+            return u
+        logo_url = absolute_logo(os.getenv("SYSTEM_LOGO_URL"))
         html = render_teams_html(rows, filters, logo_url)
         
         # Convertir a PDF
@@ -600,6 +612,8 @@ async def games_pdf(
     from_: Optional[str] = Query(None, alias="from"),
     to: Optional[str] = Query(None),
     status: Optional[str] = Query(None),
+    limit: int = Query(200, ge=1, le=2000),
+    offset: int = Query(0, ge=0),
     _=Depends(require_admin)
 ):
     try:
@@ -630,8 +644,8 @@ async def games_pdf(
                 cur.execute(
                     f"""SELECT game_id, home_team, away_team, home_team_id, away_team_id, 
                                quarter, home_score, away_score, status, created_at 
-                        FROM games{where_sql} ORDER BY created_at DESC""",
-                    params,
+                        FROM games{where_sql} ORDER BY created_at DESC LIMIT %s OFFSET %s""",
+                    [*params, limit, offset],
                 )
                 rows = [
                     {
@@ -650,8 +664,17 @@ async def games_pdf(
                 ]
         
         # Generar HTML
-        filters = {"from": from_, "to": to, "status": status}
-        logo_url = os.getenv("SYSTEM_LOGO_URL")
+        filters = {"from": from_, "to": to, "status": status, "limit": limit, "offset": offset}
+        def absolute_logo(url: Optional[str]) -> Optional[str]:
+            if not url:
+                return None
+            u = str(url)
+            if u.startswith("http://") or u.startswith("https://"):
+                return u.replace("http://localhost:8080", "http://api:8080")
+            if u.startswith("/"):
+                return f"http://api:8080{u}"
+            return u
+        logo_url = absolute_logo(os.getenv("SYSTEM_LOGO_URL"))
         html = render_games_html(rows, filters, logo_url)
         
         # Convertir a PDF
@@ -666,6 +689,207 @@ async def games_pdf(
             media_type="application/pdf",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
         )
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format; use ISO 8601 (YYYY-MM-DD or full ISO)")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# /// <summary>
+# /// RF-REP-05: Estadísticas por jugador en PDF (puntos, faltas).
+# /// </summary>
+# /// <remarks>
+# /// - Filtros opcionales: from, to (ISO 8601) contra created_at de game_events.
+# /// - Cálculo:
+# ///   • points_1/2/3 desde event_type 'POINT_1'|'POINT_2'|'POINT_3' (solo conteos; total_points con ponderación).
+# ///   • total_fouls y desglose por foul_type cuando event_type='FOUL'.
+# ///   • games_count: cantidad de juegos distintos con eventos del jugador en el rango.
+# /// - Requiere JWT con rol ADMIN.
+# /// </remarks>
+@router.get("/players/{playerId}/stats.pdf")
+async def player_stats_pdf(
+    playerId: int,
+    from_: Optional[str] = Query(None, alias="from"),
+    to: Optional[str] = Query(None),
+    _=Depends(require_admin)
+):
+    try:
+        # Parsear fechas si existen
+        def parse_dt(s: Optional[str]) -> Optional[datetime]:
+            if not s:
+                return None
+            return datetime.fromisoformat(s)
+        dt_from = parse_dt(from_)
+        dt_to = parse_dt(to)
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Traer datos del jugador y equipo
+                cur.execute(
+                    """
+                    SELECT p.name, p.number, p.position, p.team_id, t.name as team_name
+                    FROM players p
+                    LEFT JOIN teams t ON t.team_id = p.team_id
+                    WHERE p.player_id = %s
+                    """,
+                    (playerId,)
+                )
+                prow = cur.fetchone()
+                if not prow:
+                    raise HTTPException(status_code=404, detail="Player not found")
+                player = {
+                    "name": prow[0],
+                    "number": prow[1],
+                    "position": prow[2],
+                    "team_id": prow[3],
+                    "team_name": prow[4],
+                    # Campos extendidos (no replicados en PG por ahora)
+                    "height_cm": None,
+                    "age": None,
+                    "nationality": None,
+                }
+
+                # Condiciones de fecha
+                where = ["player_id = %s"]
+                params = [playerId]
+                if dt_from:
+                    where.append("created_at >= %s")
+                    params.append(dt_from)
+                if dt_to:
+                    where.append("created_at <= %s")
+                    params.append(dt_to)
+                where_sql = " WHERE " + " AND ".join(where)
+
+                # Puntos por tipo (por player_id)
+                cur.execute(
+                    f"""
+                    SELECT 
+                        SUM(CASE WHEN event_type='POINT_1' THEN 1 ELSE 0 END) AS p1,
+                        SUM(CASE WHEN event_type='POINT_2' THEN 1 ELSE 0 END) AS p2,
+                        SUM(CASE WHEN event_type='POINT_3' THEN 1 ELSE 0 END) AS p3
+                    FROM game_events
+                    {where_sql}
+                    """,
+                    params,
+                )
+                pcounts = cur.fetchone() or (0,0,0)
+                points_1 = int(pcounts[0] or 0)
+                points_2 = int(pcounts[1] or 0)
+                points_3 = int(pcounts[2] or 0)
+                total_points = points_1*1 + points_2*2 + points_3*3
+
+                # Fouls por tipo (por player_id)
+                cur.execute(
+                    f"""
+                    SELECT COALESCE(foul_type,'PERSONAL') AS foul_type, COUNT(*)
+                    FROM game_events
+                    {where_sql} AND event_type='FOUL'
+                    GROUP BY COALESCE(foul_type,'PERSONAL')
+                    ORDER BY 1
+                    """,
+                    params,
+                )
+                fouls_by_type = [{"foul_type": r[0], "count": int(r[1])} for r in (cur.fetchall() or [])]
+                total_fouls = sum(r["count"] for r in fouls_by_type)
+
+                # Juegos distintos con eventos del jugador (por player_id)
+                cur.execute(
+                    f"""
+                    SELECT COUNT(DISTINCT game_id)
+                    FROM game_events
+                    {where_sql} AND event_type IN ('POINT_1','POINT_2','POINT_3','FOUL')
+                    """,
+                    params,
+                )
+                games_count = int((cur.fetchone() or (0,))[0] or 0)
+
+                # Fallback: si no hay datos por player_id, intentar por player_number + pertenencia al equipo
+                # Esto cubre el caso cuando API insertó eventos con player_id nulo pero sí player_number
+                if total_points == 0 and total_fouls == 0:
+                    pnum = player.get("number")
+                    team_id = player.get("team_id")
+                    if pnum is not None and team_id is not None:
+                        # Puntos por tipo usando player_number y que el evento pertenezca al equipo del jugador
+                        cur.execute(
+                            """
+                            SELECT 
+                                SUM(CASE WHEN e.event_type='POINT_1' THEN 1 ELSE 0 END) AS p1,
+                                SUM(CASE WHEN e.event_type='POINT_2' THEN 1 ELSE 0 END) AS p2,
+                                SUM(CASE WHEN e.event_type='POINT_3' THEN 1 ELSE 0 END) AS p3
+                            FROM game_events e
+                            JOIN games g ON g.game_id = e.game_id
+                            WHERE e.player_id IS NULL
+                              AND e.player_number = %s
+                              AND (
+                                   (e.team = 'HOME' AND g.home_team_id = %s) OR
+                                   (e.team = 'AWAY' AND g.away_team_id = %s)
+                              )
+                            """,
+                            (pnum, team_id, team_id)
+                        )
+                        pcounts2 = cur.fetchone() or (0,0,0)
+                        points_1 = int(pcounts2[0] or 0)
+                        points_2 = int(pcounts2[1] or 0)
+                        points_3 = int(pcounts2[2] or 0)
+                        total_points = points_1*1 + points_2*2 + points_3*3
+
+                        # Faltas por tipo por número
+                        cur.execute(
+                            """
+                            SELECT COALESCE(e.foul_type,'PERSONAL') AS foul_type, COUNT(*)
+                            FROM game_events e
+                            JOIN games g ON g.game_id = e.game_id
+                            WHERE e.event_type='FOUL'
+                              AND e.player_id IS NULL
+                              AND e.player_number = %s
+                              AND (
+                                   (e.team = 'HOME' AND g.home_team_id = %s) OR
+                                   (e.team = 'AWAY' AND g.away_team_id = %s)
+                              )
+                            GROUP BY COALESCE(e.foul_type,'PERSONAL')
+                            ORDER BY 1
+                            """,
+                            (pnum, team_id, team_id)
+                        )
+                        fouls_by_type = [{"foul_type": r[0], "count": int(r[1])} for r in (cur.fetchall() or [])]
+                        total_fouls = sum(r["count"] for r in fouls_by_type)
+
+                        # Juegos distintos con esos eventos
+                        cur.execute(
+                            """
+                            SELECT COUNT(DISTINCT e.game_id)
+                            FROM game_events e
+                            JOIN games g ON g.game_id = e.game_id
+                            WHERE e.player_id IS NULL
+                              AND e.player_number = %s
+                              AND e.event_type IN ('POINT_1','POINT_2','POINT_3','FOUL')
+                              AND (
+                                   (e.team = 'HOME' AND g.home_team_id = %s) OR
+                                   (e.team = 'AWAY' AND g.away_team_id = %s)
+                              )
+                            """,
+                            (pnum, team_id, team_id)
+                        )
+                        games_count = int((cur.fetchone() or (0,))[0] or 0)
+
+        filters = {"from": from_, "to": to}
+        # No logo for RF-REP-05 as requested
+        html = render_player_stats_html(player, {
+            "total_points": total_points,
+            "points_1": points_1,
+            "points_2": points_2,
+            "points_3": points_3,
+            "total_fouls": total_fouls,
+            "fouls_by_type": fouls_by_type,
+            "games_count": games_count,
+        }, filters, None)
+
+        pdf_bytes = await render_html_to_pdf(html)
+        today = datetime.now().strftime("%Y%m%d")
+        safe_name = (player.get("name") or "jugador").replace(" ", "-").lower()[:24]
+        filename = f"reporte-stats-jugador-{safe_name}-{today}.pdf"
+        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+    except HTTPException:
+        raise
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format; use ISO 8601 (YYYY-MM-DD or full ISO)")
     except Exception as e:

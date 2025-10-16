@@ -216,6 +216,76 @@
       </div>
     </div>
 
+    <!-- RF-REP-05: Estadísticas por Jugador -->
+    <div class="row mb-4">
+      <div class="col-lg-8 col-xl-6">
+        <div class="card report-card">
+          <div class="card-header">
+            <h5 class="card-title mb-0">
+              <i class="bi bi-person-lines-fill me-2"></i>
+              RF-REP-05: Estadísticas por Jugador
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted mb-3">
+              Genera un PDF con resumen de puntos y faltas por jugador.
+            </p>
+
+            <!-- Selección de equipo para cargar jugadores -->
+            <div class="mb-3">
+              <label for="statsTeamSelect" class="form-label">Seleccionar equipo</label>
+              <select
+                class="form-select"
+                id="statsTeamSelect"
+                [(ngModel)]="selectedTeamId"
+                (ngModelChange)="onTeamChange($event)">
+                <option [ngValue]="null">-- Selecciona un equipo --</option>
+                <option *ngFor="let team of teams" [ngValue]="team.team_id">
+                  {{ team.name }} <span *ngIf="team.city">({{ team.city }})</span>
+                </option>
+              </select>
+            </div>
+
+            <!-- Selección de jugador del equipo -->
+            <div class="mb-3">
+              <label for="playerSelect" class="form-label">Seleccionar jugador</label>
+              <select
+                class="form-select"
+                id="playerSelect"
+                [(ngModel)]="selectedPlayerId">
+                <option [ngValue]="null">-- Selecciona un jugador --</option>
+                <option *ngFor="let p of players" [ngValue]="p.player_id">
+                  {{ p.name }} <span *ngIf="p.number">(#{{ p.number }})</span>
+                </option>
+              </select>
+            </div>
+
+            <!-- Alternativa: ingresar ID de jugador manualmente -->
+            <div class="mb-3">
+              <label for="playerStatsManualId" class="form-label">O ingresa ID del jugador</label>
+              <input
+                type="number"
+                class="form-control"
+                id="playerStatsManualId"
+                [(ngModel)]="playerStatsManualId"
+                placeholder="Ej: 10">
+              <small class="text-muted">Útil si el listado de jugadores está vacío.</small>
+            </div>
+
+            <!-- (Eliminado) Filtros de fecha -->
+
+            <button
+              class="btn btn-primary w-100"
+              (click)="downloadPlayerStatsPDF()"
+              [disabled]="loading || (!selectedPlayerId && !playerStatsManualId)">
+              <i class="bi bi-download me-2"></i>
+              Descargar PDF de Estadísticas
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Info Footer -->
     <div class="row">
       <div class="col">
