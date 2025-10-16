@@ -12,6 +12,7 @@ import { TournamentPageComponent } from './pages/tournament-page.component';
 import { adminGuard } from './guards/admin.guard';
 import { ScoreboardsPageComponent } from './pages/scoreboards-page.component';
 import { ReportsPageComponent } from './pages/reports-page.component';
+import { ProfilePageComponent } from './pages/profile-page.component';
 export const routes: Routes = [
   // Login
   { path: 'login', component: LoginPageComponent },
@@ -29,6 +30,7 @@ export const routes: Routes = [
   { path: 'tableros', component: ScoreboardsPageComponent },  // listador de tableros
   { path: 'resultados', component: ResultsPageComponent, canActivate: [authGuard] },    // protegido
   { path: 'reportes', component: ReportsPageComponent, canActivate: [adminGuard] },     // protegido admin
+  { path: 'perfil', component: ProfilePageComponent, canActivate: [adminGuard] },       // protegido admin
   { path: 'torneo', component: TournamentPageComponent, canActivate: [authGuard] },
 
   // Redirects legacy

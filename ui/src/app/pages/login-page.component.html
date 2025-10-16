@@ -24,6 +24,7 @@
 <div class="login-wrapper">
   <h2>Iniciar sesión</h2>
 
+  <!-- Login por email y contraseña -->
   <form (ngSubmit)="submit()" #f="ngForm" autocomplete="on">
     <div class="form-group">
       <label>Email</label>
@@ -36,25 +37,38 @@
     </div>
 
     <button type="submit" [disabled]="loading">{{ loading ? 'Entrando...' : 'Entrar' }}</button>
-
     <div class="error" *ngIf="error">{{ error }}</div>
   </form>
 
   <div class="oauth-section">
-    <p class="oauth-divider">O inicia sesión con:</p>
-    
+    <p class="oauth-divider">Inicia sesión con:</p>
+
     <div class="oauth-buttons">
-      <button type="button" class="oauth-btn google" (click)="loginWithGoogle()">
-        <span>Google</span>
-      </button>
-      
-      <button type="button" class="oauth-btn facebook" (click)="loginWithFacebook()">
-        <span>Facebook</span>
-      </button>
-      
       <button type="button" class="oauth-btn github" (click)="loginWithGitHub()">
         <span>GitHub</span>
       </button>
     </div>
+  </div>
+
+  <!-- Registro nativo sencillo -->
+  <hr />
+  <div class="register-section">
+    <p class="oauth-divider">¿No tienes cuenta? Regístrate:</p>
+    <form (ngSubmit)="submitRegister()" #r="ngForm" autocomplete="on">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" name="regName" [(ngModel)]="regName" required />
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" name="regEmail" [(ngModel)]="regEmail" required />
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" name="regPassword" [(ngModel)]="regPassword" required />
+      </div>
+      <button type="submit" [disabled]="regLoading">{{ regLoading ? 'Creando...' : 'Crear cuenta' }}</button>
+      <div class="error" *ngIf="regError">{{ regError }}</div>
+    </form>
   </div>
 </div>

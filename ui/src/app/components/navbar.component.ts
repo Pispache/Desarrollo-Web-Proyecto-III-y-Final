@@ -1,4 +1,4 @@
-﻿/// <summary>
+/// <summary>
 /// Barra de navegación principal de la aplicación.
 /// </summary>
 /// <remarks>
@@ -30,6 +30,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   isAuthenticated = false;
   isAdmin = false;
   username: string | null = null;
+  role: string | null = null;
   currentRoute = '';
   private authSubscription?: Subscription;
   private routerSubscription?: Subscription;
@@ -47,6 +48,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.isAuthenticated = isAuth;
         this.isAdmin = isAuth ? this.authService.isAdmin() : false;
         this.username = isAuth ? (this.authService.getUsername() || null) : null;
+        this.role = isAuth ? (this.authService.getUserRole() || null) : null;
       }
     );
 

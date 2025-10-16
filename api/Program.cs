@@ -129,10 +129,7 @@ string GetCs() =>
 // Endpoints del dominio
 // ============================
 
-/// <summary>
-/// Registro de endpoints de autenticación (login).
-/// </summary>
-app.MapAuthEndpoints(GetCs);
+// Login local deshabilitado: autenticación centralizada en auth-service (OAuth2.0 + JWT)
 
 /// <summary>
 /// Activación de middlewares de autenticación/autorización si hay JWT configurado.
@@ -143,15 +140,7 @@ if (!string.IsNullOrWhiteSpace(jwtSecret))
     app.UseAuthorization();
 }
 
-/// <summary>
-/// Sembrado opcional de usuario(s) administrador al iniciar la app.
-/// </summary>
-/// <remarks>
-/// Lee variables de entorno o archivo JSON para crear/actualizar cuentas admin.  
-/// No bloquea el arranque si ocurre algún error; registra mensajes en el log.
-/// </remarks>
-// Seed admin user (if env vars provided)
-await Bootstrap.SeedAdminAsync(app, GetCs);
+// Seed de AdminUsers deshabilitado: gestión de usuarios via auth-service
 
 /// <summary>
 /// Registro de endpoints de juegos, reloj y torneos.

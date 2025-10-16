@@ -38,6 +38,11 @@ export class LoginPageComponent {
   password = '';
   loading = false;
   error = '';
+  regName = '';
+  regEmail = '';
+  regPassword = '';
+  regLoading = false;
+  regError = '';
 
   constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute) {
     // Manejar callback de OAuth primero (tiene prioridad)
@@ -62,6 +67,31 @@ export class LoginPageComponent {
         this.error = 'Cerraste sesión correctamente.';
       }
     } catch {}
+  }
+
+  submitRegister() {
+    this.regError = '';
+    const name = this.regName.trim();
+    const email = this.regEmail.trim();
+    const password = this.regPassword;
+    if (!name || !email || !password) { this.regError = 'Completa nombre, email y contraseña'; return; }
+    this.regLoading = true;
+    this.auth.register({ name, email, password }).subscribe({
+      next: (res) => {
+        this.regLoading = false;
+        if (res.success) {
+          this.router.navigateByUrl('/');
+        } else {
+          const firstErr = (res as any)?.errors?.[0]?.msg;
+          this.regError = firstErr || res.message || 'No se pudo registrar';
+        }
+      },
+      error: (err) => {
+        this.regLoading = false;
+        const firstErr = err?.error?.errors?.[0]?.msg;
+        this.regError = firstErr || err?.error?.message || err?.error?.error || 'No se pudo registrar';
+      }
+    });
   }
 
   submit() {

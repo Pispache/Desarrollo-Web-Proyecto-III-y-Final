@@ -5,23 +5,27 @@ const db = require('../config/database');
 
 // Generate JWT token compatible with .NET
 function generateToken(user) {
+  // Mapear rol de MySQL (viewer/operator/admin) al claim de .NET esperado por la API (ADMIN/USUARIO)
+  const mysqlRole = (user.role || '').toString().trim().toLowerCase();
+  const dotnetRole = mysqlRole === 'admin' ? 'ADMIN' : 'USUARIO';
+
   const payload = {
     // Claims estándar
     id: user.id,
     email: user.email,
     username: user.username,
-    role: user.role,
-    
+    role: user.role, // mantener tal cual para compatibilidad con la UI
+
     // Claims compatibles con .NET
-    'http://schemas.microsoft.com/ws/2008/06/identity/claims/role': user.role?.toUpperCase() || 'VIEWER',
+    'http://schemas.microsoft.com/ws/2008/06/identity/claims/role': dotnetRole,
     'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': user.username || user.email,
     'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': user.id.toString(),
-    
+
     // Claims adicionales
     sub: user.id.toString(),
     name: user.name || user.username
   };
-  
+
   return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '1h',
     issuer: process.env.JWT_ISSUER || 'MarcadorApi',

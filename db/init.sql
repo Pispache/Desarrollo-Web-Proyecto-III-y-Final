@@ -216,19 +216,4 @@ BEGIN
 END
 GO
 
-/* =========================
-   ADMIN USERS (para autenticación)
-   ========================= */
-IF OBJECT_ID('dbo.AdminUsers') IS NULL
-BEGIN
-    CREATE TABLE dbo.AdminUsers (
-        UserId       INT IDENTITY(1,1) PRIMARY KEY,
-        Username     NVARCHAR(50) NOT NULL UNIQUE,
-        PasswordHash VARBINARY(256) NOT NULL,
-        PasswordSalt VARBINARY(128) NOT NULL,
-        Role         NVARCHAR(20) NOT NULL DEFAULT 'ADMIN',
-        Active       BIT NOT NULL DEFAULT 1,
-        CreatedAt    DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
-    );
-END
-GO
+-- AdminUsers removido: autenticación gestionada por auth-service (OAuth2.0 + JWT)

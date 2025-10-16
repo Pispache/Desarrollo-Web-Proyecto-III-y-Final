@@ -91,6 +91,16 @@
             <span>TORNEO</span>
           </a>
         </li>
+        
+        <li class="nav-item" *ngIf="isAdmin">
+          <a routerLink="/perfil" 
+             class="nav-link" 
+             [class.active]="isActiveRoute('/perfil')"
+             (click)="closeMenu()">
+            <i class="bi bi-person-gear"></i>
+            <span>PERFIL</span>
+          </a>
+        </li>
         <li class="nav-item" *ngIf="!isAuthenticated">
           <a routerLink="/login" 
              class="nav-link" 
@@ -116,10 +126,13 @@
         <i class="bi bi-box-arrow-right me-1"></i>
         <span>Cerrar sesión</span>
       </button>
-      <!-- Indicador de usuario al extremo derecho (icono + nombre) -->
+      <!-- Indicador de usuario al extremo derecho (icono + nombre + rol) -->
       <div *ngIf="isAuthenticated" class="d-flex align-items-center ms-auto px-2 py-1 text-light user-chip">
         <i class="bi bi-person-circle me-2"></i>
-        <span class="fw-semibold">{{ username || 'Usuario' }}</span>
+        <span class="fw-semibold">
+          {{ username || 'Usuario' }}
+          <small class="ms-2 text-muted" *ngIf="role">({{ role | uppercase }})</small>
+        </span>
       </div>
     </div>
 
@@ -210,6 +223,15 @@
            (click)="closeMenu()">
           <i class="bi bi-bar-chart-fill"></i>
           <span>Torneo</span>
+        </a>
+      </li>
+
+      <li *ngIf="isAdmin">
+        <a class="dropdown-item" routerLink="/perfil" 
+           [class.active]="isActiveRoute('/perfil')"
+           (click)="closeMenu()">
+          <i class="bi bi-person-gear"></i>
+          <span>Perfil</span>
         </a>
       </li>
 

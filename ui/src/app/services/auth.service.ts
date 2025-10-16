@@ -43,7 +43,7 @@ const USER_KEY = 'auth.user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private base = 'http://localhost:5001/api/auth'; // Auth Service Node.js
+  private base = '/auth/api/auth'; // Proxy Nginx hacia Auth Service Node.js
   private _authed$ = new BehaviorSubject<boolean>(!!this.getToken());
   readonly authed$ = this._authed$.asObservable();
   private logoutTimer?: any;
@@ -137,6 +137,14 @@ export class AuthService {
     window.location.href = `${this.base}/github`;
   }
 
+  // Admin: listar usuarios del Auth Service
+  listUsers(): Observable<{ success: boolean; users: any[] }> {
+    const token = this.getToken();
+    return this.http.get<{ success: boolean; users: any[] }>(`${this.base}/users`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
+  }
+
   // Obtener usuario actual
   getCurrentUser(): any {
     const userStr = this.safeGetItem(USER_KEY);
@@ -162,6 +170,8 @@ export class AuthService {
       next: (res) => {
         if (res.success) {
           this.safeSetItem(USER_KEY, JSON.stringify(res.user));
+          // Re-emitir estado autenticado para notificar que ya hay usuario cargado
+          this._authed$.next(true);
         }
       }
     });

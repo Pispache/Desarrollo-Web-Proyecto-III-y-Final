@@ -1,0 +1,33 @@
+<div class="profile-wrapper">
+  <h2>Perfil — Administración de usuarios</h2>
+
+  <div *ngIf="loading">Cargando...</div>
+  <div *ngIf="error" class="error">{{ error }}</div>
+
+  <div class="table-responsive" *ngIf="!loading && !error">
+    <table class="table table-dark table-striped table-hover">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Email</th>
+          <th>Nombre</th>
+          <th>Username</th>
+          <th>Rol</th>
+          <th>Activo</th>
+          <th>Último acceso</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let u of users">
+          <td>{{ u.id }}</td>
+          <td>{{ u.email }}</td>
+          <td>{{ u.name || '-' }}</td>
+          <td>{{ u.username || '-' }}</td>
+          <td>{{ u.role | uppercase }}</td>
+          <td>{{ (u.active ? 'Sí' : 'No') }}</td>
+          <td>{{ u.last_login_at || '-' }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
