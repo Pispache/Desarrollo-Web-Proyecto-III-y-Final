@@ -151,7 +151,13 @@ def get_base_styles() -> str:
     """
 
 def render_teams_html(teams: List[Dict], filters: Dict, logo_url: Optional[str] = None) -> str:
-    """Genera HTML para reporte de equipos."""
+    """
+    @summary Genera HTML para el reporte de equipos.
+    @param teams Lista de equipos (name, city, logo_url, created_at...)
+    @param filters Filtros aplicados (q, city, limit/offset opcionales)
+    @param logo_url URL de logo opcional para el encabezado
+    @returns HTML listo para ser enviado al renderer PDF
+    """
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
     
     # Construir filtros aplicados
@@ -229,15 +235,13 @@ def render_teams_html(teams: List[Dict], filters: Dict, logo_url: Optional[str] 
     return html
 
 def render_player_stats_html(player: Dict, stats: Dict, filters: Dict, logo_url: Optional[str] = None) -> str:
-    """Genera HTML para reporte de estadísticas por jugador.
-    Espera:
-      - player: { name, number, team_name, position, height_cm, age, nationality }
-      - stats: {
-          total_points, points_1, points_2, points_3,
-          total_fouls, fouls_by_type: [{ foul_type, count }],
-          games_count
-        }
-      - filters: { from, to }
+    """
+    @summary Genera HTML para estadísticas por jugador.
+    @param player Diccionario con metadatos del jugador (name, number, team_name, position, height_cm, age, nationality)
+    @param stats Totales y desgloses (total_points, points_1/2/3, total_fouls, fouls_by_type, games_count)
+    @param filters Rango de fechas aplicado (from, to)
+    @param logo_url Logo opcional para el encabezado
+    @returns HTML listo para el renderer PDF
     """
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
 
@@ -358,6 +362,16 @@ def render_player_stats_html(player: Dict, stats: Dict, filters: Dict, logo_url:
     return html
 
 def render_roster_html(game: Dict, home_players: List[Dict], away_players: List[Dict], logo_url: Optional[str] = None, home_logo_url: Optional[str] = None, away_logo_url: Optional[str] = None) -> str:
+    """
+    @summary Genera HTML para el roster por partido con ambos equipos.
+    @param game Información del partido (home_team, away_team, etc.)
+    @param home_players Lista de jugadores locales
+    @param away_players Lista de jugadores visitantes
+    @param logo_url Logo institucional opcional
+    @param home_logo_url Logo del equipo local
+    @param away_logo_url Logo del equipo visitante
+    @returns HTML listo para el renderer PDF
+    """
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
 
     max_rows = max(len(home_players), len(away_players))
@@ -433,7 +447,13 @@ def render_roster_html(game: Dict, home_players: List[Dict], away_players: List[
     return html
 
 def render_players_html(players: List[Dict], team_name: str, logo_url: Optional[str] = None) -> str:
-    """Genera HTML para reporte de jugadores por equipo."""
+    """
+    @summary Genera HTML para el reporte de jugadores de un equipo.
+    @param players Lista de jugadores (name, number, position, age, height_cm, nationality)
+    @param team_name Nombre del equipo
+    @param logo_url Logo opcional para el encabezado
+    @returns HTML listo para el renderer PDF
+    """
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
     
     # Construir filas de tabla
@@ -501,7 +521,13 @@ def render_players_html(players: List[Dict], team_name: str, logo_url: Optional[
     return html
 
 def render_games_html(games: List[Dict], filters: Dict, logo_url: Optional[str] = None) -> str:
-    """Genera HTML para reporte de historial de partidos."""
+    """
+    @summary Genera HTML para el historial de partidos con filtros.
+    @param games Lista de partidos (home_team, away_team, status, created_at, quarter, scores)
+    @param filters Filtros aplicados (from, to, status)
+    @param logo_url Logo opcional para el encabezado
+    @returns HTML listo para el renderer PDF
+    """
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
     
     # Construir filtros aplicados

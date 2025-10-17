@@ -27,6 +27,13 @@ interface GameLite {
   templateUrl: './reports-page.component.html',
   styleUrls: ['./reports-page.component.scss']
 })
+/**
+ * @summary Pantalla de Reportes (Angular).
+ * @remarks
+ * - Consume la API principal vía `apiBaseUrl` y el microservicio de reportes vía `reportsBaseUrl`.\
+ * - Requiere token JWT (se añade en `getHeaders()`).\
+ * - Permite descargar PDF de equipos, jugadores, partidos, roster y estadísticas por jugador.
+ */
 export class ReportsPageComponent implements OnInit {
   // Filtros para equipos
   teamSearchQuery = '';
@@ -55,6 +62,9 @@ export class ReportsPageComponent implements OnInit {
     return this._selectedTeamId;
   }
 
+  /**
+   * @summary Carga lista de partidos para el selector de reportes.
+   */
   loadGamesList() {
     // Cargar lista de partidos desde report-service (sin filtros para selector)
     this.http.get<{ items: any[] }>(`${this.reportsBaseUrl}/games`, {
@@ -74,6 +84,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga el PDF de roster para un partido seleccionado.
+   */
   downloadRosterPDF() {
     const gameId = this.selectedGameId ?? this.rosterGameId;
     if (!gameId) {
@@ -142,6 +155,9 @@ export class ReportsPageComponent implements OnInit {
     console.log('[DEBUG] Team changed to:', this.selectedTeamId);
   }
 
+  /**
+   * @summary Construye headers HTTP con JWT en `Authorization`.
+   */
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();
     return new HttpHeaders({
@@ -149,6 +165,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Carga todos los equipos desde la API principal (paginación amplia para selector).
+   */
   loadTeams() {
     this.loading = true;
     this.error = '';
@@ -179,6 +198,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga el PDF de equipos aplicando filtros locales.
+   */
   downloadTeamsPDF() {
     this.loading = true;
     this.error = '';
@@ -211,6 +233,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga el PDF de jugadores del equipo seleccionado.
+   */
   downloadPlayersPDF() {
     const teamId = this.selectedTeamId;
     if (!teamId) {
@@ -248,6 +273,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga el PDF de historial de partidos con filtros.
+   */
   downloadGamesPDF() {
     this.loading = true;
     this.error = '';
@@ -280,6 +308,10 @@ export class ReportsPageComponent implements OnInit {
   }
 
   // ===== RF-REP-05: Carga de jugadores por equipo y descarga de estadísticas =====
+  /**
+   * @summary Carga jugadores del equipo (para RF-REP-05 y selección de jugador).
+   * @param teamId Identificador del equipo
+   */
   private loadPlayersForTeam(teamId: number) {
     this.http.get<{ items: any[] }>(`${this.reportsBaseUrl}/teams/${teamId}/players`, {
       headers: this.getHeaders()
@@ -298,6 +330,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga PDF de estadísticas de un jugador (por ID seleccionado o manual).
+   */
   downloadPlayerStatsPDF() {
     const pid = this.selectedPlayerId ?? this.playerStatsManualId;
     if (!pid) {
@@ -331,6 +366,11 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Dispara la descarga del Blob en el navegador.
+   * @param blob Contenido del archivo
+   * @param filename Nombre de archivo sugerido
+   */
   private downloadBlob(blob: Blob, filename: string) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -342,6 +382,9 @@ export class ReportsPageComponent implements OnInit {
     window.URL.revokeObjectURL(url);
   }
 
+  /**
+   * @summary Devuelve fecha actual como AAAAMMDD para nombres de archivo.
+   */
   private getDateString(): string {
     const now = new Date();
     return now.toISOString().split('T')[0].replace(/-/g, '');
@@ -351,6 +394,9 @@ export class ReportsPageComponent implements OnInit {
     this.error = '';
   }
 
+  /**
+   * @summary Normaliza mensajes de error HTTP para mostrar en UI.
+   */
   private getErrorMessage(err: HttpErrorResponse): string {
     if (err.status === 401) {
       return 'No autorizado. Verifica que tengas permisos de administrador.';

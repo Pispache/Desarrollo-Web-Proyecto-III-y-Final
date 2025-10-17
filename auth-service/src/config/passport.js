@@ -1,13 +1,32 @@
+/**
+ * @summary Configuración de Passport para autenticación OAuth 2.0 con GitHub.
+ * @remarks
+ * - Este módulo define la serialización de usuario en sesión y la estrategia de GitHub
+ *   usando el flujo Authorization Code.
+ * - Requiere las variables de entorno: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`,
+ *   `GITHUB_CALLBACK_URL`.
+ * - Persiste/actualiza usuarios en MySQL vía `db.query()` y almacena el último inicio de sesión.
+ */
 const passport = require('passport');
 const GitHubStrategy = require('passport-github2').Strategy;
 const db = require('./database');
 
-// Serialize user
+/**
+ * @summary Serializa el usuario en la sesión.
+ * @param {object} user Objeto de usuario persistido (con `id`).
+ * @param {(err: any, id?: number) => void} done Callback de finalización.
+ * @returns {void}
+ */
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
-// Deserialize user
+/**
+ * @summary Deserializa el usuario desde la sesión.
+ * @param {number} id Identificador de usuario almacenado en la sesión.
+ * @param {(err: any, user?: object|null) => void} done Callback de finalización.
+ * @returns {Promise<void>}
+ */
 passport.deserializeUser(async (id, done) => {
   try {
     const users = await db.query('SELECT * FROM users WHERE id = ?', [id]);
@@ -17,9 +36,14 @@ passport.deserializeUser(async (id, done) => {
   }
 });
 
-// (Google y Facebook removidos; mantenemos solo GitHub)
-
-// GitHub Strategy
+/**
+ * @summary Estrategia de GitHub OAuth 2.0 (Authorization Code).
+ * @remarks
+ * - Usa `passport-github2` para iniciar el flujo y procesar el `callback`.
+ * - Inserta/actualiza el usuario por `oauth_provider='github'` y `oauth_id`.
+ * - Actualiza `name`, `avatar` y `last_login_at`. Si falta `username`, se deriva del email.
+ * - No expone el `client_secret` en el navegador; el intercambio de `code`→`access_token` se hace en backend.
+ */
 if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
   passport.use(new GitHubStrategy({
     clientID: process.env.GITHUB_CLIENT_ID,
@@ -28,6 +52,7 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
     scope: ['user:email']
   },
   async (accessToken, refreshToken, profile, done) => {
+    // Nota: este callback se ejecuta tras el intercambio de `code` por `access_token`.
     try {
       const email = profile.emails?.[0]?.value;
       const name = profile.displayName || profile.username || null;
@@ -38,7 +63,6 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         return done(new Error('No email from GitHub'), null);
       }
       
-      // Similar logic as Google
       let users = await db.query(
         'SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?',
         ['github', profile.id]

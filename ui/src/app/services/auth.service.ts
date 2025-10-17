@@ -1,10 +1,10 @@
 /**
- * summary:
- *   Servicio de autenticación (login, estado, cierre de sesión y roles).
- * remarks:
- *   - Gestiona el token JWT y su expiración (auto-logout programado).
- *   - Sincroniza cierre de sesión entre pestañas con BroadcastChannel y `storage`.
- *   - Expone estado reactivo `authed$`, helpers de rol/usuario y maneja navegación.
+ * @summary Servicio de autenticación del Frontend (Angular).
+ * @remarks
+ * - Administra el ciclo de vida del JWT (almacenamiento, expiración y auto-logout).\
+ * - Sincroniza el cierre de sesión entre pestañas usando `BroadcastChannel` y el evento `storage`.\
+ * - Expone estado reactivo `authed$`, helpers de rol/usuario y utilidades de navegación.\
+ * - Interactúa con el Auth Service Node.js por medio del proxy Nginx (`/auth/api/auth`).
  */
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
@@ -89,6 +89,12 @@ export class AuthService {
     } catch {}
   }
 
+  /**
+   * @summary Realiza login con email/contraseña contra el Auth Service.
+   * @remarks
+   * - Persiste el JWT y programa auto-logout (60 minutos por defecto).\
+   * - Emite estado autenticado y notifica a otras pestañas.
+   */
   login(email: string, password: string): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.base}/login`, { email, password }).pipe(
       tap(res => {
@@ -108,6 +114,11 @@ export class AuthService {
   }
 
   // Nuevo método de registro
+  /**
+   * @summary Registro de usuario (email/contraseña) en el Auth Service.
+   * @remarks
+   * - Tras registrar, inicia sesión automáticamente y emite estado autenticado.
+   */
   register(data: RegisterData): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.base}/register`, data).pipe(
       tap(res => {
@@ -133,11 +144,21 @@ export class AuthService {
     window.location.href = `${this.base}/facebook`;
   }
 
+  /**
+   * @summary Inicia el flujo OAuth con GitHub redirigiendo al backend.
+   * @remarks
+   * - El backend maneja el `redirect_uri` y el intercambio del código por token.\
+   * - Tras el callback, la UI recibe el JWT vía `handleOAuthCallback()`.
+   * redirige a https://tobarumg.lat/api/auth/github.
+   */
   loginWithGitHub(): void {
     window.location.href = `${this.base}/github`;
   }
 
   // Admin: listar usuarios del Auth Service
+  /**
+   * @summary Lista usuarios (restringido a administradores).
+   */
   listUsers(): Observable<{ success: boolean; users: any[] }> {
     const token = this.getToken();
     return this.http.get<{ success: boolean; users: any[] }>(`${this.base}/users`, {
@@ -146,6 +167,11 @@ export class AuthService {
   }
 
   // Admin: actualizar rol de usuario
+  /**
+   * @summary Actualiza el rol de un usuario (requiere token de admin).
+   * @param userId Identificador del usuario a actualizar
+   * @param role Nuevo rol (`viewer`, `operator` o `admin`)
+   */
   updateUserRole(userId: number, role: 'viewer' | 'operator' | 'admin'): Observable<{ success: boolean; user: any }> {
     const token = this.getToken();
     return this.http.patch<{ success: boolean; user: any }>(`${this.base}/users/${userId}/role`, { role }, {
@@ -163,6 +189,9 @@ export class AuthService {
   }
 
   // Obtener usuario actual
+  /**
+   * @summary Devuelve el usuario actual desde almacenamiento local.
+   */
   getCurrentUser(): any {
     const userStr = this.safeGetItem(USER_KEY);
     if (!userStr) return null;
@@ -174,6 +203,11 @@ export class AuthService {
   }
 
   // Manejar callback de OAuth
+  /**
+   * @summary Maneja el callback de OAuth recibiendo el JWT del backend.
+   * @remarks
+   * - Persiste el token, programa auto-logout y consulta los datos del usuario con `/me`.
+   */
   handleOAuthCallback(token: string): void {
     this.safeSetItem(TOKEN_KEY, token);
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -194,6 +228,12 @@ export class AuthService {
     });
   }
 
+  /**
+   * @summary Cierra sesión localmente y sincroniza con otras pestañas.
+   * @param navigate Si `true`, redirige a `/login`.
+   * @param reason Motivo del cierre (p.ej., `expired`, `logged_out`).
+   * @param origin Origen del evento (`local`, `external`, `interceptor`, `guard`).
+   */
   logout(
     navigate: boolean = true,
     reason?: 'expired' | 'logged_out' | 'manual' | string,
@@ -226,15 +266,24 @@ export class AuthService {
     if (navigate) this.router.navigate(['/login'], { queryParams: { reason: reason === 'logged_out' ? 'logged_out' : 'expired' } });
   }
 
+  /**
+   * @summary Obtiene el token actual del almacenamiento.
+   */
   getToken(): string | null {
     return this.safeGetItem(TOKEN_KEY);
   }
 
+  /**
+   * @summary Indica si el usuario está autenticado y el token es válido/no expirado.
+   */
   isAuthenticated(): boolean {
     const t = this.getToken();
     return !!t && t.length > 0 && !this.isExpired();
   }
 
+  /**
+   * @summary Devuelve la fecha de expiración del token si existe.
+   */
   getExpiresAt(): Date | null {
     const raw = this.safeGetItem(EXPIRES_KEY);
     if (!raw) return null;
@@ -242,12 +291,18 @@ export class AuthService {
     return isNaN(d.getTime()) ? null : d;
   }
 
+  /**
+   * @summary Verifica si el token ha expirado.
+   */
   isExpired(): boolean {
     const exp = this.getExpiresAt();
     if (!exp) return false;
     return Date.now() >= exp.getTime();
   }
 
+  /**
+   * @summary Obtiene el rol del usuario desde cache o decodificando el JWT.
+   */
   getUserRole(): string | null {
     const user = this.getCurrentUser();
     if (user?.role) return user.role;
@@ -271,22 +326,34 @@ export class AuthService {
     }
   }
 
+  /**
+   * @summary Indica si el usuario tiene rol de administrador.
+   */
   isAdmin(): boolean {
     const role = this.getUserRole();
     return role === 'admin' || role === 'ADMIN';
   }
 
+  /**
+   * @summary Indica si el usuario tiene rol de operador o superior.
+   */
   isOperator(): boolean {
     const role = this.getUserRole();
     return role === 'operator' || role === 'admin' || role === 'ADMIN';
   }
 
   // Obtiene un nombre de usuario legible
+  /**
+   * @summary Obtiene un nombre presentable del usuario actual.
+   */
   getUsername(): string | null {
     const user = this.getCurrentUser();
     return user?.name || user?.username || user?.email || null;
   }
 
+  /**
+   * @summary Programa un cierre de sesión automático al llegar la expiración.
+   */
   private scheduleAutoLogout(): void {
     if (this.logoutTimer) { clearTimeout(this.logoutTimer); this.logoutTimer = undefined; }
     const exp = this.getExpiresAt();
