@@ -122,12 +122,17 @@ export class ReportsPageComponent implements OnInit {
   loading = false;
   error = '';
 
-  private reportsBaseUrl = (location.port === '4200')
-    ? 'http://localhost:8081/v1/reports'
-    : '/reports';
-  private apiBaseUrl = (location.port === '4200')
-    ? 'http://localhost:8080/api'
-    : '/api';
+  private get reportsBaseUrl(): string {
+    return (location.port === '4200')
+      ? 'http://localhost:8081/v1/reports'
+      : '/reports';
+  }
+
+  private get apiBaseUrl(): string {
+    return (location.port === '4200')
+      ? 'http://localhost:8080/api'
+      : '/api';
+  }
 
   constructor(
     private http: HttpClient,
