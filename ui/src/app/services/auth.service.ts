@@ -12,38 +12,14 @@ import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { NotificationService } from './notification.service';
 
-interface LoginResponse { 
-  success: boolean;
-  message: string;
-  user: {
-    id: number;
-    email: string;
-    username: string;
-    name: string;
-    role: string;
-    avatar?: string;
-  };
-  token: {
-    access_token: string;
-    token_type: string;
-    expires_in: string;
-  };
-}
-
-interface RegisterData {
-  email: string;
-  password: string;
-  name: string;
-  username?: string;
-}
+interface LoginResponse { accessToken: string; expiresAt: string; }
 
 const TOKEN_KEY = 'auth.token';
 const EXPIRES_KEY = 'auth.expiresAt';
-const USER_KEY = 'auth.user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private base = 'http://localhost:5001/api/auth'; // Auth Service Node.js
+  private base = '/api/auth';
   private _authed$ = new BehaviorSubject<boolean>(!!this.getToken());
   readonly authed$ = this._authed$.asObservable();
   private logoutTimer?: any;
@@ -51,11 +27,9 @@ export class AuthService {
   private isLoggingOut = false; // evita duplicados por múltiples disparadores
 
   constructor(private http: HttpClient, private router: Router, private notify: NotificationService) {
-    // Verificar expiración al iniciar (pero no en página de login con token OAuth)
+    // Verificar expiración al iniciar
     const token = this.getToken();
-    const isOAuthCallback = typeof window !== 'undefined' && window.location.href.includes('token=');
-    
-    if (token && this.isExpired() && !isOAuthCallback) {
+    if (token && this.isExpired()) {
       this.logout(true, 'expired');
     } else if (token) {
       this.scheduleAutoLogout();
@@ -89,82 +63,17 @@ export class AuthService {
     } catch {}
   }
 
-  login(email: string, password: string): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.base}/login`, { email, password }).pipe(
+  login(username: string, password: string): Observable<LoginResponse> {
+    return this.http.post<LoginResponse>(`${this.base}/login`, { username, password }).pipe(
       tap(res => {
-        if (res.success) {
-          this.safeSetItem(TOKEN_KEY, res.token.access_token);
-          // Calcular expiración (1 hora por defecto)
-          const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-          this.safeSetItem(EXPIRES_KEY, expiresAt);
-          this.safeSetItem(USER_KEY, JSON.stringify(res.user));
-          this._authed$.next(true);
-          this.scheduleAutoLogout();
-          // Notificar a otras pestañas que hay sesión activa (opcional)
-          try { this.bc?.postMessage({ type: 'login' }); } catch {}
-        }
+        this.safeSetItem(TOKEN_KEY, res.accessToken);
+        this.safeSetItem(EXPIRES_KEY, res.expiresAt ?? '');
+        this._authed$.next(true);
+        this.scheduleAutoLogout();
+        // Notificar a otras pestañas que hay sesión activa (opcional)
+        try { this.bc?.postMessage({ type: 'login' }); } catch {}
       })
     );
-  }
-
-  // Nuevo método de registro
-  register(data: RegisterData): Observable<LoginResponse> {
-    return this.http.post<LoginResponse>(`${this.base}/register`, data).pipe(
-      tap(res => {
-        if (res.success) {
-          this.safeSetItem(TOKEN_KEY, res.token.access_token);
-          const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-          this.safeSetItem(EXPIRES_KEY, expiresAt);
-          this.safeSetItem(USER_KEY, JSON.stringify(res.user));
-          this._authed$.next(true);
-          this.scheduleAutoLogout();
-          try { this.bc?.postMessage({ type: 'login' }); } catch {}
-        }
-      })
-    );
-  }
-
-  // OAuth login methods
-  loginWithGoogle(): void {
-    window.location.href = `${this.base}/google`;
-  }
-
-  loginWithFacebook(): void {
-    window.location.href = `${this.base}/facebook`;
-  }
-
-  loginWithGitHub(): void {
-    window.location.href = `${this.base}/github`;
-  }
-
-  // Obtener usuario actual
-  getCurrentUser(): any {
-    const userStr = this.safeGetItem(USER_KEY);
-    if (!userStr) return null;
-    try {
-      return JSON.parse(userStr);
-    } catch {
-      return null;
-    }
-  }
-
-  // Manejar callback de OAuth
-  handleOAuthCallback(token: string): void {
-    this.safeSetItem(TOKEN_KEY, token);
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-    this.safeSetItem(EXPIRES_KEY, expiresAt);
-    this._authed$.next(true);
-    this.scheduleAutoLogout();
-    // Cargar información del usuario
-    this.http.get<{ success: boolean; user: any }>(`${this.base}/me`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    }).subscribe({
-      next: (res) => {
-        if (res.success) {
-          this.safeSetItem(USER_KEY, JSON.stringify(res.user));
-        }
-      }
-    });
   }
 
   logout(
@@ -178,7 +87,6 @@ export class AuthService {
 
     this.safeRemoveItem(TOKEN_KEY);
     this.safeRemoveItem(EXPIRES_KEY);
-    this.safeRemoveItem(USER_KEY);
     this._authed$.next(false);
     if (this.logoutTimer) { clearTimeout(this.logoutTimer); this.logoutTimer = undefined; }
 
@@ -222,14 +130,11 @@ export class AuthService {
   }
 
   getUserRole(): string | null {
-    const user = this.getCurrentUser();
-    if (user?.role) return user.role;
-    
-    // Fallback: decodificar del JWT
     const token = this.getToken();
     if (!token) return null;
     
     try {
+      // Decodificar el JWT (solo la parte del payload) soportando base64url
       const part = token.split('.')[1];
       if (!part) return null;
       let base64 = part.replace(/-/g, '+').replace(/_/g, '/');
@@ -237,7 +142,11 @@ export class AuthService {
       if (pad) base64 = base64 + '='.repeat(4 - pad);
       const json = atob(base64);
       const payload = JSON.parse(json);
-      return payload['role'] || payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || null;
+      // El claim de rol en .NET suele ser ClaimTypes.Role
+      return payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+        || payload['role']
+        || payload['roles']?.[0]
+        || null;
     } catch (error) {
       console.error('Error decoding JWT:', error);
       return null;
@@ -246,18 +155,33 @@ export class AuthService {
 
   isAdmin(): boolean {
     const role = this.getUserRole();
-    return role === 'admin' || role === 'ADMIN';
+    return role === 'ADMIN';
   }
 
-  isOperator(): boolean {
-    const role = this.getUserRole();
-    return role === 'operator' || role === 'admin' || role === 'ADMIN';
-  }
-
-  // Obtiene un nombre de usuario legible
+  // Obtiene un nombre de usuario legible del JWT, probando varios claims comunes
   getUsername(): string | null {
-    const user = this.getCurrentUser();
-    return user?.name || user?.username || user?.email || null;
+    const token = this.getToken();
+    if (!token) return null;
+    try {
+      const part = token.split('.')[1];
+      if (!part) return null;
+      let base64 = part.replace(/-/g, '+').replace(/_/g, '/');
+      const pad = base64.length % 4;
+      if (pad) base64 = base64 + '='.repeat(4 - pad);
+      const json = atob(base64);
+      const payload = JSON.parse(json);
+      return (
+        payload['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] ||
+        payload['name'] ||
+        payload['preferred_username'] ||
+        payload['unique_name'] ||
+        payload['email'] ||
+        payload['sub'] ||
+        null
+      );
+    } catch {
+      return null;
+    }
   }
 
   private scheduleAutoLogout(): void {
