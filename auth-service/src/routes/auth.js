@@ -2,7 +2,6 @@ const express = require('express');
 const router = express.Router();
 const passport = require('passport');
 const authController = require('../controllers/authController');
-const { verifyToken, requireAdmin } = require('../middleware/auth');
 const { validateRegister, validateLogin } = require('../middleware/validators');
 
 // Email/Password Authentication
@@ -45,8 +44,5 @@ router.get('/github/callback',
   passport.authenticate('github', { failureRedirect: '/login' }),
   authController.oauthCallback
 );
-
-// Admin-only: list users
-router.get('/users', verifyToken, requireAdmin, authController.listUsers);
 
 module.exports = router;
