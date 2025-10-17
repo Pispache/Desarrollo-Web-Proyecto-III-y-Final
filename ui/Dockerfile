@@ -2,15 +2,17 @@
 FROM node:20 AS build
 WORKDIR /app
 
-# Manifiestos
-COPY package.json package-lock.json ./
+# Manifiestos (si faltan, falla aquí)
+COPY package.json ./
+COPY package-lock.json ./
 
-# Instalar deps determinísticamente con cache
-ENV NODE_OPTIONS=--max-old-space-size=1024
-RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
+# Instalar deps (más tolerante que ci)
+ENV NPM_CONFIG_LEGACY_PEER_DEPS=true
+RUN npm cache clean --force && npm install
 
 # Código y build prod
 COPY . .
+# Forzamos build sin prerender y con salida directa a /out para evitar copiados condicionales
 RUN npx ng build --configuration=production --no-prerender --output-path=/out || \
     npm run build -- --configuration=production --no-prerender --output-path=/out
 
