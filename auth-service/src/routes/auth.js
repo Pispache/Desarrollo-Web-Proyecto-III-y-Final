@@ -49,7 +49,4 @@ router.get('/github/callback',
 // Admin-only: list users
 router.get('/users', verifyToken, requireAdmin, authController.listUsers);
 
-// Admin-only: update user role
-router.patch('/users/:id/role', verifyToken, requireAdmin, authController.updateUserRole);
-
 module.exports = router;

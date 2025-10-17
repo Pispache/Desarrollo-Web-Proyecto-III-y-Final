@@ -8,7 +8,7 @@
 /// - Se actualiza dinámicamente al cambiar de ruta y al recibir eventos globales de la interfaz.
 /// </remarks>
 
-import { Component, OnInit, OnDestroy, HostListener, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { AuthService } from '../services/auth.service';
@@ -25,14 +25,12 @@ import { UiEventsService } from '../services/ui-events.service';
 })
 export class NavbarComponent implements OnInit, OnDestroy {
   isMenuOpen = false;
-  adminOpen = false;
   /** Preferencia: si el menú móvil tipo hamburguesa está habilitado */
   mobileMenuEnabled = true;
   isAuthenticated = false;
   isAdmin = false;
   username: string | null = null;
   role: string | null = null;
-  avatarUrl: string | null = null;
   currentRoute = '';
   private authSubscription?: Subscription;
   private routerSubscription?: Subscription;
@@ -40,8 +38,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   constructor(
     private authService: AuthService,
     private router: Router,
-    private uiEvents: UiEventsService,
-    private elRef: ElementRef
+    private uiEvents: UiEventsService
   ) {}
 
   ngOnInit() {
@@ -52,9 +49,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.isAdmin = isAuth ? this.authService.isAdmin() : false;
         this.username = isAuth ? (this.authService.getUsername() || null) : null;
         this.role = isAuth ? (this.authService.getUserRole() || null) : null;
-        // Intentar obtener avatar desde el usuario actual
-        const me = isAuth ? this.authService.getCurrentUser() : null;
-        this.avatarUrl = me?.avatar || null;
       }
     );
 
@@ -94,7 +88,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   closeMenu() {
     this.isMenuOpen = false;
-    this.adminOpen = false;
     this.toggleBodyScroll(false);
   }
 
@@ -125,21 +118,6 @@ export class NavbarComponent implements OnInit, OnDestroy {
     try {
       document.body.classList.toggle('nav-open', !!lock);
     } catch {}
-  }
-
-  toggleAdminMenu(event: MouseEvent) {
-    event.stopPropagation();
-    this.adminOpen = !this.adminOpen;
-  }
-
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(ev: MouseEvent) {
-    if (!this.adminOpen) return;
-    const host: HTMLElement = this.elRef.nativeElement;
-    const dropdown = host.querySelector('.admin-dropdown');
-    if (dropdown && !dropdown.contains(ev.target as Node)) {
-      this.adminOpen = false;
-    }
   }
 
   // ================= Preferencia de hamburguesa ON/OFF =================
