@@ -504,6 +504,14 @@ def render_games_html(games: List[Dict], filters: Dict, logo_url: Optional[str] 
     """Genera HTML para reporte de historial de partidos."""
     now = datetime.now().strftime("%d/%m/%Y %H:%M")
     
+    status_translation = {
+        "SCHEDULED": "Programado",
+        "IN_PROGRESS": "En Progreso",
+        "FINISHED": "Finalizado",
+        "CANCELLED": "Cancelado",
+        "SUSPENDED": "Suspendido"
+    }
+    
     # Construir filtros aplicados
     filters_html = ""
     if filters.get("from"):
@@ -511,7 +519,8 @@ def render_games_html(games: List[Dict], filters: Dict, logo_url: Optional[str] 
     if filters.get("to"):
         filters_html += f'<span class="filter-item"><span class="filter-label">Hasta:</span> {filters["to"]}</span>'
     if filters.get("status"):
-        filters_html += f'<span class="filter-item"><span class="filter-label">Estado:</span> {filters["status"]}</span>'
+        status_es = status_translation.get(filters["status"], filters["status"])
+        filters_html += f'<span class="filter-item"><span class="filter-label">Estado:</span> {status_es}</span>'
     if not filters_html:
         filters_html = '<span class="filter-item">Sin filtros aplicados</span>'
     
@@ -520,7 +529,8 @@ def render_games_html(games: List[Dict], filters: Dict, logo_url: Optional[str] 
         "SCHEDULED": '<span class="badge badge-info">Programado</span>',
         "IN_PROGRESS": '<span class="badge badge-warning">En Progreso</span>',
         "FINISHED": '<span class="badge badge-success">Finalizado</span>',
-        "CANCELLED": '<span class="badge badge-danger">Cancelado</span>'
+        "CANCELLED": '<span class="badge badge-danger">Cancelado</span>',
+        "SUSPENDED": '<span class="badge badge-warning">Suspendido</span>'
     }
     
     # Construir filas de tabla
