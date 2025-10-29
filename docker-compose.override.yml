@@ -1,6 +1,6 @@
 services:
   auth-service:
     environment:
-      - FRONTEND_URL=https://tobarumg.lat
-      - CORS_ORIGIN=https://tobarumg.lat
-      - GITHUB_CALLBACK_URL=https://tobarumg.lat/api/auth/github/callback
+      # - FRONTEND_URL=https://tobarumg.lat
+      # - CORS_ORIGIN=https://tobarumg.lat
+      # - GITHUB_CALLBACK_URL=https://tobarumg.lat/api/auth/github/callback

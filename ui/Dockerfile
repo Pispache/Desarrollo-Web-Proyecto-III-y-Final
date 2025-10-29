@@ -6,12 +6,15 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Instalar deps determinísticamente con cache
-ENV NODE_OPTIONS=--max-old-space-size=1024
+ENV NODE_OPTIONS=--max-old-space-size=1024 \
+    NG_CLI_ANALYTICS=false \
+    CI=true
 RUN --mount=type=cache,target=/root/.npm npm ci --no-audit --no-fund
 
 # Código y build prod
 COPY . .
-RUN npx ng build --configuration=production --no-prerender --output-path=/out || \
+RUN --mount=type=cache,target=/app/.angular/cache \
+    npx ng build --configuration=production --no-prerender --output-path=/out || \
     npm run build -- --configuration=production --no-prerender --output-path=/out
 
 # ---------- runtime ----------
