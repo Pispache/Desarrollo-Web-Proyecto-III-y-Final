@@ -43,7 +43,7 @@ const USER_KEY = 'auth.user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private base = '/auth/api/auth'; // Proxy Nginx hacia Auth Service Node.js
+  private base = '/api/auth'; // Proxy Nginx del VPS hacia Auth Service Node.js
   private _authed$ = new BehaviorSubject<boolean>(!!this.getToken());
   readonly authed$ = this._authed$.asObservable();
   private logoutTimer?: any;

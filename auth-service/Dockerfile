@@ -1,18 +1,14 @@
-FROM node:20-alpine
-
+FROM node:20-alpine AS deps
 WORKDIR /app
-
-# Copy package files
+ENV NODE_ENV=production
 COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm npm install --omit=dev --no-audit --no-fund
 
-# Install dependencies
-RUN npm install --production
-
-# Copy application files
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Expose port
+USER node
 EXPOSE 5000
-
-# Start application
 CMD ["npm", "start"]
