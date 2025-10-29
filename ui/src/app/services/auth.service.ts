@@ -11,6 +11,7 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, tap } from 'rxjs';
 import { NotificationService } from './notification.service';
+import { environment } from '../../environments/environment';
 
 interface LoginResponse { 
   success: boolean;
@@ -43,7 +44,7 @@ const USER_KEY = 'auth.user';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private base = 'http://localhost:5001/api/auth'; // Endpoint local directo del Auth Service
+  private base = environment.authBaseUrl;
   private _authed$ = new BehaviorSubject<boolean>(!!this.getToken());
   readonly authed$ = this._authed$.asObservable();
   private logoutTimer?: any;

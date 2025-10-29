@@ -15,6 +15,8 @@ RUN --mount=type=cache,target=/root/.nuget/packages \
 # Copiar el resto del código y publicar
 COPY . .
 RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet restore ./Api.csproj
+RUN --mount=type=cache,target=/root/.nuget/packages \
     dotnet publish ./Api.csproj -c Release -o /out --no-restore
 
 # ----------------------------

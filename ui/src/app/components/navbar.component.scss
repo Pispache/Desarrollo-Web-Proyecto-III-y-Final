@@ -668,6 +668,29 @@
     background: rgba(0,224,255,0.08);
   }
 }
+/* Ajustes específicos para pantallas muy estrechas (p. ej., 360–380px) */
+@media (max-width: 399px) {
+  .mobile-menu {
+    .mobile-quick-actions {
+      display: grid !important;
+      grid-template-columns: 1fr auto; /* botón ocupa todo, toggle a la derecha */
+      align-items: center;
+      gap: .5rem;
+
+      .btn.btn-sm { /* compactar un poco el botón en SE/mini */
+        padding-top: .45rem;
+        padding-bottom: .45rem;
+      }
+
+      app-theme-toggle {
+        flex: 0 0 auto;
+        min-width: 44px; /* evita saltos de línea del toggle */
+        display: inline-flex;
+        justify-content: center;
+      }
+    }
+  }
+}
   /* Overlay solo para captar clic fuera, mantiene funcionamiento */
   .mobile-menu-overlay.active { top: calc(var(--navbar-height-global) + env(safe-area-inset-top, 0px)); }
 

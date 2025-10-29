@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../services/auth.service';
 import { catchError, throwError } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 interface Team {
   team_id: number;
@@ -136,15 +137,11 @@ export class ReportsPageComponent implements OnInit {
   error = '';
 
   private get reportsBaseUrl(): string {
-    return (location.port === '4200')
-      ? 'http://localhost:8081/v1/reports'
-      : '/reports';
+    return environment.reportsBaseUrl;
   }
 
   private get apiBaseUrl(): string {
-    return (location.port === '4200')
-      ? 'http://localhost:8080/api'
-      : '/api';
+    return environment.apiBaseUrl;
   }
 
   constructor(
