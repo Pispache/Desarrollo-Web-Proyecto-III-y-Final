@@ -123,15 +123,19 @@ export class AuthService {
   register(data: RegisterData): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(`${this.base}/register`, data).pipe(
       tap(res => {
-        if (res.success) {
-          this.safeSetItem(TOKEN_KEY, res.token.access_token);
+        if (!res?.success) return;
+        const token = (res as any)?.token?.access_token;
+        const user = (res as any)?.user;
+        if (token && user) {
+          this.safeSetItem(TOKEN_KEY, token);
           const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
           this.safeSetItem(EXPIRES_KEY, expiresAt);
-          this.safeSetItem(USER_KEY, JSON.stringify(res.user));
+          this.safeSetItem(USER_KEY, JSON.stringify(user));
           this._authed$.next(true);
           this.scheduleAutoLogout();
           try { this.bc?.postMessage({ type: 'login' }); } catch {}
         }
+        // Si no hay token ni user, se asume flujo de verificación por correo y no se cambia el estado de autenticación
       })
     );
   }

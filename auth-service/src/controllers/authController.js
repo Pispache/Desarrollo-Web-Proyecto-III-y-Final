@@ -1,3 +1,4 @@
+ 
 /**
  * @summary Controladores de autenticación para el Auth Service (Node/Express).
  * @remarks
@@ -9,6 +10,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const db = require('../config/database');
+// const { sendVerificationEmail } = require('../utils/mailer');
 
 // Generate JWT token compatible with .NET
 /**
@@ -83,27 +85,19 @@ exports.register = async (req, res) => {
       [email, username || email.split('@')[0], hashedPassword, name]
     );
     
-    // Get created user
-    const users = await db.query('SELECT id, email, username, name, role FROM users WHERE id = ?', [result.insertId]);
+    // Mark email as verified immediately and issue token
+    await db.query('UPDATE users SET email_verified = TRUE WHERE id = ?', [result.insertId]);
+    const users = await db.query('SELECT id, email, username, name, role, avatar FROM users WHERE id = ?', [result.insertId]);
     const user = users[0];
-    
-    // Generate token
     const token = generateToken(user);
-    
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        role: user.role
-      },
+      message: 'Registration successful',
+      user,
       token: {
         access_token: token,
         token_type: 'Bearer',
-        expires_in: '1h'
+        expires_in: process.env.JWT_EXPIRES_IN || '1h'
       }
     });
   } catch (error) {
@@ -170,6 +164,8 @@ exports.login = async (req, res) => {
         message: 'Account is inactive'
       });
     }
+    
+    // Do not block login based on email verification
     
     // Update last login
     await db.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
@@ -335,7 +331,7 @@ exports.validateToken = async (req, res) => {
 /**
  * @summary Callback de OAuth (GitHub) tras el intercambio de código por token.
  * @remarks
- * - Si hay usuario, genera un JWT y redirige a `FRONTEND_URL/login?token=...`.\
+ * - Si hay usuario, genera un JWT y redirige a `BACKEND_AUTH_BASE/login?token=...`.
  * - Si falta usuario o hay error, redirige con mensaje de error.
  * @param {import('express').Request} req
  * @param {import('express').Response} res
@@ -363,6 +359,27 @@ exports.oauthCallback = (req, res) => {
     console.error('OAuth callback error:', error);
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
     res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error.message)}`);
+  }
+};
+
+// Verify email endpoint
+exports.verifyEmail = async (req, res) => {
+  try {
+    const token = String(req.query.token || '');
+    if (!token) {
+      return res.status(400).send('Missing token');
+    }
+    const decoded = jwt.verify(token, process.env.EMAIL_VERIFY_SECRET || process.env.JWT_SECRET);
+    if (decoded?.purpose !== 'email_verify' || !decoded?.id) {
+      return res.status(400).send('Invalid token');
+    }
+    await db.query('UPDATE users SET email_verified = TRUE WHERE id = ?', [decoded.id]);
+    const frontend = process.env.FRONTEND_URL || 'http://localhost:4200';
+    return res.redirect(`${frontend}/login?verified=1`);
+  } catch (error) {
+    const frontend = process.env.FRONTEND_URL || 'http://localhost:4200';
+    const msg = error.name === 'TokenExpiredError' ? 'verify_expired' : 'verify_invalid';
+    return res.redirect(`${frontend}/login?error=${msg}`);
   }
 };
 

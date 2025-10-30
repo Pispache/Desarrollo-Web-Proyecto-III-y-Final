@@ -9,6 +9,8 @@
  */
 const passport = require('passport');
 const GitHubStrategy = require('passport-github2').Strategy;
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const FacebookStrategy = require('passport-facebook').Strategy;
 const db = require('./database');
 
 /**
@@ -17,6 +19,94 @@ const db = require('./database');
  * @param {(err: any, id?: number) => void} done Callback de finalización.
  * @returns {void}
  */
+// Google OAuth 2.0 Strategy
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL,
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails?.[0]?.value;
+      const name = profile.displayName || null;
+      const avatar = profile.photos?.[0]?.value || null;
+      const oauthId = profile.id;
+      const username = (email?.split('@')[0]) || null;
+      if (!email) return done(new Error('No email from Google'), null);
+
+      let users = await db.query('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?', ['google', oauthId]);
+      if (users.length > 0) {
+        await db.query('UPDATE users SET name = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', [name || users[0].name, avatar || users[0].avatar, users[0].id]);
+        return done(null, users[0]);
+      }
+      users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+      if (users.length > 0) {
+        await db.query('UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', ['google', oauthId, avatar || users[0].avatar, users[0].id]);
+        return done(null, users[0]);
+      }
+      const result = await db.query(
+        `INSERT INTO users (email, username, name, avatar, oauth_provider, oauth_id, email_verified, last_login_at)
+         VALUES (?, ?, ?, ?, ?, ?, TRUE, NOW())`,
+        [email, username, name, avatar, 'google', oauthId]
+      );
+      const newUser = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
+      await db.query(
+        `INSERT INTO oauth_tokens (user_id, provider, access_token, refresh_token, expires_at)
+         VALUES (?, ?, ?, ?, NULL)`,
+        [result.insertId, 'google', accessToken || null, refreshToken || null]
+      );
+      done(null, newUser[0]);
+    } catch (error) {
+      done(error, null);
+    }
+  }));
+}
+
+// Facebook OAuth 2.0 Strategy
+if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
+  passport.use(new FacebookStrategy({
+    clientID: process.env.FACEBOOK_APP_ID,
+    clientSecret: process.env.FACEBOOK_APP_SECRET,
+    callbackURL: process.env.FACEBOOK_CALLBACK_URL,
+    profileFields: ['id', 'displayName', 'emails', 'photos']
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      const email = profile.emails?.[0]?.value;
+      const name = profile.displayName || null;
+      const avatar = profile.photos?.[0]?.value || null;
+      const oauthId = profile.id;
+      const username = (email?.split('@')[0]) || null;
+      if (!email) return done(new Error('No email from Facebook'), null);
+
+      let users = await db.query('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?', ['facebook', oauthId]);
+      if (users.length > 0) {
+        await db.query('UPDATE users SET name = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', [name || users[0].name, avatar || users[0].avatar, users[0].id]);
+        return done(null, users[0]);
+      }
+      users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+      if (users.length > 0) {
+        await db.query('UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', ['facebook', oauthId, avatar || users[0].avatar, users[0].id]);
+        return done(null, users[0]);
+      }
+      const result = await db.query(
+        `INSERT INTO users (email, username, name, avatar, oauth_provider, oauth_id, email_verified, last_login_at)
+         VALUES (?, ?, ?, ?, ?, ?, TRUE, NOW())`,
+        [email, username, name, avatar, 'facebook', oauthId]
+      );
+      const newUser = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
+      await db.query(
+        `INSERT INTO oauth_tokens (user_id, provider, access_token, refresh_token, expires_at)
+         VALUES (?, ?, ?, ?, NULL)`,
+        [result.insertId, 'facebook', accessToken || null, refreshToken || null]
+      );
+      done(null, newUser[0]);
+    } catch (error) {
+      done(error, null);
+    }
+  }));
+}
 passport.serializeUser((user, done) => {
   done(null, user.id);
 });
