@@ -80,6 +80,16 @@ $pagination-hover-border-color: $dark-border;
   .main-content > * { animation: none !important; }
 }
 
+/* Fondo oscuro del área de contenido para evitar flashes blancos durante transiciones */
+.main-content {
+  background: linear-gradient(180deg, #0f213c 0%, #0b1428 100%) !important;
+  min-height: calc(100vh - var(--navbar-height-global));
+}
+
+:root[data-theme="light"] .main-content {
+  background: linear-gradient(180deg, #0f213c 0%, #0b1428 100%) !important;
+}
+
 /* =====================================================
    Roles UI helpers
    - The app toggles body.role-admin / body.role-user in app.component.ts
