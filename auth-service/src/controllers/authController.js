@@ -10,7 +10,6 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const db = require('../config/database');
-// const { sendVerificationEmail } = require('../utils/mailer');
 
 // Generate JWT token compatible with .NET
 /**
@@ -85,7 +84,8 @@ exports.register = async (req, res) => {
       [email, username || email.split('@')[0], hashedPassword, name]
     );
     
-    // Mark email as verified immediately and issue token
+    // Marcar como verificado (mantener flujo actual) y emitir token
+    // Nota: si quieres exigir verificación, cambia a FALSE y no emitas token hasta verificar.
     await db.query('UPDATE users SET email_verified = TRUE WHERE id = ?', [result.insertId]);
     const users = await db.query('SELECT id, email, username, name, role, avatar FROM users WHERE id = ?', [result.insertId]);
     const user = users[0];
@@ -362,26 +362,6 @@ exports.oauthCallback = (req, res) => {
   }
 };
 
-// Verify email endpoint
-exports.verifyEmail = async (req, res) => {
-  try {
-    const token = String(req.query.token || '');
-    if (!token) {
-      return res.status(400).send('Missing token');
-    }
-    const decoded = jwt.verify(token, process.env.EMAIL_VERIFY_SECRET || process.env.JWT_SECRET);
-    if (decoded?.purpose !== 'email_verify' || !decoded?.id) {
-      return res.status(400).send('Invalid token');
-    }
-    await db.query('UPDATE users SET email_verified = TRUE WHERE id = ?', [decoded.id]);
-    const frontend = process.env.FRONTEND_URL || 'http://localhost:4200';
-    return res.redirect(`${frontend}/login?verified=1`);
-  } catch (error) {
-    const frontend = process.env.FRONTEND_URL || 'http://localhost:4200';
-    const msg = error.name === 'TokenExpiredError' ? 'verify_expired' : 'verify_invalid';
-    return res.redirect(`${frontend}/login?error=${msg}`);
-  }
-};
 
 // Listar usuarios (solo ADMIN)
 /**

@@ -29,8 +29,6 @@ router.get('/me', authController.me);
  */
 router.post('/validate', authController.validateToken);
 
-// Email verification
-router.get('/verify-email', authController.verifyEmail);
 
 // OAuth - Google (no utilizado en despliegue actual; rutas conservadas por compatibilidad)
 router.get('/google', passport.authenticate('google', { 

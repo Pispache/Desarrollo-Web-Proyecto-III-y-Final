@@ -1,6 +1,9 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const passport = require('passport');
 const db = require('./config/database');
@@ -9,9 +12,27 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// Trust proxy (requerido detrás de Nginx para cookies secure)
+app.set('trust proxy', 1);
+
+// Seguridad HTTP headers
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: 'cross-origin' }
+}));
+
+// Compresión HTTP
+app.use(compression());
+
+// CORS (estricto en producción)
+const allowedOrigins = (process.env.CORS_ORIGIN || '').split(',').map(s => s.trim()).filter(Boolean);
+const isProd = (process.env.NODE_ENV === 'production');
 app.use(cors({
-  origin: process.env.CORS_ORIGIN?.split(',') || '*',
+  origin: (origin, cb) => {
+    if (!isProd) return cb(null, true);
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    return cb(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 
@@ -26,6 +47,7 @@ app.use(session({
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
@@ -46,7 +68,14 @@ app.get('/api/health', (req, res) => {
 });
 
 // Routes
-app.use('/api/auth', authRoutes);
+// Rate limiting para rutas de autenticación
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // 300 req por IP por ventana
+  standardHeaders: true,
+  legacyHeaders: false
+});
+app.use('/api/auth', authLimiter, authRoutes);
 
 // 404 handler
 app.use((req, res) => {

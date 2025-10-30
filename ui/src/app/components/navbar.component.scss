@@ -50,12 +50,6 @@
   background: #111827; color: #fff; border: 1px solid rgba(255,255,255,0.35);
   font-size: 10px; line-height: 1;
 }
-.user-chip .avatar-wrap .provider-badge[data-provider="google"],
-.mobile-menu .avatar-wrap .provider-badge[data-provider="google"] { background: #ea4335; }
-.user-chip .avatar-wrap .provider-badge[data-provider="facebook"],
-.mobile-menu .avatar-wrap .provider-badge[data-provider="facebook"] { background: #1877f2; }
-.user-chip .avatar-wrap .provider-badge[data-provider="github"],
-.mobile-menu .avatar-wrap .provider-badge[data-provider="github"] { background: #24292f; }
 
 /* Avatar en chip de usuario (sin tamaños fijos en la imagen para no deformar) */
 
