@@ -71,7 +71,18 @@ $pagination-hover-border-color: $dark-border;
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.main-content > * {
+.main-content > *,
+.main-content > * > .card,
+.main-content > section,
+.main-content > .container,
+.admin-panel,
+.results-page,
+.profile-page,
+.scoreboards-page,
+.team-register-page,
+.players-team-select-page,
+.reports-page,
+.user-profile-page {
   animation: route-fade-up 380ms cubic-bezier(.22,1,.36,1) both; /* easeOutCubic */
   will-change: opacity, transform;
 }
