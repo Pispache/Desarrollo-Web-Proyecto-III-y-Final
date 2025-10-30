@@ -15,10 +15,10 @@
   <div class="navbar-container">
     <!-- Logo -->
     <div class="navbar-brand">
-      <a routerLink="/control" class="brand-link">
+      <span class="brand-link">
         <i class="bi bi-trophy-fill"></i>
         <span class="brand-text">Marcador BB</span>
-      </a>
+      </span>
     </div>
 
     <!-- Desktop Menu -->
@@ -124,13 +124,31 @@
         <span>Cerrar sesión</span>
       </button>
       <!-- Indicador de usuario al extremo derecho (icono + nombre + rol) -->
+      <!-- Perfil (chip de usuario)
+           - Muestra avatar del proveedor OAuth (si existe) o ícono genérico.
+           - Incluye insignia del proveedor: GitHub/Google/Facebook. -->
       <a *ngIf="isAuthenticated" routerLink="/perfil" class="d-flex align-items-center ms-auto px-2 py-1 text-light user-chip text-decoration-none">
-        <ng-container *ngIf="avatarUrl; else iconFallback">
-          <img [src]="avatarUrl" alt="avatar" class="avatar-img me-2" referrerpolicy="no-referrer" />
-        </ng-container>
-        <ng-template #iconFallback>
-          <i class="bi bi-person-circle me-2"></i>
-        </ng-template>
+        <span class="avatar-wrap me-2 position-relative d-inline-flex align-items-center justify-content-center">
+          <ng-container *ngIf="avatarUrl; else iconFallback">
+            <img
+              [src]="avatarUrl"
+              alt="Avatar de usuario"
+              class="avatar-img"
+              referrerpolicy="no-referrer"
+              loading="lazy" />
+          </ng-container>
+          <ng-template #iconFallback>
+            <i class="bi bi-person-circle"></i>
+          </ng-template>
+          <!-- Insignia del proveedor OAuth -->
+          <span *ngIf="oauthProvider" class="provider-badge" [attr.data-provider]="oauthProvider" aria-hidden="true">
+            <i class="bi" [ngClass]="{
+              'bi-github': oauthProvider==='github',
+              'bi-google': oauthProvider==='google',
+              'bi-facebook': oauthProvider==='facebook'
+            }"></i>
+          </span>
+        </span>
         <span class="fw-semibold">
           {{ username || 'Usuario' }}
           <small class="ms-2 text-muted" *ngIf="role">({{ role | uppercase }})</small>
@@ -246,12 +264,26 @@
       <li><hr class="dropdown-divider"></li>
       <li class="dropdown-header px-3 text-uppercase small text-muted">Cuenta</li>
 
-      <!-- Usuario autenticado: mostrar nombre (sin botón extra de cerrar sesión aquí) -->
+      <!-- Usuario autenticado: avatar + nombre con enlace a Perfil -->
       <li *ngIf="isAuthenticated">
-        <span class="dropdown-item-text text-muted d-flex align-items-center gap-2">
-          <i class="bi bi-person-circle"></i>
+        <a routerLink="/perfil" class="dropdown-item d-flex align-items-center gap-2">
+          <span class="avatar-wrap position-relative d-inline-flex align-items-center justify-content-center">
+            <ng-container *ngIf="avatarUrl; else mobileIconFallback">
+              <img [src]="avatarUrl" alt="Avatar" class="avatar-img" referrerpolicy="no-referrer" loading="lazy" width="28" height="28" />
+            </ng-container>
+            <ng-template #mobileIconFallback>
+              <i class="bi bi-person-circle"></i>
+            </ng-template>
+            <span *ngIf="oauthProvider" class="provider-badge" [attr.data-provider]="oauthProvider" aria-hidden="true">
+              <i class="bi" [ngClass]="{
+                'bi-github': oauthProvider==='github',
+                'bi-google': oauthProvider==='google',
+                'bi-facebook': oauthProvider==='facebook'
+              }"></i>
+            </span>
+          </span>
           <span class="small">{{ username || 'Usuario' }}</span>
-        </span>
+        </a>
       </li>
       <li *ngIf="isAuthenticated">
         <a class="dropdown-item text-danger" (click)="logout()">

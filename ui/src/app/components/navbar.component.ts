@@ -33,6 +33,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   username: string | null = null;
   role: string | null = null;
   avatarUrl: string | null = null;
+  oauthProvider: string | null = null; // 'github' | 'google' | 'facebook' | null
   currentRoute = '';
   private authSubscription?: Subscription;
   private routerSubscription?: Subscription;
@@ -54,7 +55,13 @@ export class NavbarComponent implements OnInit, OnDestroy {
         this.role = isAuth ? (this.authService.getUserRole() || null) : null;
         // Intentar obtener avatar desde el usuario actual
         const me = isAuth ? this.authService.getCurrentUser() : null;
+        /**
+         * Avatar del usuario y proveedor OAuth
+         * - avatarUrl: URL de imagen de perfil provista por el proveedor OAuth (GitHub/Google/Facebook) o null.
+         * - oauthProvider: nombre del proveedor para mostrar el ícono/badge correspondiente en la UI.
+         */
         this.avatarUrl = me?.avatar || null;
+        this.oauthProvider = (me?.oauth_provider || me?.oauthProvider || null);
       }
     );
 

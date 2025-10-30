@@ -18,11 +18,29 @@
   }
 
   .avatar {
-    width: 64px; height: 64px; border-radius: 50%;
+    width: 85px; height: 85px; border-radius: 50%;
     display: grid; place-items: center;
     background: rgba(255,255,255,0.08);
     border: 1px solid rgba(255,255,255,0.12);
     i { font-size: 36px; color: #ffffff; }
+
+    /* Imagen de avatar (OAuth) */
+    .avatar-img {
+      width: 85px; height: 85px; border-radius: 50%;
+      object-fit: cover; display: block;
+    }
+
+    /* Insignia del proveedor (GitHub/Google/Facebook) */
+    .provider-badge {
+      position: absolute; bottom: -4px; right: -4px;
+      width: 20px; height: 20px;
+      border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+      background: #111827; color: #fff; border: 1px solid rgba(255,255,255,0.35);
+      font-size: 12px; line-height: 1;
+      &[data-provider="google"] { background: #ea4335; }
+      &[data-provider="facebook"] { background: #1877f2; }
+      &[data-provider="github"] { background: #24292f; }
+    }
   }
 
   .grid {
