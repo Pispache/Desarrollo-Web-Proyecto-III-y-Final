@@ -111,8 +111,13 @@ LEFT JOIN {TT}Teams t ON t.TeamId = gt.TeamId
             });
             return Results.Ok(result);
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
-
-        // Create group
+        /// <summary>
+        /// Validación de GroupCreateDto (crear grupo).
+        /// </summary>
+        /// <remarks>
+        /// - Aplica <c>ValidationFilter&lt;GroupCreateDto&gt;</c> para exigir <c>Name</c> requerido (2-100).\
+        /// - En errores, responde 400 con <c>{ success: false, errors: [{ field, message }] }</c>.
+        /// </remarks>
         g.MapPost("/tournaments/default/groups", async ([FromBody] GroupCreateDto body) =>
         {
             var name = (body?.Name ?? string.Empty).Trim();
@@ -150,7 +155,13 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
             return Results.NoContent();
         }).RequireAuthorization("ADMIN").WithOpenApi();
 
-        // Add team to group
+        /// <summary>
+        /// Validación de GroupAddTeamDto (agregar equipo a grupo).
+        /// </summary>
+        /// <remarks>
+        /// - Aplica <c>ValidationFilter&lt;GroupAddTeamDto&gt;</c> para asegurar <c>TeamId</c> &gt; 0.\
+        /// - En errores, responde 400 con <c>{ success: false, errors: [...] }</c>.
+        /// </remarks>
         g.MapPost("/tournaments/default/groups/{groupId:int}/teams", async (int groupId, [FromBody] GroupAddTeamDto body) =>
         {
             var teamId = body?.TeamId ?? 0;
@@ -187,7 +198,13 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
             return Results.NoContent();
         }).RequireAuthorization("ADMIN").WithOpenApi();
 
-        // Persist a generated schedule for a group as Games
+        /// <summary>
+        /// Validación de GroupScheduleDto (persistir calendario generado).
+        /// </summary>
+        /// <remarks>
+        /// - Aplica <c>ValidationFilter&lt;GroupScheduleDto&gt;</c> para validar que <c>Rounds</c> no sea nulo y cada <c>PairDto</c> sea válido.\
+        /// - En errores, responde 400 con <c>{ success: false, errors: [...] }</c>.
+        /// </remarks>
         g.MapPost("/tournaments/default/groups/{groupId:int}/schedule", async (int groupId, [FromBody] GroupScheduleDto body) =>
         {
             if (body == null || body.Rounds == null)

@@ -30,15 +30,38 @@ router.get('/me', authController.me);
 router.post('/validate', authController.validateToken);
 
 
-// OAuth - Google (no utilizado en despliegue actual; rutas conservadas por compatibilidad)
-router.get('/google', passport.authenticate('google', { 
-  scope: ['profile', 'email'] 
+// OAuth - Google
+router.get('/google', (req, res, next) => {
+  try {
+    console.log('[Google] /google init:', { sid: req.sessionID, cookie: req.headers.cookie });
+  } catch {}
+  next();
+}, passport.authenticate('google', { 
+  scope: ['profile', 'email']
 }));
 
-router.get('/google/callback', 
-  passport.authenticate('google', { failureRedirect: '/login' }),
-  authController.oauthCallback
-);
+// Usar callback personalizado para capturar el error real y redirigir a la UI con mensaje
+router.get('/google/callback', (req, res, next) => {
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+  passport.authenticate('google', (err, user, info) => {
+    if (err || !user) {
+      console.error('Google OAuth failure:', err || info);
+      try { console.log('[Google] callback failure:', { sid: req.sessionID, cookie: req.headers.cookie, info }); } catch {}
+      const msg = encodeURIComponent(err?.message || info?.message || 'oauth_failed');
+      return res.redirect(`${FRONTEND_URL}/login?error=${msg}`);
+    }
+    req.logIn(user, (loginErr) => {
+      if (loginErr) {
+        console.error('Google OAuth login error:', loginErr);
+        const msg = encodeURIComponent(loginErr?.message || 'oauth_login_failed');
+        return res.redirect(`${FRONTEND_URL}/login?error=${msg}`);
+      }
+      try { console.log('[Google] callback success:', { sid: req.sessionID, userId: user?.id }); } catch {}
+      // Reutiliza el callback común para emitir JWT y redirigir con token
+      return authController.oauthCallback(req, res);
+    });
+  })(req, res, next);
+});
 
 // OAuth - Facebook (no utilizado en despliegue actual; rutas conservadas por compatibilidad)
 router.get('/facebook', passport.authenticate('facebook', { 

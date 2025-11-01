@@ -2,8 +2,24 @@ using System;
 using System.Collections.Generic;
 using FluentValidation;
 
+/// <summary>
+/// Conjunto de validadores FluentValidation para los DTOs de la API.
+/// </summary>
+/// <remarks>
+/// - Cada clase define reglas de validación coherentes con las restricciones de negocio.
+/// - Se integran mediante <c>ValidationFilter&lt;T&gt;</c> en los endpoints para devolver 400 con <c>{ success: false, errors: [{ field, message }] }</c>.
+/// - Mantienen mensajes claros y rangos seguros para prevenir datos inválidos.
+/// </remarks>
 public class TeamUpsertDtoValidator : AbstractValidator<TeamUpsertDto>
 {
+    /// <summary>
+    /// Valida creación/actualización de equipos.
+    /// </summary>
+    /// <remarks>
+    /// - <c>Name</c> requerido, 2-100 caracteres.
+    /// - <c>City</c> opcional, hasta 100.
+    /// - <c>LogoUrl</c> vacío o URL http(s)/ruta absoluta iniciando con '/'.
+    /// </remarks>
     public TeamUpsertDtoValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MinimumLength(2).MaximumLength(100);
@@ -16,6 +32,17 @@ public class TeamUpsertDtoValidator : AbstractValidator<TeamUpsertDto>
 
 public class CreatePlayerDtoValidator : AbstractValidator<CreatePlayerDto>
 {
+    /// <summary>
+    /// Valida alta de jugador.
+    /// </summary>
+    /// <remarks>
+    /// - <c>Name</c> requerido, 2-100.
+    /// - <c>Number</c> 0-99 (opcional).
+    /// - <c>Position</c> hasta 20 (opcional).
+    /// - <c>HeightCm</c> 120-250 (opcional).
+    /// - <c>Age</c> 10-60 (opcional).
+    /// - <c>Nationality</c> hasta 100 (opcional).
+    /// </remarks>
     public CreatePlayerDtoValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MinimumLength(2).MaximumLength(100);
@@ -29,6 +56,13 @@ public class CreatePlayerDtoValidator : AbstractValidator<CreatePlayerDto>
 
 public class UpdatePlayerDtoValidator : AbstractValidator<UpdatePlayerDto>
 {
+    /// <summary>
+    /// Valida actualización parcial de jugador.
+    /// </summary>
+    /// <remarks>
+    /// - Aplica mismas reglas que creación pero solo a campos presentes.
+    /// - Permite nulls para mantener valores actuales.
+    /// </remarks>
     public UpdatePlayerDtoValidator()
     {
         RuleFor(x => x.Name).MinimumLength(2).MaximumLength(100).When(x => x.Name != null);
@@ -42,6 +76,15 @@ public class UpdatePlayerDtoValidator : AbstractValidator<UpdatePlayerDto>
 
 public class ScoreDtoValidator : AbstractValidator<ScoreDto>
 {
+    /// <summary>
+    /// Valida evento de anotación.
+    /// </summary>
+    /// <remarks>
+    /// - <c>Team</c> debe ser HOME o AWAY.
+    /// - <c>Points</c> solo 1, 2 o 3.
+    /// - <c>PlayerId</c> > 0 si se envía.
+    /// - <c>PlayerNumber</c> 0-99 si se envía.
+    /// </remarks>
     public ScoreDtoValidator()
     {
         RuleFor(x => x.Team).NotEmpty().Must(t =>
@@ -65,6 +108,14 @@ public class FoulDtoValidator : AbstractValidator<FoulDto>
         nameof(FoulType.DISQUALIFYING)
     };
 
+    /// <summary>
+    /// Valida registro de falta.
+    /// </summary>
+    /// <remarks>
+    /// - <c>Team</c> HOME/AWAY.
+    /// - <c>PlayerId</c> > 0 y <c>PlayerNumber</c> 0-99 si se envían.
+    /// - <c>FoulType</c> en catálogo permitido (case-insensitive).
+    /// </remarks>
     public FoulDtoValidator()
     {
         RuleFor(x => x.Team).NotEmpty().Must(t =>
@@ -80,6 +131,13 @@ public class FoulDtoValidator : AbstractValidator<FoulDto>
 
 public class AdjustScoreDtoValidator : AbstractValidator<AdjustScoreDto>
 {
+    /// <summary>
+    /// Valida ajuste manual de marcador.
+    /// </summary>
+    /// <remarks>
+    /// - <c>HomeDelta</c> y <c>AwayDelta</c> entre -200 y 200.
+    /// - Al menos uno distinto de 0.
+    /// </remarks>
     public AdjustScoreDtoValidator()
     {
         RuleFor(x => x.HomeDelta).InclusiveBetween(-200, 200);
@@ -91,6 +149,13 @@ public class AdjustScoreDtoValidator : AbstractValidator<AdjustScoreDto>
 
 public class CreateGameDtoValidator : AbstractValidator<CreateGameDto>
 {
+    /// <summary>
+    /// Valida creación de partido.
+    /// </summary>
+    /// <remarks>
+    /// - <c>Home</c>/<c>Away</c> opcionales; si se envían, 1-50 caracteres.
+    /// - Se normalizan nombres por el endpoint en caso de vacío.
+    /// </remarks>
     public CreateGameDtoValidator()
     {
         RuleFor(x => x.Home).MinimumLength(1).MaximumLength(50).When(x => !string.IsNullOrWhiteSpace(x.Home));
@@ -100,6 +165,13 @@ public class CreateGameDtoValidator : AbstractValidator<CreateGameDto>
 
 public class PairDtoValidator : AbstractValidator<PairDto>
 {
+    /// <summary>
+    /// Valida un emparejamiento Home/Away por identificador.
+    /// </summary>
+    /// <remarks>
+    /// - <c>HomeTeamId</c> y <c>AwayTeamId</c> > 0.
+    /// - No se permiten equipos iguales.
+    /// </remarks>
     public PairDtoValidator()
     {
         RuleFor(x => x.HomeTeamId).GreaterThan(0);
@@ -111,6 +183,12 @@ public class PairDtoValidator : AbstractValidator<PairDto>
 
 public class ClockDurationDtoValidator : AbstractValidator<ClockDurationDto>
 {
+    /// <summary>
+    /// Valida minutos de duración del cuarto.
+    /// </summary>
+    /// <remarks>
+    /// - <c>Minutes</c> > 0 y <= 60.
+    /// </remarks>
     public ClockDurationDtoValidator()
     {
         RuleFor(x => x.Minutes).GreaterThan(0).LessThanOrEqualTo(60);
@@ -119,6 +197,12 @@ public class ClockDurationDtoValidator : AbstractValidator<ClockDurationDto>
 
 public class ClockResetDtoValidator : AbstractValidator<ClockResetDto>
 {
+    /// <summary>
+    /// Valida reinicio del reloj.
+    /// </summary>
+    /// <remarks>
+    /// - <c>QuarterMs</c> opcional; si se envía, > 0 y <= 60 minutos (en ms).
+    /// </remarks>
     public ClockResetDtoValidator()
     {
         RuleFor(x => x.QuarterMs).GreaterThan(0).LessThanOrEqualTo(60 * 60 * 1000).When(x => x.QuarterMs.HasValue);
@@ -127,6 +211,12 @@ public class ClockResetDtoValidator : AbstractValidator<ClockResetDto>
 
 public class GroupCreateDtoValidator : AbstractValidator<GroupCreateDto>
 {
+    /// <summary>
+    /// Valida creación de grupo de torneo.
+    /// </summary>
+    /// <remarks>
+    /// - <c>Name</c> requerido, 2-100.
+    /// </remarks>
     public GroupCreateDtoValidator()
     {
         RuleFor(x => x.Name).NotEmpty().MinimumLength(2).MaximumLength(100);
@@ -135,6 +225,12 @@ public class GroupCreateDtoValidator : AbstractValidator<GroupCreateDto>
 
 public class GroupAddTeamDtoValidator : AbstractValidator<GroupAddTeamDto>
 {
+    /// <summary>
+    /// Valida incorporación de equipo al grupo.
+    /// </summary>
+    /// <remarks>
+    /// - <c>TeamId</c> > 0.
+    /// </remarks>
     public GroupAddTeamDtoValidator()
     {
         RuleFor(x => x.TeamId).GreaterThan(0);
@@ -143,6 +239,13 @@ public class GroupAddTeamDtoValidator : AbstractValidator<GroupAddTeamDto>
 
 public class GroupScheduleDtoValidator : AbstractValidator<GroupScheduleDto>
 {
+    /// <summary>
+    /// Valida estructura de rondas para calendario por grupos.
+    /// </summary>
+    /// <remarks>
+    /// - <c>Rounds</c> no nulo.
+    /// - Cada ronda (lista) valida sus <c>PairDto</c> con <c>PairDtoValidator</c>.
+    /// </remarks>
     public GroupScheduleDtoValidator()
     {
         RuleFor(x => x.Rounds).NotNull();

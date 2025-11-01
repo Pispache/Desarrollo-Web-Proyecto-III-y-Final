@@ -40,16 +40,23 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Session
+const cookieSecureEnv = String(process.env.SESSION_COOKIE_SECURE || '').toLowerCase();
+const cookieSecure = cookieSecureEnv === 'true' ? true : cookieSecureEnv === 'false' ? false : (process.env.NODE_ENV === 'production');
+const cookieSameSite = process.env.SESSION_COOKIE_SAMESITE || (process.env.NODE_ENV === 'production' ? 'lax' : 'lax');
+const cookieDomain = process.env.SESSION_COOKIE_DOMAIN || undefined;
+const sessionCookieOptions = {
+  secure: cookieSecure,
+  httpOnly: true,
+  sameSite: cookieSameSite,
+  maxAge: 24 * 60 * 60 * 1000
+};
+if (cookieDomain) { sessionCookieOptions.domain = cookieDomain; }
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'default-secret-change-this',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
-  }
+  cookie: sessionCookieOptions
 }));
 
 // Passport
