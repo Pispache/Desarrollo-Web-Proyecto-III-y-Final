@@ -58,7 +58,19 @@
                 class="form-control" 
                 id="teamSearch"
                 [(ngModel)]="teamSearchQuery"
+                (input)="onTeamNameInput($event)"
+                (focus)="onTeamNameFocus()"
+                (blur)="onTeamNameBlur()"
+                autocomplete="off"
                 placeholder="Ej: Lakers, Bulls...">
+              <div class="list-group mt-1" *ngIf="showTeamSuggestions">
+                <button type="button" class="list-group-item list-group-item-action"
+                        *ngFor="let t of teamSuggestions"
+                        (mousedown)="$event.preventDefault()"
+                        (click)="selectTeamSuggestion(t)">
+                  {{ t.name }} <span class="text-muted" *ngIf="t.city">— {{ t.city }}</span>
+                </button>
+              </div>
             </div>
 
             <div class="mb-3">

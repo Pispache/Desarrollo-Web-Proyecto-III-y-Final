@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../services/auth.service';
-import { catchError, throwError } from 'rxjs';
+import { catchError, throwError, Subject, debounceTime, distinctUntilChanged, switchMap, map, of } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 interface Team {
@@ -41,6 +41,10 @@ export class ReportsPageComponent implements OnInit {
   teamCityFilter = '';
   teamLimit: number = 200;
   teamOffset: number = 0;
+  // Autocomplete
+  private teamNameInput$ = new Subject<string>();
+  teamSuggestions: Team[] = [];
+  showTeamSuggestions = false;
   
   // Filtros para partidos
   gamesFromDate = '';
@@ -152,6 +156,60 @@ export class ReportsPageComponent implements OnInit {
   ngOnInit() {
     this.loadTeams();
     this.loadGamesList();
+    // Autocomplete pipeline for team name
+    this.teamNameInput$
+      .pipe(
+        debounceTime(200),
+        map(v => (v ?? '').trim()),
+        distinctUntilChanged(),
+        switchMap(q => q.length === 0
+          ? of({ items: [] as any[] })
+          : this.http.get<{ items: any[] }>(`${this.apiBaseUrl}/teams`, {
+              headers: this.getHeaders(),
+              params: { q, pageSize: 10 }
+            })
+        ),
+        map(resp => (resp.items || []).map((t: any) => ({
+          team_id: t.team_id ?? t.teamId ?? t.TeamId,
+          name: t.name ?? t.Name,
+          city: t.city ?? t.City ?? '',
+          logo_url: t.logo_url ?? t.logoUrl ?? null,
+          created_at: t.created_at ?? t.createdAt ?? ''
+        }) as Team))
+      )
+      .subscribe(list => {
+        this.teamSuggestions = list;
+        this.showTeamSuggestions = list.length > 0;
+      });
+  }
+
+  // === Autocomplete handlers ===
+  onTeamNameInput(ev: Event) {
+    const value = (ev.target as HTMLInputElement | null)?.value ?? '';
+    this.teamSearchQuery = value;
+    const v = value.trim();
+    if (!v) {
+      this.teamSuggestions = [];
+      this.showTeamSuggestions = false;
+      return;
+    }
+    this.teamNameInput$.next(value);
+  }
+
+  onTeamNameFocus() {
+    this.showTeamSuggestions = this.teamSuggestions.length > 0;
+  }
+
+  onTeamNameBlur() {
+    // small delay to allow click on suggestion
+    setTimeout(() => {
+      this.showTeamSuggestions = false;
+    }, 150);
+  }
+
+  selectTeamSuggestion(t: Team) {
+    this.teamSearchQuery = t.name;
+    this.showTeamSuggestions = false;
   }
 
   onTeamChange(event: Event) {
