@@ -101,7 +101,7 @@ public static class ClockEndpoints
                 WHERE GameId = @id;", new { id, quarterMs = dto.Minutes * 60 * 1000 });
 
             return ok > 0 ? Results.Ok() : Results.NotFound();
-        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<ClockDurationDto>>().RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // POST start
         app.MapPost("/api/games/{id:int}/clock/start", async (int id) =>
@@ -144,6 +144,6 @@ public static class ClockEndpoints
                   Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME()
                 WHERE GameId=@id;", new { id, qms = b?.QuarterMs });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
-        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<ClockResetDto>>().RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
     }
 }

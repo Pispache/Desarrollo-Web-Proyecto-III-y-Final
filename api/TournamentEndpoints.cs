@@ -135,7 +135,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
             {
                 return Results.Problem($"Error creando grupo: {ex.Message}", statusCode: 500);
             }
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<GroupCreateDto>>().RequireAuthorization("ADMIN").WithOpenApi();
 
         // Delete group (and its memberships)
         g.MapDelete("/tournaments/default/groups/{groupId:int}", async (int groupId) =>
@@ -175,7 +175,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
                 return Results.Problem($"Error agregando equipo: {ex.Message}", statusCode: 500);
             }
             return Results.NoContent();
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<GroupAddTeamDto>>().RequireAuthorization("ADMIN").WithOpenApi();
 
         // Remove team from group
         g.MapDelete("/tournaments/default/groups/{groupId:int}/teams/{teamId:int}", async (int groupId, int teamId) =>
@@ -246,7 +246,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
                 tx.Rollback();
                 return Results.Problem($"Error guardando calendario: {ex.Message}", statusCode: 500);
             }
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<GroupScheduleDto>>().RequireAuthorization("ADMIN").WithOpenApi();
 
         static SqlConnection Open(string cs) { var c = new SqlConnection(cs); c.Open(); return c; }
 
