@@ -1,6 +1,17 @@
 services:
   auth-service:
     environment:
-      - FRONTEND_URL=https://tobarumg.lat
-      - CORS_ORIGIN=https://tobarumg.lat
-      - GITHUB_CALLBACK_URL=https://tobarumg.lat/api/auth/github/callback
+      # - FRONTEND_URL=https://tobarumg.lat
+      # - CORS_ORIGIN=https://tobarumg.lat
+      # - GITHUB_CALLBACK_URL=https://tobarumg.lat/api/auth/github/callback
+      # Local Dev overrides
+      - GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+      - GOOGLE_CLIENT_SECRET=your-google-client-secret
+      - SESSION_COOKIE_SECURE=false
+      - SESSION_COOKIE_SAMESITE=lax
+      - SESSION_COOKIE_DOMAIN=
+      - FRONTEND_URL=http://localhost:4200
+      - CORS_ORIGIN=http://localhost:4200
+      - GOOGLE_CALLBACK_URL=http://localhost:5001/api/auth/google/callback
+      - FACEBOOK_CALLBACK_URL=http://localhost:5001/api/auth/facebook/callback
+      - GITHUB_CALLBACK_URL=http://localhost:5001/api/auth/github/callback

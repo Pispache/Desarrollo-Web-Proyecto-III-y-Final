@@ -1,9 +1,22 @@
+ 
+/**
+ * @summary Controladores de autenticación para el Auth Service (Node/Express).
+ * @remarks
+ * - Expone endpoints de registro, login/email y flujo OAuth (callback).\
+ * - Genera un JWT compatible con la API .NET (incluye claims de rol esperados).\
+ * - Provee endpoints auxiliares: información del usuario actual, validación de token y administración de roles.
+ */
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const db = require('../config/database');
 
 // Generate JWT token compatible with .NET
+/**
+ * @summary Genera un JWT con claims compatibles con la API .NET.
+ * @param {{ id:number, email:string, username?:string, name?:string, role?:string }} user Usuario persistido.
+ * @returns {string} Token JWT firmado con `JWT_SECRET`.
+ */
 function generateToken(user) {
   // Mapear rol de MySQL (viewer/operator/admin) al claim de .NET esperado por la API (ADMIN/USUARIO)
   const mysqlRole = (user.role || '').toString().trim().toLowerCase();
@@ -34,6 +47,12 @@ function generateToken(user) {
 }
 
 // Register with email/password
+/**
+ * @summary Registro de usuario con email y contraseña.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.register = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -65,27 +84,20 @@ exports.register = async (req, res) => {
       [email, username || email.split('@')[0], hashedPassword, name]
     );
     
-    // Get created user
-    const users = await db.query('SELECT id, email, username, name, role FROM users WHERE id = ?', [result.insertId]);
+    // Marcar como verificado (mantener flujo actual) y emitir token
+    // Nota: si quieres exigir verificación, cambia a FALSE y no emitas token hasta verificar.
+    await db.query('UPDATE users SET email_verified = TRUE WHERE id = ?', [result.insertId]);
+    const users = await db.query('SELECT id, email, username, name, role, avatar FROM users WHERE id = ?', [result.insertId]);
     const user = users[0];
-    
-    // Generate token
     const token = generateToken(user);
-    
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        role: user.role
-      },
+      message: 'Registration successful',
+      user,
       token: {
         access_token: token,
         token_type: 'Bearer',
-        expires_in: '1h'
+        expires_in: process.env.JWT_EXPIRES_IN || '1h'
       }
     });
   } catch (error) {
@@ -99,6 +111,12 @@ exports.register = async (req, res) => {
 };
 
 // Login with email/password
+/**
+ * @summary Login con email/contraseña.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.login = async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -147,6 +165,8 @@ exports.login = async (req, res) => {
       });
     }
     
+    // Do not block login based on email verification
+    
     // Update last login
     await db.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
     
@@ -181,6 +201,11 @@ exports.login = async (req, res) => {
 };
 
 // Logout
+/**
+ * @summary Cierra la sesión de Passport del usuario actual.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
 exports.logout = (req, res) => {
   req.logout((err) => {
     if (err) {
@@ -197,6 +222,12 @@ exports.logout = (req, res) => {
 };
 
 // Get current user
+/**
+ * @summary Obtiene información del usuario actual a partir del JWT.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.me = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -247,6 +278,12 @@ exports.me = async (req, res) => {
 };
 
 // Validate token (for other microservices)
+/**
+ * @summary Valida un JWT para uso entre microservicios.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.validateToken = async (req, res) => {
   try {
     const authHeader = req.headers.authorization;
@@ -291,6 +328,14 @@ exports.validateToken = async (req, res) => {
 };
 
 // OAuth callback
+/**
+ * @summary Callback de OAuth (GitHub) tras el intercambio de código por token.
+ * @remarks
+ * - Si hay usuario, genera un JWT y redirige a `BACKEND_AUTH_BASE/login?token=...`.
+ * - Si falta usuario o hay error, redirige con mensaje de error.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
 exports.oauthCallback = (req, res) => {
   try {
     console.log('OAuth callback - User:', req.user);
@@ -317,7 +362,14 @@ exports.oauthCallback = (req, res) => {
   }
 };
 
+
 // Listar usuarios (solo ADMIN)
+/**
+ * @summary Lista usuarios (solo administradores).
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.listUsers = async (req, res) => {
   try {
     const rows = await db.query(
@@ -334,6 +386,12 @@ exports.listUsers = async (req, res) => {
 };
 
 // Actualizar rol de usuario (solo ADMIN)
+/**
+ * @summary Actualiza el rol de un usuario (solo administradores).
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @returns {Promise<void>}
+ */
 exports.updateUserRole = async (req, res) => {
   try {
     const userId = parseInt(req.params.id, 10);

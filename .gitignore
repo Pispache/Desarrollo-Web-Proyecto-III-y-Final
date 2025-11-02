@@ -12,3 +12,8 @@ obj/
 db-data/
 
 .fake
+
+# Scripts (ignorar cambios locales en scripts .sh)
+scripts/*.sh
+
+.env

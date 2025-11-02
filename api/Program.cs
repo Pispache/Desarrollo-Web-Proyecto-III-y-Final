@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.IO;
+using FluentValidation;
 
 /// <summary>
 /// Punto de entrada de la API del marcador.
@@ -27,6 +28,9 @@ var b = WebApplication.CreateBuilder(args);
 b.Services.AddEndpointsApiExplorer();
 b.Services.AddSwaggerGen();
 b.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+
+// FluentValidation: registrar validadores del ensamblado
+b.Services.AddValidatorsFromAssemblyContaining<TeamUpsertDtoValidator>();
 
 // ============================
 // Autenticación por JWT (opcional)

@@ -9,11 +9,15 @@ WORKDIR /src
 
 # Restauración cacheable: copiar solo csproj y restaurar
 COPY Api.csproj ./
-RUN dotnet restore ./Api.csproj
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet restore ./Api.csproj
 
 # Copiar el resto del código y publicar
 COPY . .
-RUN dotnet publish ./Api.csproj -c Release -o /out
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet restore ./Api.csproj
+RUN --mount=type=cache,target=/root/.nuget/packages \
+    dotnet publish ./Api.csproj -c Release -o /out --no-restore
 
 # ----------------------------
 # Etapa de ejecución (runtime)

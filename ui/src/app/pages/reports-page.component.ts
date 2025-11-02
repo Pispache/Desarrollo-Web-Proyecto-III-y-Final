@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders, HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../services/auth.service';
-import { catchError, throwError } from 'rxjs';
+import { catchError, throwError, Subject, debounceTime, distinctUntilChanged, switchMap, map, of } from 'rxjs';
+import { environment } from '../../environments/environment';
 
 interface Team {
   team_id: number;
@@ -27,12 +28,23 @@ interface GameLite {
   templateUrl: './reports-page.component.html',
   styleUrls: ['./reports-page.component.scss']
 })
+/**
+ * @summary Pantalla de Reportes (Angular).
+ * @remarks
+ * - Consume la API principal vía `apiBaseUrl` y el microservicio de reportes vía `reportsBaseUrl`.\
+ * - Requiere token JWT (se añade en `getHeaders()`).\
+ * - Permite descargar PDF de equipos, jugadores, partidos, roster y estadísticas por jugador.
+ */
 export class ReportsPageComponent implements OnInit {
   // Filtros para equipos
   teamSearchQuery = '';
   teamCityFilter = '';
   teamLimit: number = 200;
   teamOffset: number = 0;
+  // Autocomplete
+  private teamNameInput$ = new Subject<string>();
+  teamSuggestions: Team[] = [];
+  showTeamSuggestions = false;
   
   // Filtros para partidos
   gamesFromDate = '';
@@ -55,6 +67,9 @@ export class ReportsPageComponent implements OnInit {
     return this._selectedTeamId;
   }
 
+  /**
+   * @summary Carga lista de partidos para el selector de reportes.
+   */
   loadGamesList() {
     // Cargar lista de partidos desde report-service (sin filtros para selector)
     this.http.get<{ items: any[] }>(`${this.reportsBaseUrl}/games`, {
@@ -74,6 +89,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga el PDF de roster para un partido seleccionado.
+   */
   downloadRosterPDF() {
     const gameId = this.selectedGameId ?? this.rosterGameId;
     if (!gameId) {
@@ -123,15 +141,11 @@ export class ReportsPageComponent implements OnInit {
   error = '';
 
   private get reportsBaseUrl(): string {
-    return (location.port === '4200')
-      ? 'http://localhost:8081/v1/reports'
-      : '/reports';
+    return environment.reportsBaseUrl;
   }
 
   private get apiBaseUrl(): string {
-    return (location.port === '4200')
-      ? 'http://localhost:8080/api'
-      : '/api';
+    return environment.apiBaseUrl;
   }
 
   constructor(
@@ -142,6 +156,60 @@ export class ReportsPageComponent implements OnInit {
   ngOnInit() {
     this.loadTeams();
     this.loadGamesList();
+    // Autocomplete pipeline for team name
+    this.teamNameInput$
+      .pipe(
+        debounceTime(200),
+        map(v => (v ?? '').trim()),
+        distinctUntilChanged(),
+        switchMap(q => q.length === 0
+          ? of({ items: [] as any[] })
+          : this.http.get<{ items: any[] }>(`${this.apiBaseUrl}/teams`, {
+              headers: this.getHeaders(),
+              params: { q, pageSize: 10 }
+            })
+        ),
+        map(resp => (resp.items || []).map((t: any) => ({
+          team_id: t.team_id ?? t.teamId ?? t.TeamId,
+          name: t.name ?? t.Name,
+          city: t.city ?? t.City ?? '',
+          logo_url: t.logo_url ?? t.logoUrl ?? null,
+          created_at: t.created_at ?? t.createdAt ?? ''
+        }) as Team))
+      )
+      .subscribe(list => {
+        this.teamSuggestions = list;
+        this.showTeamSuggestions = list.length > 0;
+      });
+  }
+
+  // === Autocomplete handlers ===
+  onTeamNameInput(ev: Event) {
+    const value = (ev.target as HTMLInputElement | null)?.value ?? '';
+    this.teamSearchQuery = value;
+    const v = value.trim();
+    if (!v) {
+      this.teamSuggestions = [];
+      this.showTeamSuggestions = false;
+      return;
+    }
+    this.teamNameInput$.next(value);
+  }
+
+  onTeamNameFocus() {
+    this.showTeamSuggestions = this.teamSuggestions.length > 0;
+  }
+
+  onTeamNameBlur() {
+    // small delay to allow click on suggestion
+    setTimeout(() => {
+      this.showTeamSuggestions = false;
+    }, 150);
+  }
+
+  selectTeamSuggestion(t: Team) {
+    this.teamSearchQuery = t.name;
+    this.showTeamSuggestions = false;
   }
 
   onTeamChange(event: Event) {
@@ -151,6 +219,9 @@ export class ReportsPageComponent implements OnInit {
     console.log('[DEBUG] Team changed to:', this.selectedTeamId);
   }
 
+  /**
+   * @summary Construye headers HTTP con JWT en `Authorization`.
+   */
   private getHeaders(): HttpHeaders {
     const token = this.authService.getToken();
     return new HttpHeaders({
@@ -158,6 +229,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Carga todos los equipos desde la API principal (paginación amplia para selector).
+   */
   loadTeams() {
     this.loading = true;
     this.error = '';
@@ -188,6 +262,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga el PDF de equipos aplicando filtros locales.
+   */
   downloadTeamsPDF() {
     this.loading = true;
     this.error = '';
@@ -220,6 +297,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga el PDF de jugadores del equipo seleccionado.
+   */
   downloadPlayersPDF() {
     const teamId = this.selectedTeamId;
     if (!teamId) {
@@ -257,6 +337,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga el PDF de historial de partidos con filtros.
+   */
   downloadGamesPDF() {
     this.loading = true;
     this.error = '';
@@ -289,6 +372,10 @@ export class ReportsPageComponent implements OnInit {
   }
 
   // ===== RF-REP-05: Carga de jugadores por equipo y descarga de estadísticas =====
+  /**
+   * @summary Carga jugadores del equipo (para RF-REP-05 y selección de jugador).
+   * @param teamId Identificador del equipo
+   */
   private loadPlayersForTeam(teamId: number) {
     this.http.get<{ items: any[] }>(`${this.reportsBaseUrl}/teams/${teamId}/players`, {
       headers: this.getHeaders()
@@ -307,6 +394,9 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Descarga PDF de estadísticas de un jugador (por ID seleccionado o manual).
+   */
   downloadPlayerStatsPDF() {
     const pid = this.selectedPlayerId ?? this.playerStatsManualId;
     if (!pid) {
@@ -340,6 +430,11 @@ export class ReportsPageComponent implements OnInit {
     });
   }
 
+  /**
+   * @summary Dispara la descarga del Blob en el navegador.
+   * @param blob Contenido del archivo
+   * @param filename Nombre de archivo sugerido
+   */
   private downloadBlob(blob: Blob, filename: string) {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -351,6 +446,9 @@ export class ReportsPageComponent implements OnInit {
     window.URL.revokeObjectURL(url);
   }
 
+  /**
+   * @summary Devuelve fecha actual como AAAAMMDD para nombres de archivo.
+   */
   private getDateString(): string {
     const now = new Date();
     return now.toISOString().split('T')[0].replace(/-/g, '');
@@ -360,6 +458,9 @@ export class ReportsPageComponent implements OnInit {
     this.error = '';
   }
 
+  /**
+   * @summary Normaliza mensajes de error HTTP para mostrar en UI.
+   */
   private getErrorMessage(err: HttpErrorResponse): string {
     if (err.status === 401) {
       return 'No autorizado. Verifica que tengas permisos de administrador.';

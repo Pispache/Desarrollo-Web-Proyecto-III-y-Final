@@ -3,11 +3,34 @@
 
   <div *ngIf="!user" class="alert alert-warning">No hay información de usuario.</div>
 
+  <!-- Tarjeta de perfil
+       - Muestra el avatar de OAuth (GitHub/Google/Facebook) si está disponible.
+       - Fallback a ícono genérico si no hay avatar.
+       - Incluye insignia del proveedor para referencia visual. -->
   <div *ngIf="user" class="profile-card">
     <div class="row g-3 align-items-center">
       <div class="col-auto">
-        <div class="avatar">
-          <i class="bi bi-person-circle"></i>
+        <div class="avatar position-relative d-inline-flex align-items-center justify-content-center">
+          <ng-container *ngIf="user?.avatar; else noAvatar">
+            <img
+              [src]="user.avatar"
+              alt="Avatar de usuario"
+              class="avatar-img"
+              referrerpolicy="no-referrer"
+              loading="lazy"
+              width="64" height="64" />
+          </ng-container>
+          <ng-template #noAvatar>
+            <i class="bi bi-person-circle"></i>
+          </ng-template>
+          <!-- Insignia del proveedor OAuth (si aplica) -->
+          <span *ngIf="user?.oauth_provider" class="provider-badge" [attr.data-provider]="user.oauth_provider" aria-hidden="true">
+            <i class="bi" [ngClass]="{
+              'bi-github': user.oauth_provider==='github',
+              'bi-google': user.oauth_provider==='google',
+              'bi-facebook': user.oauth_provider==='facebook'
+            }"></i>
+          </span>
         </div>
       </div>
       <div class="col">
@@ -23,6 +46,9 @@
 
           <div class="label">Rol</div>
           <div class="value"><span class="badge role">{{ (user.role || 'viewer') | uppercase }}</span></div>
+
+          <div class="label" *ngIf="user?.oauth_provider">Proveedor</div>
+          <div class="value" *ngIf="user?.oauth_provider">{{ user.oauth_provider | titlecase }}</div>
         </div>
       </div>
     </div>

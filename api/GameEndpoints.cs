@@ -159,8 +159,14 @@ END;";
                 players = playerFouls 
             });
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
-
-        // Add adjust score endpoint
+        
+    /// <summary>
+    /// Validación de AdjustScoreDto (ajuste de marcador).
+    /// </summary>
+    /// <remarks>
+    /// - Aplica <c>ValidationFilter&lt;AdjustScoreDto&gt;</c> para asegurar rangos de <c>HomeDelta</c>/<c>AwayDelta</c> y que al menos uno sea distinto de 0.
+    /// - Devuelve 400 con <c>{ success: false, errors: [...] }</c> cuando no cumple.
+    /// </remarks>
         g.MapPost("/games/{id:int}/adjust-score", async (int id, [FromBody] AdjustScoreDto dto) =>
         {
             using var c = Open(cs());
@@ -233,7 +239,7 @@ END;";
                 Console.WriteLine($"Error en la conexión: {ex}");
                 return Results.Problem("Error de conexión con la base de datos", statusCode: 500);
             }
-        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<AdjustScoreDto>>().RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
 
         /// <summary>
@@ -308,6 +314,13 @@ END;";
             return trow is null ? Results.NotFound() : Results.Ok(trow);
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
+        /// <summary>
+        /// Validación de TeamUpsertDto (crear equipo).
+        /// </summary>
+        /// <remarks>
+        /// - Aplica <c>ValidationFilter&lt;TeamUpsertDto&gt;</c> para validar <c>Name</c> (2-100), <c>City</c> (&lt;=100) y <c>LogoUrl</c> (http/https o ruta absoluta).
+        /// - En errores, responde 400 con <c>{ success: false, errors: [{ field, message }] }</c>.
+        /// </remarks>
         g.MapPost("/teams", async ([FromBody] TeamUpsertDto dto) =>
         {
             if (dto is null || string.IsNullOrWhiteSpace(dto.Name))
@@ -326,8 +339,15 @@ END;";
 
             var created = await c.QuerySingleAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
             return Results.Created($"/api/teams/{id}", created);
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<TeamUpsertDto>>().RequireAuthorization("ADMIN").WithOpenApi();
 
+        /// <summary>
+        /// Validación de TeamUpsertDto (actualizar equipo).
+        /// </summary>
+        /// <remarks>
+        /// - Usa <c>ValidationFilter&lt;TeamUpsertDto&gt;</c> con las mismas reglas del alta.
+        /// - Respuestas de error mantienen el formato estándar 400 <c>{ success: false, errors: [...] }</c>.
+        /// </remarks>
         g.MapPut("/teams/{id:int}", async (int id, [FromBody] TeamUpsertDto dto) =>
         {
             if (dto is null || string.IsNullOrWhiteSpace(dto.Name))
@@ -371,7 +391,7 @@ END;";
 
             var updated = await c.QuerySingleAsync<TeamDto>($"SELECT TeamId, Name, City, LogoUrl, CreatedAt FROM {T}Teams WHERE TeamId=@id;", new { id });
             return Results.Ok(updated);
-        }).RequireAuthorization("ADMIN").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<TeamUpsertDto>>().RequireAuthorization("ADMIN").WithOpenApi();
 
         
         /// <summary>
@@ -524,6 +544,13 @@ END;";
             return Results.Ok(rows);
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
+        /// <summary>
+        /// Validación de CreateGameDto (crear partido).
+        /// </summary>
+        /// <remarks>
+        /// - Aplica <c>ValidationFilter&lt;CreateGameDto&gt;</c> para verificar longitudes de <c>Home</c>/<c>Away</c> cuando se envían.
+        /// - En caso de fallo, responde 400 con <c>{ success: false, errors: [{ field, message }] }</c>.
+        /// </remarks>
         g.MapPost("/games", async ([FromBody] CreateGameDto body) =>
         {
             var home = IsNullOrWhite(body?.Home) ? "Local" : body!.Home!.Trim();
@@ -545,7 +572,7 @@ END;";
 
             tx.Commit();
             return Results.Created($"/api/games/{id}", new { gameId = id, home, away });
-        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<CreateGameDto>>().RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapGet("/games/{id:int}", async (int id) =>
         {
@@ -567,7 +594,7 @@ END;";
             await Exec(c, $"UPDATE {T}GameClocks SET Running=1, StartedAt=SYSUTCDATETIME(), UpdatedAt=SYSUTCDATETIME() WHERE GameId=@id;", new { id }, tx);
             tx.Commit();
             return Results.NoContent();
-        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<ScoreDto>>().RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         g.MapPost("/games/{id:int}/advance-quarter", async (int id) =>
         {
@@ -861,7 +888,7 @@ END;";
 
             tx.Commit();
             return Results.NoContent();
-        }).WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<ScoreDto>>().WithOpenApi();
 
         g.MapPost("/games/{id:int}/foul", async (
             int id, 
@@ -1013,7 +1040,7 @@ END;";
 
 
             return Results.NoContent();
-        }).WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<FoulDto>>().WithOpenApi();
 
         // Endpoint para deshacer un evento
         /// <summary>
@@ -1233,7 +1260,7 @@ END;";
 
             tx.Commit();
             return Results.Created($"/api/games/{id}", new { gameId = id, home, away });
-        }).WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<PairDto>>().WithOpenApi();
 
         g.MapGet("/teams/{teamId:int}/players", async (int teamId) =>
         {
@@ -1260,7 +1287,7 @@ END;";
                 return Results.Created($"/api/players/{id}", new { playerId = id });
             }
             catch (SqlException ex) when (ex.Number is 2601 or 2627) { return Results.BadRequest(new { error = "Dorsal duplicado." }); }
-        }).WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<CreatePlayerDto>>().WithOpenApi();
 
         g.MapPatch("/players/{playerId:int}", async (int playerId, [FromBody] UpdatePlayerDto b) =>
         {
@@ -1276,7 +1303,7 @@ END;";
                   Active=COALESCE(@Active,Active)
                 WHERE PlayerId=@playerId;", new { playerId, b?.Number, b?.Name, b?.Position, b?.HeightCm, b?.Age, b?.Nationality, b?.Active });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
-        }).WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<UpdatePlayerDto>>().WithOpenApi();
 
         g.MapDelete("/players/{playerId:int}", async (int playerId) =>
         {
@@ -1333,7 +1360,7 @@ END;";
 
             tx.Commit();
             return Results.NoContent();
-        }).WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<AdjustScoreDto>>().WithOpenApi();
 
         /// <summary>
         /// Rosters por juego y resumen de faltas.

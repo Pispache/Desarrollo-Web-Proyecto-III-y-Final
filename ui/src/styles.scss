@@ -53,6 +53,54 @@ $pagination-hover-border-color: $dark-border;
 /* Fuente LED Digital */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
 
+/* Utilidades globales: Insignias de proveedores OAuth
+   - Mantiene colores coherentes para cualquier badge con data-provider
+   - Usado en navbar y perfil (provider-badge)
+*/
+.provider-badge[data-provider="google"] { background: #ea4335 !important; }
+.provider-badge[data-provider="facebook"] { background: #1877f2 !important; }
+.provider-badge[data-provider="github"] { background: #24292f !important; }
+
+/* =========================
+   Transición CSS para vistas
+   - Aplica a cualquier componente renderizado por el router
+   - No toca layout ni requiere Angular Animations
+   ========================= */
+@keyframes route-fade-up {
+  from { opacity: 0; transform: translateY(16px) scale(.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.main-content > *,
+.main-content > * > .card,
+.main-content > section,
+.main-content > .container,
+.admin-panel,
+.results-page,
+.profile-page,
+.scoreboards-page,
+.team-register-page,
+.players-team-select-page,
+.reports-page,
+.user-profile-page {
+  animation: route-fade-up 380ms cubic-bezier(.22,1,.36,1) both; /* easeOutCubic */
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-content > * { animation: none !important; }
+}
+
+/* Fondo oscuro del área de contenido para evitar flashes blancos durante transiciones */
+.main-content {
+  background: linear-gradient(180deg, #0f213c 0%, #0b1428 100%) !important;
+  min-height: calc(100vh - var(--navbar-height-global));
+}
+
+:root[data-theme="light"] .main-content {
+  background: linear-gradient(180deg, #0f213c 0%, #0b1428 100%) !important;
+}
+
 /* =====================================================
    Roles UI helpers
    - The app toggles body.role-admin / body.role-user in app.component.ts

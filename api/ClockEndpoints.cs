@@ -86,7 +86,13 @@ public static class ClockEndpoints
             });
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
-        // POST set duration
+        /// <summary>
+        /// Validación de ClockDurationDto (definir duración de cuarto).
+        /// </summary>
+        /// <remarks>
+        /// - Aplica <c>ValidationFilter&lt;ClockDurationDto&gt;</c> para exigir <c>Minutes</c> &gt; 0 y &lt;= 60.
+        /// - En errores, responde 400 con <c>{ success: false, errors: [{ field, message }] }</c>.
+        /// </remarks>
         app.MapPost("/api/games/{id:int}/clock/duration", async (int id, [FromBody] ClockDurationDto dto) =>
         {
             if (dto == null || dto.Minutes <= 0)
@@ -101,7 +107,7 @@ public static class ClockEndpoints
                 WHERE GameId = @id;", new { id, quarterMs = dto.Minutes * 60 * 1000 });
 
             return ok > 0 ? Results.Ok() : Results.NotFound();
-        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<ClockDurationDto>>().RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
 
         // POST start
         app.MapPost("/api/games/{id:int}/clock/start", async (int id) =>
@@ -132,8 +138,13 @@ public static class ClockEndpoints
                 WHERE GameId=@id;", new { id });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
         }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
-
-        // POST reset (quarterMs opcional)
+        /// <summary>
+        /// Validación de ClockResetDto (reiniciar reloj).
+        /// </summary>
+        /// <remarks>
+        /// - Aplica <c>ValidationFilter&lt;ClockResetDto&gt;</c> para validar <c>QuarterMs</c> opcional (&gt; 0 y &lt;= 60 minutos, en ms).
+        /// - En errores, responde 400 con <c>{ success: false, errors: [...] }</c>.
+        /// </remarks>
         app.MapPost("/api/games/{id:int}/clock/reset", async (int id, [FromBody] ClockResetDto? b) =>
         {
             using var c = new SqlConnection(cs());
@@ -144,6 +155,6 @@ public static class ClockEndpoints
                   Running=0, StartedAt=NULL, UpdatedAt=SYSUTCDATETIME()
                 WHERE GameId=@id;", new { id, qms = b?.QuarterMs });
             return ok > 0 ? Results.NoContent() : Results.NotFound();
-        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<ClockResetDto>>().RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
     }
 }

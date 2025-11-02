@@ -1,3 +1,10 @@
+"""
+@summary Utilidades de renderizado PDF para el microservicio de reportes.
+@remarks
+- Envía HTML al servicio `pdf-renderer` (Node) para obtener un PDF generado con Puppeteer.\
+- Controla timeout y opciones de render (formato, márgenes, orientación) recibidas como JSON.\
+- La URL del renderer se toma de `PDF_RENDERER_URL` (por defecto `http://pdf-renderer:3000`).
+"""
 import os
 import httpx
 from typing import List, Dict, Optional

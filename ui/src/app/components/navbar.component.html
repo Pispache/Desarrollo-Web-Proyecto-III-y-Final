@@ -15,10 +15,10 @@
   <div class="navbar-container">
     <!-- Logo -->
     <div class="navbar-brand">
-      <a routerLink="/control" class="brand-link">
+      <span class="brand-link">
         <i class="bi bi-trophy-fill"></i>
         <span class="brand-text">Marcador BB</span>
-      </a>
+      </span>
     </div>
 
     <!-- Desktop Menu -->
@@ -124,13 +124,31 @@
         <span>Cerrar sesión</span>
       </button>
       <!-- Indicador de usuario al extremo derecho (icono + nombre + rol) -->
+      <!-- Perfil (chip de usuario)
+           - Muestra avatar del proveedor OAuth (si existe) o ícono genérico.
+           - Incluye insignia del proveedor: GitHub/Google/Facebook. -->
       <a *ngIf="isAuthenticated" routerLink="/perfil" class="d-flex align-items-center ms-auto px-2 py-1 text-light user-chip text-decoration-none">
-        <ng-container *ngIf="avatarUrl; else iconFallback">
-          <img [src]="avatarUrl" alt="avatar" class="avatar-img me-2" referrerpolicy="no-referrer" />
-        </ng-container>
-        <ng-template #iconFallback>
-          <i class="bi bi-person-circle me-2"></i>
-        </ng-template>
+        <span class="avatar-wrap me-2 position-relative d-inline-flex align-items-center justify-content-center">
+          <ng-container *ngIf="avatarUrl; else iconFallback">
+            <img
+              [src]="avatarUrl"
+              alt="Avatar de usuario"
+              class="avatar-img"
+              referrerpolicy="no-referrer"
+              loading="lazy" />
+          </ng-container>
+          <ng-template #iconFallback>
+            <i class="bi bi-person-circle"></i>
+          </ng-template>
+          <!-- Insignia del proveedor OAuth -->
+          <span *ngIf="oauthProvider" class="provider-badge" [attr.data-provider]="oauthProvider" aria-hidden="true">
+            <i class="bi" [ngClass]="{
+              'bi-github': oauthProvider==='github',
+              'bi-google': oauthProvider==='google',
+              'bi-facebook': oauthProvider==='facebook'
+            }"></i>
+          </span>
+        </span>
         <span class="fw-semibold">
           {{ username || 'Usuario' }}
           <small class="ms-2 text-muted" *ngIf="role">({{ role | uppercase }})</small>
@@ -157,7 +175,7 @@
   <!-- Mobile Menu as Bootstrap Dropdown -->
   <div class="mobile-menu dropdown-menu" [class.show]="isMenuOpen">
     <!-- Mobile quick actions -->
-    <div class="px-3 py-2 d-flex align-items-center gap-2 border-bottom">
+    <div class="mobile-quick-actions px-3 py-2 d-flex align-items-center gap-2 border-bottom">
       <button class="btn btn-primary btn-sm w-100" (click)="onRefresh(); closeMenu()">
         <i class="bi bi-arrow-clockwise me-1"></i> Actualizar
       </button>
@@ -176,20 +194,41 @@
         </a>
       </li>
       
-      <li *ngIf="isAdmin">
-        <a class="dropdown-item" routerLink="/equipos" 
-           [class.active]="isActiveRoute('/equipos')"
-           (click)="closeMenu()">
-          <i class="bi bi-people-fill"></i>
-          <span>Gestión de Equipos</span>
-        </a>
-      </li>
-      
-      <li *ngIf="isAdmin">
-        <a class="dropdown-item" (click)="navigateToPlayers()" [class.active]="isActiveRoute('/jugadores')">
-          <i class="bi bi-people"></i>
-          <span>Jugadores</span>
-        </a>
+      <!-- Administración (colapsable en móvil) -->
+      <li *ngIf="isAdmin" class="mobile-admin" [class.open]="adminOpen">
+        <button class="dropdown-item d-flex align-items-center justify-content-between" (click)="toggleAdminMenu($event)">
+          <span class="d-inline-flex align-items-center gap-2">
+            <i class="bi bi-gear-fill"></i>
+            <span>Administración</span>
+          </span>
+          <i class="bi" [ngClass]="adminOpen ? 'bi-chevron-up' : 'bi-chevron-down'"></i>
+        </button>
+        <ul class="submenu" *ngIf="adminOpen">
+          <li>
+            <a class="dropdown-item" routerLink="/equipos" [class.active]="isActiveRoute('/equipos')" (click)="closeMenu()">
+              <i class="bi bi-people-fill"></i>
+              <span>Equipos</span>
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" (click)="navigateToPlayers()" [class.active]="isActiveRoute('/jugadores')">
+              <i class="bi bi-people"></i>
+              <span>Jugadores</span>
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" routerLink="/reportes" [class.active]="isActiveRoute('/reportes')" (click)="closeMenu()">
+              <i class="bi bi-file-earmark-pdf-fill"></i>
+              <span>Reportes</span>
+            </a>
+          </li>
+          <li>
+            <a class="dropdown-item" routerLink="/administracion/usuarios" [class.active]="isActiveRoute('/administracion/usuarios')" (click)="closeMenu()">
+              <i class="bi bi-people"></i>
+              <span>Usuarios</span>
+            </a>
+          </li>
+        </ul>
       </li>
       
       <li>
@@ -210,14 +249,6 @@
         </a>
       </li>
       
-      <li *ngIf="isAdmin">
-        <a class="dropdown-item" routerLink="/reportes" 
-           [class.active]="isActiveRoute('/reportes')"
-           (click)="closeMenu()">
-          <i class="bi bi-file-earmark-pdf-fill"></i>
-          <span>Reportes</span>
-        </a>
-      </li>
       
       <li>
         <a class="dropdown-item" routerLink="/torneo" 
@@ -228,24 +259,31 @@
         </a>
       </li>
 
-      <li *ngIf="isAdmin">
-        <a class="dropdown-item" routerLink="/perfil" 
-           [class.active]="isActiveRoute('/perfil')"
-           (click)="closeMenu()">
-          <i class="bi bi-person-gear"></i>
-          <span>Perfil</span>
-        </a>
-      </li>
+      <!-- (Opcional) puedes mantener 'Perfil' fuera del grupo si quieres -->
 
       <li><hr class="dropdown-divider"></li>
       <li class="dropdown-header px-3 text-uppercase small text-muted">Cuenta</li>
 
-      <!-- Usuario autenticado: mostrar nombre (sin botón extra de cerrar sesión aquí) -->
+      <!-- Usuario autenticado: avatar + nombre con enlace a Perfil -->
       <li *ngIf="isAuthenticated">
-        <span class="dropdown-item-text text-muted d-flex align-items-center gap-2">
-          <i class="bi bi-person-circle"></i>
+        <a routerLink="/perfil" class="dropdown-item d-flex align-items-center gap-2">
+          <span class="avatar-wrap position-relative d-inline-flex align-items-center justify-content-center">
+            <ng-container *ngIf="avatarUrl; else mobileIconFallback">
+              <img [src]="avatarUrl" alt="Avatar" class="avatar-img" referrerpolicy="no-referrer" loading="lazy" width="28" height="28" />
+            </ng-container>
+            <ng-template #mobileIconFallback>
+              <i class="bi bi-person-circle"></i>
+            </ng-template>
+            <span *ngIf="oauthProvider" class="provider-badge" [attr.data-provider]="oauthProvider" aria-hidden="true">
+              <i class="bi" [ngClass]="{
+                'bi-github': oauthProvider==='github',
+                'bi-google': oauthProvider==='google',
+                'bi-facebook': oauthProvider==='facebook'
+              }"></i>
+            </span>
+          </span>
           <span class="small">{{ username || 'Usuario' }}</span>
-        </span>
+        </a>
       </li>
       <li *ngIf="isAuthenticated">
         <a class="dropdown-item text-danger" (click)="logout()">

@@ -8,6 +8,7 @@ import { AuthService } from './services/auth.service';
 import { Subscription } from 'rxjs';
 import { UiEventsService } from './services/ui-events.service';
 import { ThemeService } from './services/theme.service';
+ 
 
 @Component({
   selector: 'app-root',
@@ -48,6 +49,8 @@ export class AppComponent implements OnInit, OnDestroy {
       this.softRefreshCurrentView();
     });
   }
+
+  
 
   ngOnDestroy(): void {
     this.sub?.unsubscribe();

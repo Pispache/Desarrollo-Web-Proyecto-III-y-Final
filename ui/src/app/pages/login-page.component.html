@@ -23,6 +23,7 @@
 
 <div class="login-wrapper">
   <h2>Iniciar sesión</h2>
+  <div class="info" *ngIf="info">{{ info }}</div>
 
   <!-- Login por email y contraseña -->
   <form (ngSubmit)="submit()" #f="ngForm" autocomplete="on">
@@ -44,6 +45,12 @@
     <p class="oauth-divider">Inicia sesión con:</p>
 
     <div class="oauth-buttons">
+      <button type="button" class="oauth-btn google" (click)="loginWithGoogle()">
+        <span>Google</span>
+      </button>
+      <button type="button" class="oauth-btn facebook" (click)="loginWithFacebook()">
+        <span>Facebook</span>
+      </button>
       <button type="button" class="oauth-btn github" (click)="loginWithGitHub()">
         <span>GitHub</span>
       </button>
@@ -69,6 +76,7 @@
       </div>
       <button type="submit" [disabled]="regLoading">{{ regLoading ? 'Creando...' : 'Crear cuenta' }}</button>
       <div class="error" *ngIf="regError">{{ regError }}</div>
+      <div class="info" *ngIf="regSuccess">{{ regSuccess }}</div>
     </form>
   </div>
 </div>

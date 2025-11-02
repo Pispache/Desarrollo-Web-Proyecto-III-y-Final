@@ -1,3 +1,10 @@
+"""
+@summary Microservicio de Reportes (FastAPI).
+@remarks
+- Expone endpoints JSON y PDF bajo el prefijo `/v1/reports`.\
+- Protege rutas sensibles con validación de JWT/rol ADMIN.\
+- Se integra con el generador de PDFs (`pdf-renderer`) y con PostgreSQL para consultas.
+"""
 import os
 from typing import Optional
 from datetime import datetime
@@ -21,6 +28,10 @@ app = FastAPI(title="Report Service", version="0.1.0")
 
 @app.get("/health")
 def health():
+    """ 
+    @summary Endpoint de salud del microservicio.
+    @returns Objeto JSON con `status: ok` para monitoreo.
+    """
     return {"status": "ok"}
 
 # /// <summary>

@@ -38,11 +38,13 @@ export class LoginPageComponent {
   password = '';
   loading = false;
   error = '';
+  info = '';
   regName = '';
   regEmail = '';
   regPassword = '';
   regLoading = false;
   regError = '';
+  regSuccess = '';
 
   constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute) {
     // Manejar callback de OAuth primero (tiene prioridad)
@@ -60,17 +62,29 @@ export class LoginPageComponent {
 
     // Mostrar mensajes según motivo de redirección solo si no hay token
     try {
-      const reason = (this.route.snapshot.queryParamMap.get('reason') || '').toLowerCase();
+      const qp = this.route.snapshot.queryParamMap;
+      const reason = (qp.get('reason') || '').toLowerCase();
       if (reason === 'expired') {
         this.error = 'Tu sesión expiró. Ingresa nuevamente.';
       } else if (reason === 'logged_out') {
         this.error = 'Cerraste sesión correctamente.';
+      }
+      const verified = qp.get('verified');
+      if (verified === '1') {
+        this.info = 'Correo verificado. Ya puedes iniciar sesión.';
+      }
+      const err = qp.get('error');
+      if (err === 'verify_expired') {
+        this.error = 'El enlace de verificación expiró. Reenvía la verificación.';
+      } else if (err === 'verify_invalid') {
+        this.error = 'El enlace de verificación no es válido.';
       }
     } catch {}
   }
 
   submitRegister() {
     this.regError = '';
+    this.regSuccess = '';
     const name = this.regName.trim();
     const email = this.regEmail.trim();
     const password = this.regPassword;
@@ -80,7 +94,12 @@ export class LoginPageComponent {
       next: (res) => {
         this.regLoading = false;
         if (res.success) {
-          this.router.navigateByUrl('/');
+          const hasToken = !!(res as any)?.token?.access_token;
+          if (hasToken) {
+            this.router.navigateByUrl('/');
+          } else {
+            this.regSuccess = 'Registro exitoso. Revisa tu correo para verificar tu cuenta.';
+          }
         } else {
           const firstErr = (res as any)?.errors?.[0]?.msg;
           this.regError = firstErr || res.message || 'No se pudo registrar';
