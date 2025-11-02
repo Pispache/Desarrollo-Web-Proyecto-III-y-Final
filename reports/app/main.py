@@ -6,6 +6,8 @@
 - Se integra con el generador de PDFs (`pdf-renderer`) y con PostgreSQL para consultas.
 """
 import os
+import base64
+import mimetypes
 from typing import Optional
 from datetime import datetime
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request
@@ -146,6 +148,8 @@ async def roster_pdf(
                 "number": r[3],
                 "name": r[4],
                 "position": r[5],
+                "fouls": 0,
+                "side": r[0],
             }
             if r[0] == "HOME":
                 home_players.append(item)
@@ -202,7 +206,64 @@ async def roster_pdf(
             except Exception as ex:
                 print(f"[WARN] Fallback API roster fetch failed: {ex}")
 
-        # Obtener logos de equipos desde API si hay IDs
+        # Contabilizar faltas por jugador en este partido
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    # Por player_id (insensible a mayúsculas y permitiendo prefijos FOUL_*)
+                    cur.execute(
+                        """
+                        SELECT player_id, COUNT(*)
+                        FROM game_events
+                        WHERE game_id = %s AND UPPER(event_type) LIKE 'FOUL%%' AND player_id IS NOT NULL
+                        GROUP BY player_id
+                        """,
+                        (gameId,)
+                    )
+                    foul_by_pid = {int(r[0]): int(r[1]) for r in (cur.fetchall() or [])}
+                    # Fallback por número y lado cuando player_id sea nulo (insensible a mayúsculas)
+                    cur.execute(
+                        """
+                        SELECT player_number, UPPER(team) AS team_up, COUNT(*)
+                        FROM game_events
+                        WHERE game_id = %s AND UPPER(event_type) LIKE 'FOUL%%' AND player_id IS NULL AND player_number IS NOT NULL
+                        GROUP BY player_number, UPPER(team)
+                        """,
+                        (gameId,)
+                    )
+                    foul_by_num_side = {}
+                    for rr in (cur.fetchall() or []):
+                        key = (int(rr[0]), str(rr[1]))
+                        foul_by_num_side[key] = int(rr[2])
+            try:
+                print(f"[DEBUG] fouls by player_id: {foul_by_pid}")
+                print(f"[DEBUG] fouls by (number,side): {foul_by_num_side}")
+            except Exception:
+                pass
+
+            def apply_fouls(lst, side_label):
+                for p in lst:
+                    pid = p.get("player_id")
+                    num = p.get("number")
+                    fouls = 0
+                    if pid is not None and pid in foul_by_pid:
+                        fouls = foul_by_pid[pid]
+                    elif num is not None:
+                        fouls = foul_by_num_side.get((int(num), side_label.upper()), 0)
+                    # Guardar None cuando no tenga faltas para que la vista muestre NA
+                    p["fouls"] = fouls if fouls > 0 else None
+
+            apply_fouls(home_players, "HOME")
+            apply_fouls(away_players, "AWAY")
+            try:
+                for p in home_players + away_players:
+                    print(f"[DEBUG] player {p.get('name')} #{p.get('number')} pid={p.get('player_id')} side={p.get('side')} fouls={p.get('fouls')}")
+            except Exception:
+                pass
+        except Exception as ex_fouls:
+            print(f"[WARN] Could not compute fouls per player for game {gameId}: {ex_fouls}")
+
+        # Obtener logos de equipos desde API si hay IDs y embeberlos como data URI
         home_logo_abs = None
         away_logo_abs = None
         try:
@@ -236,6 +297,25 @@ async def roster_pdf(
         except Exception as _:
             pass
 
+        # Normalizar logos a URLs absolutas como en RE-02/03
+        def normalize_logo_url(u: Optional[str]) -> Optional[str]:
+            if not u:
+                return None
+            s = str(u)
+            if s.startswith("http://") or s.startswith("https://"):
+                return s.replace("http://localhost:8080", "http://api:8080")
+            if not s.startswith("/"):
+                s = "/" + s
+            # intentar primero API
+            api_url = f"http://api:8080{s}"
+            # como fallback, UI
+            ui_url = f"http://ui:4200{s}"
+            # no verificamos existencia aquí; dejamos al renderer resolver
+            return api_url or ui_url
+
+        home_logo_abs = normalize_logo_url(home_logo_abs)
+        away_logo_abs = normalize_logo_url(away_logo_abs)
+
         html = render_roster_html(game, home_players, away_players, None, home_logo_abs, away_logo_abs)
         pdf_bytes = await render_html_to_pdf(html)
 
@@ -263,6 +343,8 @@ async def roster_pdf(
 def list_teams(
     q: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    limit: int = Query(200, ge=1, le=2000),
+    offset: int = Query(0, ge=0),
     _=Depends(require_admin)
 ):
     try:
@@ -402,8 +484,10 @@ def list_games(
 # /// </remarks>
 @router.get("/teams.pdf")
 async def teams_pdf(
+    request: Request,
     q: Optional[str] = Query(None),
     city: Optional[str] = Query(None),
+    cities: Optional[str] = Query(None, alias="cities"),
     limit: int = Query(200, ge=1, le=2000),
     offset: int = Query(0, ge=0),
     _=Depends(require_admin)
@@ -412,12 +496,14 @@ async def teams_pdf(
     try:
         where = []
         params = []
+        # Permitir alias 'cities' para filtrar por ciudad, manteniendo compatibilidad
+        effective_city = city or cities
         if q:
             where.append("(name ILIKE %s)")
             params.append(f"%{q}%")
-        if city:
+        if effective_city:
             where.append("(city ILIKE %s)")
-            params.append(f"%{city}%")
+            params.append(f"%{effective_city}%")
         where_sql = (" WHERE " + " AND ".join(where)) if where else ""
         
         with get_connection() as conn:
@@ -438,7 +524,7 @@ async def teams_pdf(
                 ]
         
         # Generar HTML
-        filters = {"q": q, "city": city, "limit": limit, "offset": offset}
+        filters = {"q": q, "city": effective_city, "limit": limit, "offset": offset}
         def absolute_logo(url: Optional[str]) -> Optional[str]:
             if not url:
                 return None
@@ -446,10 +532,87 @@ async def teams_pdf(
             if u.startswith("http://") or u.startswith("https://"):
                 # Si viene con localhost, reescribir al servicio 'api' dentro de la red docker
                 return u.replace("http://localhost:8080", "http://api:8080")
-            if u.startswith("/"):
-                return f"http://api:8080{u}"
-            return u
-        logo_url = absolute_logo(os.getenv("SYSTEM_LOGO_URL"))
+            # Tratar rutas relativas sin slash como raíz
+            if not u.startswith("/"):
+                u = "/" + u
+            # Preferir API; algunas instalaciones sirven estáticos desde la UI
+            return f"http://api:8080{u}"
+        # Embebido definitivo de logos como data URI (carpeta de estáticos)
+        def build_candidates(u: Optional[str]) -> list:
+            if not u:
+                return []
+            s = str(u)
+            # Si viene solo el nombre, asumir carpeta uploads/logos
+            if '/' not in s and not s.startswith('http'):
+                s = f"/uploads/logos/{s}"
+            if not s.startswith('http'):
+                if not s.startswith('/'):
+                    s = '/' + s
+                return [f"http://api:8080{s}", f"http://ui:4200{s}"]
+            # Absoluta
+            return [s.replace("http://localhost:8080", "http://api:8080")]
+
+        def fetch_data_uri(url_like: Optional[str]) -> Optional[str]:
+            try:
+                from urllib import request as urlreq
+                import base64, mimetypes, json
+                auth_header = request.headers.get("authorization")
+                for target in build_candidates(url_like):
+                    try:
+                        req = urlreq.Request(target)
+                        if auth_header:
+                            req.add_header("Authorization", auth_header)
+                        with urlreq.urlopen(req, timeout=10) as resp:
+                            ctype_hdr = resp.headers.get_content_type() or ""
+                            data = resp.read()
+                            # Si el endpoint devuelve JSON, intentar resolver URL anidada del archivo
+                            if "json" in ctype_hdr.lower():
+                                try:
+                                    obj = json.loads(data)
+                                    # Explorar campos comunes que puedan contener la URL del archivo
+                                    candidates = []
+                                    if isinstance(obj, dict):
+                                        for k in [
+                                            "url","Url","URL","fileUrl","FileUrl","href","logoUrl","logo_url","path","Path"
+                                        ]:
+                                            v = obj.get(k)
+                                            if isinstance(v, str):
+                                                candidates.append(v)
+                                    # También si el JSON es una lista con primer elemento string
+                                    if isinstance(obj, list) and obj and isinstance(obj[0], str):
+                                        candidates.append(obj[0])
+                                    # Intentar descargar la primera candidata válida
+                                    for inner in candidates:
+                                        inner_targets = build_candidates(inner)
+                                        for it in inner_targets:
+                                            try:
+                                                ireq = urlreq.Request(it)
+                                                if auth_header:
+                                                    ireq.add_header("Authorization", auth_header)
+                                                with urlreq.urlopen(ireq, timeout=10) as iresp:
+                                                    idata = iresp.read()
+                                                    ictype = iresp.headers.get_content_type() or mimetypes.guess_type(it)[0] or "image/png"
+                                                    return f"data:{ictype};base64,{base64.b64encode(idata).decode('ascii')}"
+                                            except Exception:
+                                                continue
+                                except Exception:
+                                    pass
+                            # Caso normal: contenido binario de imagen
+                            ctype = ctype_hdr or mimetypes.guess_type(target)[0] or "image/png"
+                            return f"data:{ctype};base64,{base64.b64encode(data).decode('ascii')}"
+                    except Exception:
+                        continue
+                return None
+            except Exception:
+                return None
+
+        rows = [
+            {**r, "logo_url": (fetch_data_uri(r.get("logo_url")) or r.get("logo_url"))}
+            for r in rows
+        ]
+        # Logo de encabezado con fallback del sistema
+        sys_logo = os.getenv("SYSTEM_LOGO_URL")
+        logo_url = fetch_data_uri(sys_logo) or absolute_logo(sys_logo)
         html = render_teams_html(rows, filters, logo_url)
         
         # Convertir a PDF
@@ -577,19 +740,21 @@ async def players_pdf(
             ]
         
         # Generar HTML
-        def absolute_logo(url: Optional[str]) -> Optional[str]:
-            if not url:
+        def normalize_logo_url(u: Optional[str]) -> Optional[str]:
+            if not u:
                 return None
-            u = str(url)
-            if u.startswith("http://") or u.startswith("https://"):
-                return u
-            if u.startswith("/"):
-                return f"http://api:8080{u}"
-            return u
+            s = str(u)
+            if s.startswith("http://") or s.startswith("https://"):
+                return s.replace("http://localhost:8080", "http://api:8080")
+            if not s.startswith("/"):
+                s = "/" + s
+            # Preferir API; como fallback, UI
+            return f"http://api:8080{s}"  # el renderer puede resolver UI si necesario
 
-        team_logo = absolute_logo(api_team_logo_url or pg_team_logo_url)
-        # Si no hay logo del equipo, usar logo del sistema a ambos lados
-        logo_single = team_logo or os.getenv("SYSTEM_LOGO_URL")
+        team_logo = normalize_logo_url(api_team_logo_url or pg_team_logo_url)
+        # Si no hay logo del equipo, usar logo del sistema
+        system_logo = normalize_logo_url(os.getenv("SYSTEM_LOGO_URL"))
+        logo_single = team_logo or system_logo
         html = render_players_html(rows, team_name, logo_single)
         
         # Convertir a PDF
@@ -653,9 +818,17 @@ async def games_pdf(
         with get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    f"""SELECT game_id, home_team, away_team, home_team_id, away_team_id, 
-                               quarter, home_score, away_score, status, created_at 
-                        FROM games{where_sql} ORDER BY created_at DESC LIMIT %s OFFSET %s""",
+                    f"""
+                        SELECT g.game_id, g.home_team, g.away_team, g.home_team_id, g.away_team_id,
+                               g.quarter, g.home_score, g.away_score, g.status, g.created_at,
+                               th.logo_url AS home_logo_url, ta.logo_url AS away_logo_url
+                        FROM games g
+                        LEFT JOIN teams th ON th.team_id = g.home_team_id
+                        LEFT JOIN teams ta ON ta.team_id = g.away_team_id
+                        {where_sql}
+                        ORDER BY g.created_at DESC
+                        LIMIT %s OFFSET %s
+                    """,
                     [*params, limit, offset],
                 )
                 rows = [
@@ -670,6 +843,8 @@ async def games_pdf(
                         "away_score": r[7],
                         "status": r[8],
                         "created_at": r[9].isoformat() if r[9] else None,
+                        "home_logo_url": r[10],
+                        "away_logo_url": r[11],
                     }
                     for r in cur.fetchall()
                 ]
@@ -685,6 +860,14 @@ async def games_pdf(
             if u.startswith("/"):
                 return f"http://api:8080{u}"
             return u
+        # Normalizar logos por equipo en cada fila
+        def norm_row(row: dict) -> dict:
+            return {
+                **row,
+                "home_logo_url": absolute_logo(row.get("home_logo_url")),
+                "away_logo_url": absolute_logo(row.get("away_logo_url")),
+            }
+        rows = [norm_row(r) for r in rows]
         logo_url = absolute_logo(os.getenv("SYSTEM_LOGO_URL"))
         html = render_games_html(rows, filters, logo_url)
         
@@ -882,8 +1065,29 @@ async def player_stats_pdf(
                         )
                         games_count = int((cur.fetchone() or (0,))[0] or 0)
 
+        # Logo para el encabezado: intentar con logo del equipo; si no, usar logo del sistema
+        def normalize_logo_url(u: Optional[str]) -> Optional[str]:
+            if not u:
+                return None
+            s = str(u)
+            if s.startswith("http://") or s.startswith("https://"):
+                return s.replace("http://localhost:8080", "http://api:8080")
+            if not s.startswith("/"):
+                s = "/" + s
+            return f"http://api:8080{s}"
+        team_logo_url = None
+        try:
+            with get_connection() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT logo_url FROM teams WHERE team_id = %s", (player.get("team_id"),))
+                    trow2 = cur.fetchone()
+                    if trow2 and trow2[0]:
+                        team_logo_url = normalize_logo_url(trow2[0])
+        except Exception:
+            pass
+        system_logo = normalize_logo_url(os.getenv("SYSTEM_LOGO_URL"))
+
         filters = {"from": from_, "to": to}
-        # No logo for RF-REP-05 as requested
         html = render_player_stats_html(player, {
             "total_points": total_points,
             "points_1": points_1,
@@ -892,7 +1096,7 @@ async def player_stats_pdf(
             "total_fouls": total_fouls,
             "fouls_by_type": fouls_by_type,
             "games_count": games_count,
-        }, filters, None)
+        }, filters, team_logo_url or system_logo)
 
         pdf_bytes = await render_html_to_pdf(html)
         today = datetime.now().strftime("%Y%m%d")

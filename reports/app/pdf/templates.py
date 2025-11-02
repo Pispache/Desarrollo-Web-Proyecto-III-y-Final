@@ -384,6 +384,7 @@ def render_roster_html(game: Dict, home_players: List[Dict], away_players: List[
             number = p.get("number") if p.get("number") is not None else "S/N"
             name = p.get("name", "N/A")
             pos = p.get("position") or "-"
+            fouls = p.get("fouls", 0)
             age = p.get("age")
             height = p.get("height_cm") or p.get("heightCm")
             nat = p.get("nationality") or p.get("Nationality")
@@ -395,7 +396,9 @@ def render_roster_html(game: Dict, home_players: List[Dict], away_players: List[
             if nat:
                 extra.append(f"Nac: {nat}")
             extra_html = ("<div style='color:#777;font-size:11px;margin-top:2px'>" + " | ".join(extra) + "</div>") if extra else ""
-            return f"<div><strong>{number}</strong> - {name} <span style='color:#666'>( {pos} )</span>{extra_html}</div>"
+            fouls_label = 'NA' if (fouls is None) else str(fouls)
+            foul_badge = f"<span class='badge badge-danger' style='margin-left:8px'>Faltas: {fouls_label}</span>"
+            return f"<div><strong>{number}</strong> - {name} <span style='color:#666'>( {pos} )</span>{foul_badge}{extra_html}</div>"
         return f"""
         <tr>
             <td>{fmt(left)}</td>
@@ -555,21 +558,24 @@ def render_games_html(games: List[Dict], filters: Dict, logo_url: Optional[str] 
         for idx, game in enumerate(games, 1):
             status = game.get("status", "N/A")
             status_badge = status_badges.get(status, f'<span class="badge badge-secondary">{status}</span>')
-            
-            score_html = ""
-            if status == "FINISHED":
-                score_html = f'{game.get("home_score", 0)} - {game.get("away_score", 0)}'
-            else:
-                score_html = "-"
-            
+
+            # Mostrar siempre el marcador actual
+            score_html = f'{game.get("home_score", 0)} - {game.get("away_score", 0)}'
+
             created_at = game.get("created_at", "N/A")[:16] if game.get("created_at") else "N/A"
             quarter = game.get("quarter", "N/A")
-            
+
+            # Logos junto a los nombres
+            home_logo = game.get("home_logo_url")
+            away_logo = game.get("away_logo_url")
+            home_logo_img = f'<img src="{home_logo}" class="logo-mini" alt="Home" /> ' if home_logo else ""
+            away_logo_img = f'<img src="{away_logo}" class="logo-mini" alt="Away" /> ' if away_logo else ""
+
             rows_html += f"""
             <tr>
                 <td class="text-center">{idx}</td>
-                <td>{game.get("home_team", "N/A")}</td>
-                <td>{game.get("away_team", "N/A")}</td>
+                <td>{home_logo_img}{game.get("home_team", "N/A")}</td>
+                <td>{away_logo_img}{game.get("away_team", "N/A")}</td>
                 <td class="text-center">{score_html}</td>
                 <td class="text-center">{quarter}</td>
                 <td class="text-center">{status_badge}</td>

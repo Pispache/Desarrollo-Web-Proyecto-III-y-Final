@@ -2,7 +2,8 @@ const express = require('express');
 const puppeteer = require('puppeteer');
 
 const app = express();
-app.use(express.json({limit: '2mb'}));
+// Permitir HTML más grande con imágenes embebidas (data URI)
+app.use(express.json({limit: '10mb'}));
 
 app.get('/health', (_, res) => res.json({status: 'ok'}));
 
@@ -31,7 +32,9 @@ app.post('/render', async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    // Evitar que una posible CSP en el HTML bloquee data URIs u orígenes
+    try { await page.setBypassCSP(true); } catch (_) {}
+    await page.setContent(html, { waitUntil: 'load' });
 
     const pdfOptions = {
       format: options.format || 'A4',
