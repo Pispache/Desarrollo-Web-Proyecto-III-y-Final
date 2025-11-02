@@ -14,9 +14,11 @@ import { ScoreboardsPageComponent } from './pages/scoreboards-page.component';
 import { ReportsPageComponent } from './pages/reports-page.component';
 import { ProfilePageComponent } from './pages/profile-page.component';
 import { UserProfilePageComponent } from './pages/user-profile-page.component';
+import { RegisterPageComponent } from './pages/register-page.component';
 export const routes: Routes = [
   // Login
   { path: 'login', component: LoginPageComponent },
+  { path: 'registro', component: RegisterPageComponent },
 
   // Nueva estructura en español
   { path: '', redirectTo: 'control', pathMatch: 'full' },

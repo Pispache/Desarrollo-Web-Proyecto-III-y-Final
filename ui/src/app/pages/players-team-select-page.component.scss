@@ -11,25 +11,11 @@
 .players-team-select-page {
   min-height: 100vh;
   color: var(--color-text, #e7e9ff);
-  background:
-    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
-    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  background: transparent !important;
   position: relative;
   isolation: isolate;
 
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 24px 24px, 36px 36px;
-    background-position: 0 0, 12px 18px;
-    pointer-events: none;
-    z-index: -1;
-  }
+  &::after { display: none; }
 }
 
 /* ===== MODO OSCURO (inputs/selects) ===== */
@@ -52,16 +38,14 @@
 }
 
 /* Tema CLARO: mismo look que Registrar Equipo */
-:root[data-theme="light"] .players-team-select-page {
-  /* Usa el mismo fondo que HOME en ambos temas */
-  background:
-    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
-    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%) !important;
-}
+:root[data-theme="light"] .players-team-select-page { background: transparent !important; }
 :root[data-theme="light"] .players-team-select-page .card { background:#ffffff !important; color:#111827 !important; }
 :root[data-theme="light"] .players-team-select-page .card-header { background:#f8f9fa !important; border-bottom:1px solid rgba(0,0,0,0.08) !important; }
 :root[data-theme="light"] .players-team-select-page .card > .card-body { background: transparent !important; }
+
+/* Título principal en oscuro en modo claro (usar :host-context por encapsulación Angular) */
+:host-context(html[data-theme="light"]) .players-team-select-page .page-title { color:#111827 !important; }
+:host-context(html[data-theme="light"]) .players-team-select-page .page-title .bi { color:#111827 !important; }
 
 /* Tabla en blanco puro */
 :root[data-theme="light"] .players-team-select-page .table { color:#111827 !important; }

@@ -60,26 +60,12 @@
 .container-fluid {
   min-height: 100vh;
   color: var(--fg-0);
-  background:
-    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
-    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  background: transparent !important;
   position: relative;
   isolation: isolate;
 
   /* Efecto de grano sutil */
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 24px 24px, 36px 36px;
-    background-position: 0 0, 12px 18px;
-    pointer-events: none;
-    z-index: -1;
-  }
+  &::after { display: none; }
 
   /* Asegura que títulos hereden el color del header */
   .card-header h1, .card-header h2, .card-header h3,

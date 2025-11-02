@@ -21,24 +21,10 @@
   position: relative;
   isolation: isolate;
 
-  /* Fondo degradado oscuro (igual espíritu que Home) */
-  background:
-    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
-    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  /* Fondo heredado del layout global */
+  background: transparent !important;
 
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 24px 24px, 36px 36px;
-    background-position: 0 0, 12px 18px;
-    pointer-events: none;
-    z-index: -1;
-  }
+  &::after { display: none; }
 
   /* Cards (glass) */
   .card {
@@ -98,14 +84,18 @@
   }
 }
 
+/* Refuerzo por encapsulación: asegurar título oscuro con :host-context */
+:host-context(html[data-theme="light"]) .scoreboards-page .page-title { color: #111827 !important; }
+:host-context(html[data-theme="light"]) .scoreboards-page .page-title .bi { color: #111827 !important; }
+
 /* ===== Tema claro: igualar Home (fondos claros y cards blancas) ===== */
 [data-theme="light"] .scoreboards-page {
-  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%) !important;
+  background: transparent !important;
   color: #111827;
 
-  /* Forzar el título superior "Tableros" en blanco en modo claro */
-  .page-title { color: #ffffff !important; }
-  .page-title .bi { color: #ffffff !important; }
+  /* Título en oscuro en modo claro */
+  .page-title { color: #111827 !important; }
+  .page-title .bi { color: #111827 !important; }
 
   .card {
     background: #ffffff !important;

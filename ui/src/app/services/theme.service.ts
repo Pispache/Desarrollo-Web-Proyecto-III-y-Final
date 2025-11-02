@@ -67,8 +67,10 @@ export class ThemeService {
     const root = document.documentElement;
     if (t === 'light') {
       root.setAttribute('data-theme', 'light');
+      root.setAttribute('data-bs-theme', 'light');
     } else {
       root.removeAttribute('data-theme');
+      root.setAttribute('data-bs-theme', 'dark');
     }
   }
 }

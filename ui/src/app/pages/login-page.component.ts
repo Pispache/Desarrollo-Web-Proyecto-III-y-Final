@@ -50,13 +50,14 @@ export class LoginPageComponent {
     // Manejar callback de OAuth primero (tiene prioridad)
     const token = this.route.snapshot.queryParamMap.get('token');
     if (token) {
-      console.log('OAuth token received, processing...');
-      this.auth.handleOAuthCallback(token);
-      // Esperar un momento para que se guarde el token
-      setTimeout(() => {
-        console.log('Redirecting to home...');
-        this.router.navigateByUrl('/');
-      }, 500);
+      try {
+        this.auth.handleOAuthCallback(token);
+      } finally {
+        try { window.dispatchEvent(new Event('uiBootOn')); } catch {}
+        try { sessionStorage.setItem('ui.boot', '1'); } catch {}
+        // Navegar inmediatamente y reemplazar la URL para eliminar el token del historial
+        this.router.navigateByUrl('/', { replaceUrl: true });
+      }
       return;
     }
 
@@ -90,25 +91,30 @@ export class LoginPageComponent {
     const password = this.regPassword;
     if (!name || !email || !password) { this.regError = 'Completa nombre, email y contraseña'; return; }
     this.regLoading = true;
+    try { window.dispatchEvent(new Event('uiBootOn')); } catch {}
     this.auth.register({ name, email, password }).subscribe({
       next: (res) => {
         this.regLoading = false;
         if (res.success) {
           const hasToken = !!(res as any)?.token?.access_token;
           if (hasToken) {
-            this.router.navigateByUrl('/');
+            try { sessionStorage.setItem('ui.boot', '1'); } catch {}
+            this.router.navigateByUrl('/', { replaceUrl: true });
           } else {
             this.regSuccess = 'Registro exitoso. Revisa tu correo para verificar tu cuenta.';
+            try { window.dispatchEvent(new Event('uiBootOff')); } catch {}
           }
         } else {
           const firstErr = (res as any)?.errors?.[0]?.msg;
           this.regError = firstErr || res.message || 'No se pudo registrar';
+          try { window.dispatchEvent(new Event('uiBootOff')); } catch {}
         }
       },
       error: (err) => {
         this.regLoading = false;
         const firstErr = err?.error?.errors?.[0]?.msg;
         this.regError = firstErr || err?.error?.message || err?.error?.error || 'No se pudo registrar';
+        try { window.dispatchEvent(new Event('uiBootOff')); } catch {}
       }
     });
   }
@@ -119,18 +125,22 @@ export class LoginPageComponent {
     const p = this.password;
     if (!e || !p) { this.error = 'Ingrese email y contraseña'; return; }
     this.loading = true;
+    try { window.dispatchEvent(new Event('uiBootOn')); } catch {}
     this.auth.login(e, p).subscribe({
       next: (res) => {
         this.loading = false;
         if (res.success) {
-          this.router.navigateByUrl('/');
+          try { sessionStorage.setItem('ui.boot', '1'); } catch {}
+          this.router.navigateByUrl('/', { replaceUrl: true });
         } else {
           this.error = res.message || 'Error al iniciar sesión';
+          try { window.dispatchEvent(new Event('uiBootOff')); } catch {}
         }
       },
       error: (err) => {
         this.loading = false;
         this.error = (err?.error?.message || err?.error?.error || 'Credenciales inválidas');
+        try { window.dispatchEvent(new Event('uiBootOff')); } catch {}
       }
     });
   }

@@ -1,0 +1,118 @@
+
+:host {
+  display: block;
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  background:
+    radial-gradient(1200px 800px at -10% -20%, rgba(102, 51, 153, 0.35) 0%, rgba(102, 51, 153, 0.15) 40%, transparent 70%),
+    radial-gradient(900px 700px at 110% 110%, rgba(30, 27, 75, 0.60) 0%, rgba(30, 27, 75, 0.25) 50%, transparent 75%),
+    linear-gradient(180deg, #0a0014 0%, #14082b 50%, #0a0a0f 100%);
+}
+
+:host::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.15;
+  background-repeat: repeat;
+  background-size: 140px 140px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'>\
+    <g fill='none' stroke='rgba(255,255,255,0.08)' stroke-width='4'>\
+      <circle cx='70' cy='70' r='38'/>\
+      <path d='M70 32 A38 38 0 0 1 70 108'/>\
+      <path d='M32 70 A38 38 0 0 1 108 70'/>\
+    </g>\
+  </svg>");
+}
+
+:host::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 800px at -10% -20%, rgba(102, 51, 153, 0.35) 0%, rgba(102, 51, 153, 0.15) 40%, transparent 70%),
+    radial-gradient(900px 700px at 110% 110%, rgba(30, 27, 75, 0.60) 0%, rgba(30, 27, 75, 0.25) 50%, transparent 75%),
+    linear-gradient(180deg, #0a0014 0%, #14082b 50%, #0a0a0f 100%);
+}
+
+/* Centrado y card con mismo look */
+.register-page {
+  position: relative; z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+}
+
+.register-page > .container-sm {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.register-page .card {
+  width: 100%; max-width: 520px;
+  border-radius: 12px;
+  background: #111825;
+  color: #e5e7eb;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+}
+.register-page .card-header {
+  background: #0f172a; color: #e5e7eb; border-bottom: 1px solid #1f2937;
+}
+.register-page .card-body .form-label { font-size: 12px; color: #9ca3af; }
+.register-page .card-body .form-control {
+  padding: 10px 12px; border-radius: 8px;
+  background: #0b1220; color: #e5e7eb;
+  border: 1px solid #374151; outline: none;
+}
+.register-page .card-body .form-control:focus {
+  border-color: #10b981; box-shadow: none;
+}
+.register-page .btn.btn-primary {
+  border: none; border-radius: 8px; padding: 10px 12px; font-weight: 600;
+  background: #10b981; color: #0b1220;
+}
+.register-page .btn.btn-outline-secondary { border-radius: 8px; }
+
+/* Tema claro igual que Login */
+[data-theme="light"] :host {
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
+}
+[data-theme="light"] :host::before,
+[data-theme="light"] :host::after {
+  opacity: 0.06;
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
+}
+[data-theme="light"] .register-page .card {
+  background: #ffffff; color: #111827;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+}
+[data-theme="light"] .register-page .card-header { background: #f8f9fa; color: #111827; border-bottom: 1px solid rgba(0,0,0,0.12); }
+[data-theme="light"] .register-page .card-body .form-label { color: #6b7280; }
+[data-theme="light"] .register-page .card-body .form-control {
+  background: #ffffff; color: #111827; border: 1px solid rgba(0,0,0,0.2);
+}
+[data-theme="light"] .register-page .card-body .form-control:focus {
+  border-color: transparent; box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+}
+[data-theme="light"] .register-page .btn.btn-primary {
+  background: linear-gradient(135deg, #4f46e5, #06b6d4); color: #ffffff;
+}
+/* El bloque anterior ya establece min-height y centrado; eliminamos duplicados */
+
+:root:not([data-theme="light"]) .register-page .card {
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: #e7e9ff;
+}
+
+:root[data-theme="light"] .register-page .card {
+  background: #ffffff;
+  border: 1px solid rgba(0,0,0,0.08);
+  color: #111827;
+}

@@ -95,11 +95,44 @@ $pagination-hover-border-color: $dark-border;
 .main-content {
   background: linear-gradient(180deg, #0f213c 0%, #0b1428 100%) !important;
   min-height: calc(100vh - var(--navbar-height-global));
+  /* Prevenir colapso de márgenes del primer hijo */
+  display: flow-root;
 }
 
 :root[data-theme="light"] .main-content {
-  background: linear-gradient(180deg, #0f213c 0%, #0b1428 100%) !important;
+  background:
+    radial-gradient(1200px 700px at 18% -220px, rgba(37,99,235,.12), transparent 60%),
+    radial-gradient(950px 520px at 92% -40px, rgba(0,151,255,.08), transparent 60%),
+    linear-gradient(180deg, #eaf2ff 0%, #ffffff 100%) !important;
 }
+
+/* Safe-area en móvil para evitar recortes con notch */
+@media (max-width: 767px) {
+}
+
+/* Spacer bajo la navbar fija para evitar cualquier corte/solape */
+.navbar-spacer {
+  height: var(--navbar-height-global);
+  /* Igualar fondo al del contenido para evitar "línea" de unión */
+  background: linear-gradient(180deg, #0f213c 0%, #0b1428 100%) !important;
+  /* Solapar 1px bajo la navbar para eliminar cualquier seam subpíxel */
+  margin-top: -1px;
+}
+@media (max-width: 767px) {
+  .navbar-spacer { height: calc(var(--navbar-height-global) + env(safe-area-inset-top)); }
+}
+
+/* Tema claro: fondo del spacer coherente con contenido */
+:root[data-theme="light"] .navbar-spacer {
+  background:
+    radial-gradient(1200px 700px at 18% -220px, rgba(37,99,235,.12), transparent 60%),
+    radial-gradient(950px 520px at 92% -40px, rgba(0,151,255,.08), transparent 60%),
+    linear-gradient(180deg, #eaf2ff 0%, #ffffff 100%) !important;
+}
+
+/* Evitar que el primer hijo empuje creando seam visual */
+.main-content > :first-child { margin-top: 0 !important; }
+/* Sin borde superior: el solape del spacer ya elimina la línea */
 
 /* =====================================================
    Roles UI helpers
@@ -112,6 +145,16 @@ body.role-user {
   [title="Eliminar equipo"],
   [title="Gestionar jugadores"] {
     display: none !important;
+  }
+
+  /* Semántica Bootstrap en modo CLARO */
+  :root[data-theme="light"] .bg-light {
+    background-color: #f8f9fa !important;
+    color: #111827 !important;
+  }
+
+  :root[data-theme="light"] .text-dark {
+    color: #111827 !important;
   }
 
 }
@@ -285,12 +328,12 @@ html, body { background: var(--color-bg); }
 :root { --navbar-height-global: 70px; }
 
 body {
-  /* Deja padding laterales en 0, pero agrega margen superior para no tapar encabezados */
-  padding-top: calc(var(--navbar-height-global) + 24px);
+  /* Sin offset: el desplazamiento lo maneja .main-content */
+  padding-top: 0;
 }
 
 @media (max-width: 767px) {
-  body { padding-top: calc(var(--navbar-height-global) + 28px + env(safe-area-inset-top)); }
+  body { padding-top: 0; }
 }
 
 /* Evitar solape en anclas/scroll posicionando encabezados bajo navbar fijo */
@@ -299,13 +342,22 @@ h1, h2, h3, .card, .page-title, .section-title {
 }
 
 /* Ajustes para el tema oscuro */
-.bg-light {
+:root:not([data-theme="light"]) .bg-light {
   background-color: #2d2d2d !important;
   color: #e0e0e0 !important;
 }
 
-.text-dark {
+:root:not([data-theme="light"]) .text-dark {
   color: #e0e0e0 !important;
+}
+
+:root[data-theme="light"] .bg-light {
+  background-color: #f8f9fa !important;
+  color: #111827 !important;
+}
+
+:root[data-theme="light"] .text-dark {
+  color: #111827 !important;
 }
 
 .text-muted {

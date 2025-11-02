@@ -1,0 +1,58 @@
+<div class="register-page">
+  <div class="container-sm">
+    <div class="card border-0">
+      <div class="card-header py-3">
+        <div class="d-flex align-items-start justify-content-between">
+          <div>
+            <h3 class="m-0 fw-bold">Crear cuenta</h3>
+            <small class="text-muted d-block">Regístrate para administrar equipos y tableros</small>
+          </div>
+          <a routerLink="/login" class="btn btn-sm btn-outline-secondary rounded-pill">
+            Volver a iniciar sesión
+          </a>
+        </div>
+      </div>
+      <div class="card-body p-4">
+        <form (ngSubmit)="submitRegister()" autocomplete="on" class="vstack gap-3">
+          <div>
+            <label class="form-label">Nombre</label>
+            <div class="input-group fancy">
+              <span class="input-group-text"><i class="bi bi-person"></i></span>
+              <input class="form-control" [(ngModel)]="regName" name="regName" required placeholder="Tu nombre" />
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">Email</label>
+            <div class="input-group fancy">
+              <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+              <input type="email" class="form-control" [(ngModel)]="regEmail" name="regEmail" required placeholder="correo@dominio.com" />
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label">Contraseña</label>
+            <div class="input-group fancy">
+              <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+              <input type="password" class="form-control" [(ngModel)]="regPassword" name="regPassword" required placeholder="Mínimo 6 caracteres" />
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary w-100 btn-cta" [disabled]="regLoading">
+            <span class="me-1" *ngIf="regLoading" role="status" aria-hidden="true">
+              <span class="spinner-border spinner-border-sm"></span>
+            </span>
+            {{ regLoading ? 'Creando...' : 'Crear cuenta' }}
+          </button>
+
+          <div class="small text-muted text-center">
+            Al continuar aceptas nuestros <a href="#" class="link-primary">Términos</a> y <a href="#" class="link-primary">Privacidad</a>.
+          </div>
+
+          <div class="mt-1 text-danger text-center" *ngIf="regError">{{ regError }}</div>
+          <div class="mt-1 text-success text-center" *ngIf="regSuccess">{{ regSuccess }}</div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>

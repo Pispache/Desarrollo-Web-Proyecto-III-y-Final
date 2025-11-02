@@ -20,28 +20,14 @@
   --shadow: 0 10px 30px rgba(0,0,0,.45), 0 2px 8px rgba(0,0,0,.35);
   --radius: 16px;
 
-  /* Fondo degradado oscuro como Home */
+  /* Fondo heredado del layout global */
   min-height: 100vh;
   color: var(--fg-0);
-  background:
-    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
-    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  background: transparent !important;
   position: relative;
   isolation: isolate;
 
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 24px 24px, 36px 36px;
-    background-position: 0 0, 12px 18px;
-    pointer-events: none;
-    z-index: -1;
-  }
+  &::after { display: none; }
 
   /* Cards con glassmorphism */
   .card {
@@ -133,7 +119,7 @@
 [data-theme="light"] .team-register-page {
   /* Fondo claro degradado como en scoreboards (coherencia visual) */
   min-height: 100vh;
-  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%) !important;
+  background: transparent !important;
   color: #111827 !important;
 
   /* Card estilo blanco con sombra y borde sutil (supera reglas globales oscuras) */

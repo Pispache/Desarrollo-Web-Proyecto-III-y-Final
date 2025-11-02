@@ -116,6 +116,8 @@ export class ControlPanelComponent implements OnChanges, OnDestroy {
     }).subscribe(({ home, away }) => {
       this.homePlayers = home;
       this.awayPlayers = away;
+      // Señal: datos base del panel listos -> apagar overlay global si estaba activo
+      try { window.dispatchEvent(new Event('uiBootOff')); } catch {}
     });
 
     this.refreshAll();

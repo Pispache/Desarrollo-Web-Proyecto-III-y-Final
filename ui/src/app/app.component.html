@@ -1,4 +1,13 @@
+<div class="boot-overlay" *ngIf="booting">
+  <div class="boot-box">
+    <div class="boot-spinner"></div>
+    <div class="boot-text">Cargando...</div>
+  </div>
+  <div class="boot-backdrop"></div>
+  </div>
+
 <app-navbar *ngIf="showNavbar"></app-navbar>
+<div *ngIf="showNavbar" class="navbar-spacer"></div>
 <app-notification-display></app-notification-display>
 <main class="main-content">
   <router-outlet></router-outlet>

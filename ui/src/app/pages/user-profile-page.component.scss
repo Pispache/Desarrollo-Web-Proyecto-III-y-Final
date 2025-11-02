@@ -1,11 +1,8 @@
 /* Mi Perfil: consistencia con tema global */
 .user-profile-page {
   min-height: calc(100vh - var(--navbar-height, 70px));
-  /* Fondo oscuro por defecto */
-  background:
-    radial-gradient(1100px 650px at 20% -180px, rgba(155,92,255,.28), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.20), transparent 60%),
-    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  /* Hereda el fondo del layout */
+  background: transparent !important;
   color: #e7e9ff;
 
   h2 { color: #ffffff; }
@@ -60,9 +57,9 @@
   }
 }
 
-/* Tema claro */
-[data-theme="light"] .user-profile-page {
-  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
+/* Tema claro (Angular encapsulación) */
+:host-context(html[data-theme="light"]) .user-profile-page {
+  background: transparent !important;
   color: #111827;
   h2 { color: #111827; }
   .profile-card { background: #fff; border-color: rgba(0,0,0,0.08); }

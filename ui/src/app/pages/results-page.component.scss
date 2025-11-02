@@ -182,25 +182,13 @@ ul.divide-y li {
 
 /* ====== NUEVO: Estilos con scope por página (coherentes con Home) ====== */
 .results-page {
-  /* Fondo degradado oscuro y textura sutil */
+  /* Fondo heredado del layout global */
   min-height: 100vh;
-  background:
-    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
-    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  background: transparent !important;
   position: relative;
   isolation: isolate;
 
-  &::after {
-    content: '';
-    position: absolute; inset: 0;
-    background-image:
-      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 24px 24px, 36px 36px;
-    background-position: 0 0, 12px 18px;
-    pointer-events: none; z-index: -1;
-  }
+  &::after { display: none; }
 
   /* Tipografía y encabezados */
   h1, h3, h4, .font-semibold, .font-medium { color: var(--color-text, #e7e9ff) !important; }
@@ -230,34 +218,47 @@ ul.divide-y li {
   tbody td { border-bottom: 1px solid rgba(255,255,255,0.08) !important; }
 }
 
-/* ====== Tema claro para Results ====== */
-[data-theme="light"] .results-page {
-  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%) !important;
+/* ====== Tema claro para Results (Angular encapsulación) ====== */
+:host-context(html[data-theme="light"]) .results-page {
+  background: transparent !important;
+  color: #111827 !important;
 
-  /* El contenido se centra y no ocupa toda la pantalla; de fondo se ve oscuro.
-     Por eso los títulos y textos enfatizados deben ser BLANCOS en modo claro. */
-  color: var(--color-text, #e7e9ff) !important;
-  h1, h3, h4, .font-semibold, .font-medium { color: #ffffff !important; }
+  h1, h3, h4, .font-semibold, .font-medium { color: #111827 !important; }
   .results-page .page-title,
-  .results-page .page-title.font-semibold { color: #ffffff !important; }
-  .text-gray-500 { color: rgba(231,233,255,0.65) !important; }
+  .results-page .page-title.font-semibold { color: #111827 !important; }
+  .text-gray-500 { color: #6b7280 !important; }
+  label { color: #111827 !important; }
+  .text-xs, .text-sm { color: #374151 !important; }
 
   select, input {
-    background: #fff !important;
+    background: #ffffff !important;
     color: #111827 !important;
-    border: 1px solid rgba(0,0,0,0.2) !important;
+    border: 1px solid rgba(0,0,0,0.12) !important;
     border-radius: 12px !important;
   }
   select:focus, input:focus {
-    background: #fff !important;
-    border-color: transparent !important;
+    background: #ffffff !important;
+    border-color: rgba(37,99,235,.35) !important;
     box-shadow: 0 0 0 3px rgba(37,99,235,.15) !important;
+    outline: none !important;
   }
 
+  table { color: #111827 !important; }
   thead th {
     background: #f3f4f6 !important;
     color: #6b7280 !important;
     border-bottom-color: rgba(0,0,0,0.08) !important;
   }
   tbody td { border-bottom-color: rgba(0,0,0,0.08) !important; color:#111827 !important; }
+
+  /* Contenedores con borde en claro */
+  .border {
+    background: #ffffff !important;
+    border: 1px solid rgba(0,0,0,0.08) !important;
+  }
+
+  /* Homologación de utilidades: texto blanco forzado pasa a oscuro en claro */
+  .text-white { color: #111827 !important; }
+  /* ...pero si es un badge con fondo (bg-*), mantener blanco */
+  .text-white[class*="bg-"] { color: #ffffff !important; }
 }

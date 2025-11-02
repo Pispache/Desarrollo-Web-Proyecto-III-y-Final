@@ -24,7 +24,8 @@
 
 
 :host {
-  display: block;
+  display: grid;
+  place-items: center;
   position: fixed;    
   inset: 0;
   overflow: auto;       /* permitir scroll si es necesario */
@@ -70,9 +71,10 @@
 .login-wrapper {
   position: relative;
   z-index: 2; /* encima de la capa ::after */
-  max-width: 360px;
-  margin: 10vh auto;
-  padding: 24px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 28px 24px;
   border-radius: 12px;
   background: #111825;
   color: #e5e7eb;
@@ -103,7 +105,7 @@
     margin-top: 6px;
     border: none;
     border-radius: 8px;
-    background: #10b981;
+    background: linear-gradient(135deg, #10b981, #22d3ee);
     color: #0b1220;
     font-weight: 600;
     cursor: pointer;

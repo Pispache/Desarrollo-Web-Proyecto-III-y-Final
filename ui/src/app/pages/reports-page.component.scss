@@ -1,6 +1,7 @@
 .reports-page {
   min-height: 100vh;
-  background: var(--bs-body-bg);
+  /* Heredar fondo del contenedor global (.main-content) */
+  background: transparent !important;
   
   .page-title {
     font-size: 2rem;
@@ -8,6 +9,17 @@
     color: var(--bs-body-color);
     margin-bottom: 0.5rem;
   }
+
+/* Tema claro: seguir heredando el fondo */
+:host-context(html[data-theme="light"]) .reports-page { background: transparent !important; }
+
+/* Modo claro: título e ícono en color oscuro */
+:host-context(html[data-theme="light"]) .reports-page .page-title {
+  color: #111827 !important;
+}
+:host-context(html[data-theme="light"]) .reports-page .page-title i {
+  color: #111827 !important;
+}
 
   .report-card {
     border: 1px solid var(--bs-border-color);

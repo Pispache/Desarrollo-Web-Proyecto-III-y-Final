@@ -19,12 +19,40 @@
   display: block;
 }
 
-/* LIGHT THEME: mantener contraste sobre fondos oscuros (glass) */
+/* ================= Tema claro (fondos y componentes) ================= */
+:host-context(html[data-theme="light"]) .container-fluid {
+  min-height: 100vh;
+  color: var(--fg-0);
+  background: transparent !important;
+}
+
+:host-context(html[data-theme="light"]) .card {
+  background: #ffffff;
+  border-color: var(--stroke);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+}
+
+:host-context(html[data-theme="light"]) .card > .card-header {
+  border-bottom: 1px solid var(--stroke);
+  background: #f3f4f6 !important;
+  color: var(--fg-0) !important;
+}
+
+:host-context(html[data-theme="light"]) .icon-btn:hover { background: rgba(0,0,0,0.06); }
+:host-context(html[data-theme="light"]) .card-title h3 { color: var(--fg-0); }
+
+/* Título principal en modo claro (texto e ícono) */
+:host-context(html[data-theme="light"]) .header h1,
+:host-context(html[data-theme="light"]) .page-title {
+  color: var(--fg-0) !important;
+}
+:host-context(html[data-theme="light"]) .header h1 i { color: var(--fg-0) !important; }
+
+/* LIGHT THEME: tokens claros reales */
 :host-context(html[data-theme="light"]) :host {
-  /* Forzar tokens locales claros en esta página */
-  --fg-0: #e7e9f0;
-  --muted: rgba(231,233,255,.7);
-  --stroke: rgba(255,255,255,0.12);
+  --fg-0: #111827;
+  --muted: #6b7280;
+  --stroke: rgba(0,0,0,0.08);
 }
 
 :host-context(html[data-theme="light"]) .container-fluid,
@@ -38,34 +66,20 @@
 
 :host-context(html[data-theme="light"]) .form-control,
 :host-context(html[data-theme="light"]) .form-select {
-  background: rgba(255,255,255,0.06) !important;
+  background: #ffffff !important;
   color: var(--fg-0) !important;
-  border-color: var(--stroke) !important;
+  border: 1px solid var(--stroke) !important;
 }
 
 /* Fondo degradado y grano como Home */
 .container-fluid {
   min-height: 100vh;
   color: var(--fg-0);
-  background:
-    radial-gradient(1200px 700px at 20% -200px, rgba(155,92,255,.35), transparent 60%),
-    radial-gradient(800px 500px at 90% 0%, rgba(0,224,255,.25), transparent 60%),
-    linear-gradient(180deg, #0c0a1d 0%, #0a0918 100%);
+  background: transparent !important;
   position: relative;
   isolation: isolate;
 
-  &::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image:
-      radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-      radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-    background-size: 24px 24px, 36px 36px;
-    background-position: 0 0, 12px 18px;
-    pointer-events: none;
-    z-index: -1;
-  }
+  &::after { display: none; }
 }
 
 /* Cards estilo glass como en Home */

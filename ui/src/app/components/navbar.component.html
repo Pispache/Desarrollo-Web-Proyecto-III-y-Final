@@ -119,41 +119,46 @@
       <div class="theme-pill">
         <app-theme-toggle size="sm"></app-theme-toggle>
       </div>
-      <button *ngIf="isAuthenticated" class="btn btn-sm btn-logout" (click)="logout()" title="Cerrar sesión">
-        <i class="bi bi-box-arrow-right me-1"></i>
-        <span>Cerrar sesión</span>
-      </button>
-      <!-- Indicador de usuario al extremo derecho (icono + nombre + rol) -->
-      <!-- Perfil (chip de usuario)
-           - Muestra avatar del proveedor OAuth (si existe) o ícono genérico.
-           - Incluye insignia del proveedor: GitHub/Google/Facebook. -->
-      <a *ngIf="isAuthenticated" routerLink="/perfil" class="d-flex align-items-center ms-auto px-2 py-1 text-light user-chip text-decoration-none">
-        <span class="avatar-wrap me-2 position-relative d-inline-flex align-items-center justify-content-center">
-          <ng-container *ngIf="avatarUrl; else iconFallback">
-            <img
-              [src]="avatarUrl"
-              alt="Avatar de usuario"
-              class="avatar-img"
-              referrerpolicy="no-referrer"
-              loading="lazy" />
-          </ng-container>
-          <ng-template #iconFallback>
-            <i class="bi bi-person-circle"></i>
-          </ng-template>
-          <!-- Insignia del proveedor OAuth -->
-          <span *ngIf="oauthProvider" class="provider-badge" [attr.data-provider]="oauthProvider" aria-hidden="true">
-            <i class="bi" [ngClass]="{
-              'bi-github': oauthProvider==='github',
-              'bi-google': oauthProvider==='google',
-              'bi-facebook': oauthProvider==='facebook'
-            }"></i>
+      <!-- Menú de usuario: chip con 2 líneas y dropdown -->
+      <div *ngIf="isAuthenticated" class="user-chip-wrap ms-auto position-relative">
+        <button type="button"
+                class="user-chip text-light"
+                [class.open]="userMenuOpen"
+                [attr.title]="username || 'Usuario'"
+                (click)="toggleUserMenu($event)"
+                (keydown)="onUserChipKey($event)"
+                aria-haspopup="menu"
+                [attr.aria-expanded]="userMenuOpen">
+          <span class="avatar-wrap me-1 position-relative d-inline-flex align-items-center justify-content-center">
+            <ng-container *ngIf="avatarUrl; else iconFallback">
+              <img [src]="avatarUrl" alt="Avatar de usuario" class="avatar-img" referrerpolicy="no-referrer" loading="lazy" />
+            </ng-container>
+            <ng-template #iconFallback>
+              <i class="bi bi-person-circle"></i>
+            </ng-template>
+            <span *ngIf="oauthProvider" class="provider-badge" [attr.data-provider]="oauthProvider" aria-hidden="true">
+              <i class="bi" [ngClass]="{
+                'bi-github': oauthProvider==='github',
+                'bi-google': oauthProvider==='google',
+                'bi-facebook': oauthProvider==='facebook'
+              }"></i>
+            </span>
           </span>
-        </span>
-        <span class="fw-semibold">
-          {{ username || 'Usuario' }}
-          <small class="ms-2 text-muted" *ngIf="role">({{ role | uppercase }})</small>
-        </span>
-      </a>
+          <span class="chip-text text-start">
+            <span class="name line-1">{{ username || 'Usuario' }}</span>
+            <small class="role line-2 text-muted" *ngIf="role">{{ role | uppercase }}</small>
+          </span>
+        </button>
+
+        <div class="user-menu dropdown-menu" [class.show]="userMenuOpen" role="menu">
+          <a routerLink="/perfil" class="dropdown-item" (click)="closeMenu()">
+            <i class="bi bi-person me-2"></i> Perfil
+          </a>
+          <button class="dropdown-item" (click)="logout()">
+            <i class="bi bi-box-arrow-right me-2"></i> Cerrar sesión
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- Mobile Menu Toggle (Bootstrap Icons for consistency) -->

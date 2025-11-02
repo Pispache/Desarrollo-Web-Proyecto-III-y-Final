@@ -26,6 +26,7 @@ import { UiEventsService } from '../services/ui-events.service';
 export class NavbarComponent implements OnInit, OnDestroy {
   isMenuOpen = false;
   adminOpen = false;
+  userMenuOpen = false;
   /** Preferencia: si el menú móvil tipo hamburguesa está habilitado */
   mobileMenuEnabled = true;
   isAuthenticated = false;
@@ -102,6 +103,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   closeMenu() {
     this.isMenuOpen = false;
     this.adminOpen = false;
+    this.userMenuOpen = false;
     this.toggleBodyScroll(false);
   }
 
@@ -141,11 +143,20 @@ export class NavbarComponent implements OnInit, OnDestroy {
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(ev: MouseEvent) {
-    if (!this.adminOpen) return;
     const host: HTMLElement = this.elRef.nativeElement;
-    const dropdown = host.querySelector('.admin-dropdown');
-    if (dropdown && !dropdown.contains(ev.target as Node)) {
-      this.adminOpen = false;
+    // Cerrar admin dropdown si el click es fuera
+    if (this.adminOpen) {
+      const dropdown = host.querySelector('.admin-dropdown');
+      if (dropdown && !dropdown.contains(ev.target as Node)) {
+        this.adminOpen = false;
+      }
+    }
+    // Cerrar menú de usuario si el click es fuera
+    if (this.userMenuOpen) {
+      const userWrap = host.querySelector('.user-chip-wrap');
+      if (userWrap && !userWrap.contains(ev.target as Node)) {
+        this.userMenuOpen = false;
+      }
     }
   }
 
@@ -171,5 +182,18 @@ export class NavbarComponent implements OnInit, OnDestroy {
       const root = document.documentElement;
       root.setAttribute('data-mobile-menu', this.mobileMenuEnabled ? 'on' : 'off');
     } catch {}
+  }
+
+  // ================= Menú de usuario =================
+  toggleUserMenu(event: MouseEvent) {
+    event.stopPropagation();
+    this.userMenuOpen = !this.userMenuOpen;
+  }
+
+  onUserChipKey(event: KeyboardEvent) {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      this.userMenuOpen = !this.userMenuOpen;
+    }
   }
 }

@@ -23,3 +23,56 @@ html {
 body {
   overflow-x: hidden;
 }
+
+/* Durante booting: ocultar solo el contenido detrás del overlay */
+body.booting .main-content { opacity: 0; pointer-events: none; }
+
+/* ===== Overlay de arranque / transición post-login ===== */
+.boot-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  display: grid; place-items: center;
+  pointer-events: none; /* solo backdrop capta eventos */
+}
+.boot-overlay .boot-backdrop {
+  position: absolute; inset: 0;
+  /* Igualar fondo al layout para que no se vea la pantalla previa */
+  background:
+    linear-gradient(180deg, #0f213c 0%, #0b1428 100%);
+  opacity: 0; animation: bootFade .6s ease forwards;
+  pointer-events: auto;
+}
+.boot-overlay .boot-box {
+  position: relative; z-index: 1;
+  padding: 18px 22px; border-radius: 14px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.18);
+  color: #fff; box-shadow: 0 12px 28px rgba(0,0,0,.35);
+  transform: translateY(8px); opacity: 0; animation: bootRise .45s ease forwards .1s;
+}
+.boot-overlay .boot-spinner {
+  width: 28px; height: 28px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,.25);
+  border-top-color: #60a5fa; margin: 0 auto 8px; animation: spin 1s linear infinite;
+}
+.boot-overlay .boot-text { text-align: center; font-weight: 600; letter-spacing: .2px; }
+
+@keyframes bootFade { to { opacity: 1; } }
+@keyframes bootRise { to { transform: translateY(0); opacity: 1; } }
+@keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+/* Tema claro: caja clara y texto oscuro, y backdrop con fondo light */
+:root[data-theme="light"] .boot-overlay .boot-box {
+  background: rgba(255,255,255,0.9);
+  border-color: rgba(0,0,0,0.08);
+  color: #111827;
+}
+:root[data-theme="light"] .boot-overlay .boot-backdrop {
+  background:
+    radial-gradient(1200px 700px at 18% -220px, rgba(37,99,235,.12), transparent 60%),
+    radial-gradient(950px 520px at 92% -40px, rgba(0,151,255,.08), transparent 60%),
+    linear-gradient(180deg, #eaf2ff 0%, #ffffff 100%);
+}
+:root[data-theme="dark"] .boot-overlay .boot-backdrop {
+  background:
+    linear-gradient(180deg, #0f213c 0%, #0b1428 100%);
+}

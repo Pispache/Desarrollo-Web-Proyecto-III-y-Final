@@ -57,26 +57,9 @@
     </div>
   </div>
 
-  <!-- Registro nativo sencillo -->
   <hr />
-  <div class="register-section">
-    <p class="oauth-divider">¿No tienes cuenta? Regístrate:</p>
-    <form (ngSubmit)="submitRegister()" #r="ngForm" autocomplete="on">
-      <div class="form-group">
-        <label>Nombre</label>
-        <input type="text" name="regName" [(ngModel)]="regName" required />
-      </div>
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" name="regEmail" [(ngModel)]="regEmail" required />
-      </div>
-      <div class="form-group">
-        <label>Contraseña</label>
-        <input type="password" name="regPassword" [(ngModel)]="regPassword" required />
-      </div>
-      <button type="submit" [disabled]="regLoading">{{ regLoading ? 'Creando...' : 'Crear cuenta' }}</button>
-      <div class="error" *ngIf="regError">{{ regError }}</div>
-      <div class="info" *ngIf="regSuccess">{{ regSuccess }}</div>
-    </form>
-  </div>
+  <p class="text-center">
+    ¿No tienes cuenta?
+    <a routerLink="/registro" class="link-primary">Regístrate aquí</a>
+  </p>
 </div>

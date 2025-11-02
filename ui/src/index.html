@@ -5,7 +5,35 @@
   <title>Marcador</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <!-- Favicon/Icons -->
+  <link rel="icon" type="image/png" href="assets/favicon.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="assets/favicon-64.png" sizes="64x64">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
+  <meta name="theme-color" content="#0b1428">
+  <script>
+    (function() {
+      try {
+        var KEY = 'ui.theme';
+        var docEl = document.documentElement;
+        var stored = (localStorage.getItem(KEY) || '').toLowerCase();
+        var theme = stored === 'light' || stored === 'dark' ? stored : null;
+        if (!theme) {
+          try {
+            if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+              theme = 'light';
+            }
+          } catch (e) {}
+        }
+        if (theme === 'light') {
+          docEl.setAttribute('data-theme', 'light');
+          docEl.setAttribute('data-bs-theme', 'light');
+        } else {
+          docEl.removeAttribute('data-theme');
+          docEl.setAttribute('data-bs-theme', 'dark');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>

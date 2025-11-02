@@ -84,9 +84,11 @@ exports.register = async (req, res) => {
       [email, username || email.split('@')[0], hashedPassword, name]
     );
     
-    // Marcar como verificado (mantener flujo actual) y emitir token
+    // Marcar como verificado emitir token
     // Nota: si quieres exigir verificación, cambia a FALSE y no emitas token hasta verificar.
     await db.query('UPDATE users SET email_verified = TRUE WHERE id = ?', [result.insertId]);
+    // Registrar último acceso en el registro inicial (auto-login tras registro)
+    await db.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [result.insertId]);
     const users = await db.query('SELECT id, email, username, name, role, avatar FROM users WHERE id = ?', [result.insertId]);
     const user = users[0];
     const token = generateToken(user);
@@ -346,6 +348,8 @@ exports.oauthCallback = (req, res) => {
       return res.redirect(`${frontendUrl}/login?error=no_user`);
     }
     
+    // Marcar último acceso para usuarios OAuth
+    try { if (req.user?.id) { db.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [req.user.id]); } } catch {}
     // Generate token for OAuth user
     const token = generateToken(req.user);
     console.log('OAuth callback - Token generated:', token.substring(0, 20) + '...');
