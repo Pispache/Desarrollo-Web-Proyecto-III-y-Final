@@ -90,6 +90,57 @@ def ping_db(_=Depends(require_admin)):
         raise HTTPException(status_code=500, detail=str(e))
 
 # /// <summary>
+# /// Actualiza el estado de un partido (demo). Permite marcarlo como FINISHED para que RF-REP-03 lo muestre finalizado.
+# /// </summary>
+# /// <remarks>
+# /// - POST /v1/reports/games/{gameId}/status
+# /// - Body: { status: SCHEDULED|IN_PROGRESS|FINISHED, quarter?: int, home_score?: int, away_score?: int }
+# /// - Seguridad: requiere ADMIN.
+# /// </remarks>
+@router.post("/games/{gameId}/status")
+def update_game_status(
+    gameId: int,
+    body: dict = Body(...),
+    _=Depends(require_admin)
+):
+    try:
+        status_val = str(body.get("status") or "").upper().strip()
+        allowed = {"SCHEDULED", "IN_PROGRESS", "FINISHED"}
+        if status_val not in allowed:
+            raise HTTPException(status_code=400, detail=f"status must be one of {sorted(allowed)}")
+        quarter = body.get("quarter")
+        home_score = body.get("home_score")
+        away_score = body.get("away_score")
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT game_id FROM games WHERE game_id = %s", (gameId,))
+                if not cur.fetchone():
+                    raise HTTPException(status_code=404, detail="Game not found")
+
+                sets = ["status = %s"]
+                params = [status_val]
+                if isinstance(quarter, int):
+                    sets.append("quarter = %s")
+                    params.append(quarter)
+                if isinstance(home_score, int):
+                    sets.append("home_score = %s")
+                    params.append(home_score)
+                if isinstance(away_score, int):
+                    sets.append("away_score = %s")
+                    params.append(away_score)
+                params.append(gameId)
+
+                cur.execute(f"UPDATE games SET {', '.join(sets)} WHERE game_id = %s", params)
+                conn.commit()
+
+        return {"game_id": gameId, "status": status_val, "updated": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# /// <summary>
 # /// Captura de eventos/puntos en un partido (demo en Report-Service).
 # /// </summary>
 # /// <remarks>
