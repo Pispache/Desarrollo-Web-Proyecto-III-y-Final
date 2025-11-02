@@ -10,6 +10,7 @@ import httpx
 from typing import List, Dict, Optional
 
 PDF_RENDERER_URL = os.getenv("PDF_RENDERER_URL", "http://pdf-renderer:3000")
+PDF_RENDERER_TIMEOUT = float(os.getenv("PDF_RENDERER_TIMEOUT", "30"))
 
 async def render_html_to_pdf(html: str, options: Optional[Dict] = None) -> bytes:
     """
@@ -33,7 +34,7 @@ async def render_html_to_pdf(html: str, options: Optional[Dict] = None) -> bytes
         "options": options
     }
     
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=PDF_RENDERER_TIMEOUT) as client:
         response = await client.post(
             f"{PDF_RENDERER_URL}/render",
             json=payload

@@ -10,7 +10,7 @@ import base64
 import mimetypes
 from typing import Optional
 from datetime import datetime
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request
+from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request, Body, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from .auth import require_admin
@@ -86,6 +86,84 @@ def ping_db(_=Depends(require_admin)):
                 cur.execute("SELECT 1")
                 cur.fetchone()
         return {"db": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# /// <summary>
+# /// Captura de eventos/puntos en un partido (demo en Report-Service).
+# /// </summary>
+# /// <remarks>
+# /// - POST /v1/reports/games/{gameId}/events
+# /// - Body: { event_type: POINT_1|POINT_2|POINT_3|FOUL|FOUL_*, team: HOME|AWAY, quarter: int, player_id?: int, player_number?: int }
+# /// - Efecto colateral: si event_type es POINT_1/2/3, actualiza marcador en games.
+# /// - Seguridad: requiere ADMIN.
+# /// </remarks>
+@router.post("/games/{gameId}/events", status_code=status.HTTP_201_CREATED)
+def create_game_event(
+    gameId: int,
+    body: dict = Body(...),
+    _=Depends(require_admin)
+):
+    try:
+        event_type = str(body.get("event_type") or body.get("type") or "").upper().strip()
+        team = str(body.get("team") or "").upper().strip()
+        quarter = int(body.get("quarter") or 1)
+        player_id = body.get("player_id") or body.get("playerId")
+        player_number = body.get("player_number") or body.get("playerNumber")
+
+        if team not in ("HOME", "AWAY"):
+            raise HTTPException(status_code=400, detail="team must be HOME or AWAY")
+        if quarter < 1:
+            raise HTTPException(status_code=400, detail="quarter must be >= 1")
+        if not event_type:
+            raise HTTPException(status_code=400, detail="event_type is required")
+        if player_id is None and player_number is None:
+            raise HTTPException(status_code=400, detail="Provide player_id or player_number")
+
+        # Puntos por tipo
+        pts_map = {"POINT_1": 1, "POINT_2": 2, "POINT_3": 3}
+        add_points = pts_map.get(event_type, 0)
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Validar que el juego exista
+                cur.execute("SELECT game_id FROM games WHERE game_id = %s", (gameId,))
+                if not cur.fetchone():
+                    raise HTTPException(status_code=404, detail="Game not found")
+
+                # Generar event_id simple (max+1)
+                cur.execute("SELECT COALESCE(MAX(event_id),0)+1 FROM game_events")
+                next_id = int(cur.fetchone()[0])
+
+                cur.execute(
+                    """
+                    INSERT INTO game_events (event_id, game_id, quarter, team, event_type, player_number, player_id, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, NOW())
+                    """,
+                    (next_id, gameId, quarter, team, event_type, player_number, player_id)
+                )
+
+                # Si es puntos, actualizar marcador
+                if add_points:
+                    if team == "HOME":
+                        cur.execute("UPDATE games SET home_score = home_score + %s WHERE game_id = %s", (add_points, gameId))
+                    else:
+                        cur.execute("UPDATE games SET away_score = away_score + %s WHERE game_id = %s", (add_points, gameId))
+
+                conn.commit()
+
+        return {
+            "event_id": next_id,
+            "game_id": gameId,
+            "event_type": event_type,
+            "team": team,
+            "quarter": quarter,
+            "player_id": player_id,
+            "player_number": player_number,
+            "points_added": add_points,
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

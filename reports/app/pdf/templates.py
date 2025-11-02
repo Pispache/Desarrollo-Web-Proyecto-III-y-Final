@@ -5,6 +5,10 @@ Utiliza estilos inline para compatibilidad con Puppeteer.
 
 from datetime import datetime
 from typing import List, Dict, Optional
+import html as _html
+
+def esc(v: Optional[str]) -> str:
+    return _html.escape(str(v)) if v is not None else ""
 
 def get_base_styles() -> str:
     """Estilos CSS base para todos los reportes."""
@@ -181,8 +185,8 @@ def render_teams_html(teams: List[Dict], filters: Dict, logo_url: Optional[str] 
             <tr>
                 <td class="text-center">{idx}</td>
                 <td class="text-center">{logo_cell}</td>
-                <td>{team.get("name", "N/A")}</td>
-                <td>{team.get("city", "N/A")}</td>
+                <td>{esc(team.get("name", "N/A"))}</td>
+                <td>{esc(team.get("city", "N/A"))}</td>
                 <td class="text-center">{team.get("created_at", "N/A")[:10] if team.get("created_at") else "N/A"}</td>
             </tr>
             """
@@ -382,12 +386,12 @@ def render_roster_html(game: Dict, home_players: List[Dict], away_players: List[
             if not p:
                 return ""
             number = p.get("number") if p.get("number") is not None else "S/N"
-            name = p.get("name", "N/A")
-            pos = p.get("position") or "-"
+            name = esc(p.get("name", "N/A"))
+            pos = esc(p.get("position") or "-")
             fouls = p.get("fouls", 0)
             age = p.get("age")
             height = p.get("height_cm") or p.get("heightCm")
-            nat = p.get("nationality") or p.get("Nationality")
+            nat = esc(p.get("nationality") or p.get("Nationality"))
             extra = []
             if height is not None:
                 extra.append(f"Est: {height} cm")
@@ -574,8 +578,8 @@ def render_games_html(games: List[Dict], filters: Dict, logo_url: Optional[str] 
             rows_html += f"""
             <tr>
                 <td class="text-center">{idx}</td>
-                <td>{home_logo_img}{game.get("home_team", "N/A")}</td>
-                <td>{away_logo_img}{game.get("away_team", "N/A")}</td>
+                <td>{home_logo_img}{esc(game.get("home_team", "N/A"))}</td>
+                <td>{away_logo_img}{esc(game.get("away_team", "N/A"))}</td>
                 <td class="text-center">{score_html}</td>
                 <td class="text-center">{quarter}</td>
                 <td class="text-center">{status_badge}</td>
