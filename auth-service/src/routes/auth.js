@@ -47,7 +47,11 @@ router.get('/google/callback', (req, res, next) => {
     if (err || !user) {
       console.error('Google OAuth failure:', err || info);
       try { console.log('[Google] callback failure:', { sid: req.sessionID, cookie: req.headers.cookie, info }); } catch {}
-      const msg = encodeURIComponent(err?.message || info?.message || 'oauth_failed');
+      const rawMsg = err?.message || info?.message || 'oauth_failed';
+      if (String(rawMsg).toLowerCase().includes('inactive')) {
+        return res.redirect(`${FRONTEND_URL}/cuenta-inactiva`);
+      }
+      const msg = encodeURIComponent(rawMsg);
       return res.redirect(`${FRONTEND_URL}/login?error=${msg}`);
     }
     req.logIn(user, (loginErr) => {
@@ -68,10 +72,29 @@ router.get('/facebook', passport.authenticate('facebook', {
   scope: ['email'] 
 }));
 
-router.get('/facebook/callback',
-  passport.authenticate('facebook', { failureRedirect: '/login' }),
-  authController.oauthCallback
-);
+router.get('/facebook/callback', (req, res, next) => {
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+  passport.authenticate('facebook', (err, user, info) => {
+    if (err || !user) {
+      console.error('Facebook OAuth failure:', err || info);
+      try { console.log('[Facebook] callback failure:', { sid: req.sessionID, cookie: req.headers.cookie, info }); } catch {}
+      const rawMsg = err?.message || info?.message || 'oauth_failed';
+      if (String(rawMsg).toLowerCase().includes('inactive')) {
+        return res.redirect(`${FRONTEND_URL}/cuenta-inactiva`);
+      }
+      const msg = encodeURIComponent(rawMsg);
+      return res.redirect(`${FRONTEND_URL}/login?error=${msg}`);
+    }
+    req.logIn(user, (loginErr) => {
+      if (loginErr) {
+        console.error('Facebook OAuth login error:', loginErr);
+        const msg = encodeURIComponent(loginErr?.message || 'oauth_login_failed');
+        return res.redirect(`${FRONTEND_URL}/login?error=${msg}`);
+      }
+      return authController.oauthCallback(req, res);
+    });
+  })(req, res, next);
+});
 
 /**
  * @summary Inicio de OAuth con GitHub (redirige a GitHub con scope `user:email`).
@@ -83,10 +106,28 @@ router.get('/github', passport.authenticate('github', {
 /**
  * @summary Callback de OAuth GitHub. Procesa `code`, autentica al usuario y redirige con JWT.
  */
-router.get('/github/callback',
-  passport.authenticate('github', { failureRedirect: '/login' }),
-  authController.oauthCallback
-);
+router.get('/github/callback', (req, res, next) => {
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
+  passport.authenticate('github', (err, user, info) => {
+    if (err || !user) {
+      console.error('GitHub OAuth failure:', err || info);
+      const rawMsg = err?.message || info?.message || 'oauth_failed';
+      if (String(rawMsg).toLowerCase().includes('inactive')) {
+        return res.redirect(`${FRONTEND_URL}/cuenta-inactiva`);
+      }
+      const msg = encodeURIComponent(rawMsg);
+      return res.redirect(`${FRONTEND_URL}/login?error=${msg}`);
+    }
+    req.logIn(user, (loginErr) => {
+      if (loginErr) {
+        console.error('GitHub OAuth login error:', loginErr);
+        const msg = encodeURIComponent(loginErr?.message || 'oauth_login_failed');
+        return res.redirect(`${FRONTEND_URL}/login?error=${msg}`);
+      }
+      return authController.oauthCallback(req, res);
+    });
+  })(req, res, next);
+});
 
 /**
  * @summary Lista de usuarios (solo ADMIN).

@@ -398,7 +398,7 @@ exports.validateToken = async (req, res) => {
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */
-exports.oauthCallback = (req, res) => {
+exports.oauthCallback = async (req, res) => {
   try {
     console.log('OAuth callback - User:', req.user);
     
@@ -408,8 +408,21 @@ exports.oauthCallback = (req, res) => {
       return res.redirect(`${frontendUrl}/login?error=no_user`);
     }
     
-    // Marcar último acceso para usuarios OAuth
-    try { if (req.user?.id) { db.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [req.user.id]); } } catch {}
+    // Comprobar estado activo antes de emitir token
+    try {
+      if (req.user?.id) {
+        const rows = await db.query('SELECT active FROM users WHERE id = ?', [req.user.id]);
+        const isActive = rows && rows[0] && !!rows[0].active;
+        if (!isActive) {
+          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
+          return res.redirect(`${frontendUrl}/login?error=account_inactive`);
+        }
+        // Marcar último acceso para usuarios OAuth
+        await db.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [req.user.id]);
+      }
+    } catch (e) {
+      console.warn('OAuth callback - active check failed:', e?.message);
+    }
     // Generate token for OAuth user
     const token = generateToken(req.user);
     console.log('OAuth callback - Token generated:', token.substring(0, 20) + '...');

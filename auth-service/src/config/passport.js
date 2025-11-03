@@ -38,12 +38,16 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       let users = await db.query('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?', ['google', oauthId]);
       if (users.length > 0) {
         await db.query('UPDATE users SET name = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', [name || users[0].name, avatar || users[0].avatar, users[0].id]);
-        return done(null, users[0]);
+        const found = users[0];
+        if (!found.active) return done(new Error('Account inactive'), null);
+        return done(null, found);
       }
       users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
       if (users.length > 0) {
         await db.query('UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', ['google', oauthId, avatar || users[0].avatar, users[0].id]);
-        return done(null, users[0]);
+        const found2 = users[0];
+        if (!found2.active) return done(new Error('Account inactive'), null);
+        return done(null, found2);
       }
       const result = await db.query(
         `INSERT INTO users (email, username, name, avatar, oauth_provider, oauth_id, email_verified, last_login_at)
@@ -56,7 +60,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
          VALUES (?, ?, ?, ?, NULL)`,
         [result.insertId, 'google', accessToken || null, refreshToken || null]
       );
-      done(null, newUser[0]);
+      const created = newUser[0];
+      if (!created.active) return done(new Error('Account inactive'), null);
+      done(null, created);
     } catch (error) {
       done(error, null);
     }
@@ -83,12 +89,16 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
       let users = await db.query('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?', ['facebook', oauthId]);
       if (users.length > 0) {
         await db.query('UPDATE users SET name = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', [name || users[0].name, avatar || users[0].avatar, users[0].id]);
-        return done(null, users[0]);
+        const found = users[0];
+        if (!found.active) return done(new Error('Account inactive'), null);
+        return done(null, found);
       }
       users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
       if (users.length > 0) {
         await db.query('UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', ['facebook', oauthId, avatar || users[0].avatar, users[0].id]);
-        return done(null, users[0]);
+        const found2 = users[0];
+        if (!found2.active) return done(new Error('Account inactive'), null);
+        return done(null, found2);
       }
       const result = await db.query(
         `INSERT INTO users (email, username, name, avatar, oauth_provider, oauth_id, email_verified, last_login_at)
@@ -101,7 +111,9 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
          VALUES (?, ?, ?, ?, NULL)`,
         [result.insertId, 'facebook', accessToken || null, refreshToken || null]
       );
-      done(null, newUser[0]);
+      const created = newUser[0];
+      if (!created.active) return done(new Error('Account inactive'), null);
+      done(null, created);
     } catch (error) {
       done(error, null);
     }
@@ -163,7 +175,9 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
           'UPDATE users SET name = ?, avatar = ?, last_login_at = NOW() WHERE id = ?',
           [name || users[0].name, avatar || users[0].avatar, users[0].id]
         );
-        return done(null, users[0]);
+        const found = users[0];
+        if (!found.active) return done(new Error('Account inactive'), null);
+        return done(null, found);
       }
       
       users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
@@ -173,7 +187,9 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
           'UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar = ?, last_login_at = NOW() WHERE id = ?',
           ['github', profile.id, avatar || users[0].avatar, users[0].id]
         );
-        return done(null, users[0]);
+        const found2 = users[0];
+        if (!found2.active) return done(new Error('Account inactive'), null);
+        return done(null, found2);
       }
       
       const result = await db.query(
@@ -190,7 +206,9 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         [result.insertId, 'github', accessToken || null, refreshToken || null]
       );
       
-      done(null, newUser[0]);
+      const created = newUser[0];
+      if (!created.active) return done(new Error('Account inactive'), null);
+      done(null, created);
     } catch (error) {
       done(error, null);
     }

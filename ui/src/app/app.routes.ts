@@ -15,10 +15,12 @@ import { ReportsPageComponent } from './pages/reports-page.component';
 import { ProfilePageComponent } from './pages/profile-page.component';
 import { UserProfilePageComponent } from './pages/user-profile-page.component';
 import { RegisterPageComponent } from './pages/register-page.component';
+import { AccountInactivePageComponent } from './pages/account-inactive-page.component';
 export const routes: Routes = [
   // Login
   { path: 'login', component: LoginPageComponent },
   { path: 'registro', component: RegisterPageComponent },
+  { path: 'cuenta-inactiva', component: AccountInactivePageComponent },
 
   // Nueva estructura en español
   { path: '', redirectTo: 'control', pathMatch: 'full' },
