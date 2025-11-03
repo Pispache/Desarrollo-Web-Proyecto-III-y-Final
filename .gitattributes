@@ -1,0 +1,14 @@
+# Normalize text files
+* text=auto
+
+# Enforce LF for Unix-y files
+*.sh text eol=lf
+*.bash text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Keep CRLF for native Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
