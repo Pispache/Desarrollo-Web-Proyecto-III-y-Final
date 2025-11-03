@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
@@ -11,7 +11,7 @@ import { AuthService } from '../services/auth.service';
   templateUrl: './register-page.component.html',
   styleUrls: ['./register-page.component.scss']
 })
-export class RegisterPageComponent {
+export class RegisterPageComponent implements OnInit, OnDestroy {
   regName = '';
   regEmail = '';
   regPassword = '';
@@ -19,7 +19,20 @@ export class RegisterPageComponent {
   regError = '';
   regSuccess = '';
 
-  constructor(private auth: AuthService, private router: Router) {}
+  constructor(private auth: AuthService, private router: Router) {
+    // Asegura que al abrir "/registro" no quede una sesión previa activa
+    try { this.auth.logout(false, 'manual'); } catch {}
+  }
+
+  ngOnInit(): void {
+    try { document.body.classList.add('auth-page'); } catch {}
+    // Reintento por si venimos desde bfcache
+    try { this.auth.logout(false, 'manual'); } catch {}
+  }
+
+  ngOnDestroy(): void {
+    try { document.body.classList.remove('auth-page'); } catch {}
+  }
 
   submitRegister() {
     this.regError = '';

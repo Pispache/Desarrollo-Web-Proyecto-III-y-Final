@@ -6,8 +6,8 @@
   <div class="boot-backdrop"></div>
   </div>
 
-<app-navbar *ngIf="showNavbar"></app-navbar>
-<div *ngIf="showNavbar" class="navbar-spacer"></div>
+<app-navbar *ngIf="showNavbar && authed"></app-navbar>
+<div *ngIf="showNavbar && authed" class="navbar-spacer"></div>
 <app-notification-display></app-notification-display>
 <main class="main-content">
   <router-outlet></router-outlet>

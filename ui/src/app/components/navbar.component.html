@@ -11,7 +11,7 @@
   /// - Adaptable a desktop y mobile (esta sección corresponde al menú de escritorio).
   -->
 
-<nav class="navbar">
+<nav class="navbar" *ngIf="isAuthenticated && !isOnAuthPage">
   <div class="navbar-container">
     <!-- Logo -->
     <div class="navbar-brand">

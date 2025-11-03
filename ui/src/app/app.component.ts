@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterOutlet, NavigationStart, NavigationEnd } from '@angular/router';
 import { NotificationDisplayComponent } from './components/notification-display.component';
@@ -27,6 +27,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private didInitialBoot = false;
   private bootTimeout?: any;
   private lastAuthed = false;
+  authed = false;
   private cameFromLogin = false;
   private bootStartedAt: number | null = null;
   private readonly MIN_BOOT_MS = 1500;
@@ -38,6 +39,7 @@ export class AppComponent implements OnInit, OnDestroy {
     private ui: UiEventsService,
     private router: Router,
     private themeSvc: ThemeService,
+    private zone: NgZone,
   ) {}
 
   ngOnInit(): void {
@@ -61,10 +63,11 @@ export class AppComponent implements OnInit, OnDestroy {
       // No mostrar navbar inmediatamente; esperar a terminar navegación a la primera ruta
       this.applyRoleClass();
       this.lastAuthed = !!isAuthed;
+      this.authed = !!isAuthed;
       if (isAuthed) {
         const url = this.router.url || '/';
-        const atLogin = url.includes('login');
-        if (atLogin) {
+        const atAuthPages = url.includes('login') || url.includes('registro');
+        if (atAuthPages) {
           // Caso OAuth /login?token ...: usar overlay y navegar
           this.cameFromLogin = true;
           this.showNavbar = false;
@@ -117,14 +120,19 @@ export class AppComponent implements OnInit, OnDestroy {
         // Si no hay marca pero la URL lleva token= (OAuth callback directo), tratar como login
         const urlStr = (ev.url || '');
         const hasToken = urlStr.includes('token=');
+        // Si navegamos a páginas de autenticación, ocultar la navbar de inmediato
+        const goingToAuthPages = urlStr.includes('login') || urlStr.includes('registro');
+        if (goingToAuthPages) {
+          this.zone.run(() => { this.showNavbar = false; });
+        }
         if (hasToken) { this.cameFromLogin = true; this.oauthFlow = true; }
         if (!this.didInitialBoot && (this.cameFromLogin)) {
           this.startBoot();
         }
       }
       if (ev instanceof NavigationEnd) {
-        const nowAtLogin = (this.router.url || '').includes('login');
-        if (!this.didInitialBoot && !nowAtLogin) {
+        const nowAtAuthPages = ((this.router.url || '').includes('login') || (this.router.url || '').includes('registro'));
+        if (!this.didInitialBoot && !nowAtAuthPages) {
           // Primera ruta autenticada lista
           this.showNavbar = this.lastAuthed;
           this.endBootWithMinimum();
@@ -134,7 +142,7 @@ export class AppComponent implements OnInit, OnDestroy {
           // En siguientes navegaciones nunca usamos overlay global
           this.booting = false; this.syncBootBodyClass();
           if (this.bootTimeout) { clearTimeout(this.bootTimeout); this.bootTimeout = undefined; }
-          this.showNavbar = !nowAtLogin && this.lastAuthed;
+          this.showNavbar = !nowAtAuthPages && this.lastAuthed;
         }
       }
     });
@@ -158,6 +166,28 @@ export class AppComponent implements OnInit, OnDestroy {
   }
   @HostListener('window:uiBootOff') onBootOff() {
     this.endBootWithMinimum();
+  }
+
+  // Maneja restauración desde el Back/Forward Cache del navegador
+  @HostListener('window:pageshow', ['$event'])
+  onPageShow(ev: PageTransitionEvent) {
+    try {
+      const url = this.router.url || '';
+      const atAuthPages = url.includes('login') || url.includes('registro');
+      this.zone.run(() => {
+        if (atAuthPages) {
+          // Asegura que no quede sesión ni navbar al volver con Atrás
+          this.auth.logout(false, 'manual', 'guard');
+          this.showNavbar = false;
+          this.booting = false; this.syncBootBodyClass();
+          try { document.body.classList.add('auth-page'); } catch {}
+        } else {
+          // Re-sincroniza visibilidad de navbar por si quedó DOM restaurado
+          this.showNavbar = this.lastAuthed && !atAuthPages;
+          try { document.body.classList.remove('auth-page'); } catch {}
+        }
+      });
+    } catch {}
   }
 
   private armAudio() {

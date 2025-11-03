@@ -20,7 +20,7 @@
  */
 
 
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -33,7 +33,7 @@ import { AuthService } from '../services/auth.service';
   styleUrls: ['./login-page.component.scss'],
   imports: [CommonModule, FormsModule, RouterModule]
 })
-export class LoginPageComponent {
+export class LoginPageComponent implements OnInit, OnDestroy {
   email = '';
   password = '';
   loading = false;
@@ -81,6 +81,16 @@ export class LoginPageComponent {
         this.error = 'El enlace de verificación no es válido.';
       }
     } catch {}
+  }
+
+  ngOnInit(): void {
+    // Marcar como página de autenticación y limpiar cualquier sesión previa
+    try { document.body.classList.add('auth-page'); } catch {}
+    try { this.auth.logout(false, 'manual'); } catch {}
+  }
+
+  ngOnDestroy(): void {
+    try { document.body.classList.remove('auth-page'); } catch {}
   }
 
   submitRegister() {

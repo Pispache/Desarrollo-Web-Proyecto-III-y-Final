@@ -36,6 +36,7 @@ export class NavbarComponent implements OnInit, OnDestroy {
   avatarUrl: string | null = null;
   oauthProvider: string | null = null; // 'github' | 'google' | 'facebook' | null
   currentRoute = '';
+  isOnAuthPage = false;
   private authSubscription?: Subscription;
   private routerSubscription?: Subscription;
 
@@ -76,9 +77,16 @@ export class NavbarComponent implements OnInit, OnDestroy {
     this.routerSubscription = this.router.events.subscribe(ev => {
       if (ev instanceof NavigationEnd) {
         this.currentRoute = ev.urlAfterRedirects;
+        this.isOnAuthPage = this.currentRoute.includes('/login') || this.currentRoute.includes('/registro');
         this.closeMenu();
       }
     });
+    // Estado inicial
+    try {
+      const url = this.router.url || '';
+      this.currentRoute = url;
+      this.isOnAuthPage = url.includes('/login') || url.includes('/registro');
+    } catch {}
   }
 
   ngOnDestroy() {

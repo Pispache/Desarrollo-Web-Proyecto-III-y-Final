@@ -43,12 +43,13 @@ $pagination-hover-border-color: $dark-border;
 /* Importar el resto de Bootstrap */
 @import 'bootstrap/scss/bootstrap';
 
+/* Hard-hide navbar on auth pages regardless of component state (covers bfcache in Brave) */
+body.auth-page app-navbar { display: none !important; }
+/* Also hide the spacer if any */
+body.auth-page .navbar-spacer { display: none !important; }
+
 /* Importar design tokens (variables CSS globales) */
 @import './styles/_theme';
-
-/* Nota: eliminamos importación de './styles/dark-theme' porque usábamos otro
-   mecanismo basado en data-theme="light" y variables CSS en _theme.scss.
-   Esto evita conflictos con data-bs-theme y reglas duplicadas. */
 
 /* Fuente LED Digital */
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');

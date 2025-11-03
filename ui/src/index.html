@@ -34,6 +34,31 @@
       } catch (e) {}
     })();
   </script>
+  <script>
+    (function() {
+      function onAuthPage() {
+        try {
+          var p = (location && location.pathname) || '';
+          return p.indexOf('/login') !== -1 || p.indexOf('/registro') !== -1;
+        } catch { return false; }
+      }
+      function enforceAuthPageState() {
+        if (onAuthPage()) {
+          try { document.body.classList.add('auth-page'); } catch {}
+          try {
+            // Limpia cualquier rastro de sesión por si el navegador restauró desde caché
+            localStorage.removeItem('auth.token');
+            localStorage.removeItem('auth.expiresAt');
+            localStorage.removeItem('auth.user');
+          } catch {}
+        } else {
+          try { document.body.classList.remove('auth-page'); } catch {}
+        }
+      }
+      window.addEventListener('DOMContentLoaded', enforceAuthPageState, { once: true });
+      window.addEventListener('pageshow', enforceAuthPageState);
+    })();
+  </script>
 </head>
 <body>
   <app-root></app-root>
