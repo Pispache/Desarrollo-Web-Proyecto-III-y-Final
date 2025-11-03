@@ -391,10 +391,12 @@ exports.validateToken = async (req, res) => {
 
 // OAuth callback
 /**
- * @summary Callback de OAuth (GitHub) tras el intercambio de código por token.
+ * @summary Callback de OAuth GitHub tras el intercambio de código por token.
  * @remarks
  * - Si hay usuario, genera un JWT y redirige a `BACKEND_AUTH_BASE/login?token=...`.
  * - Si falta usuario o hay error, redirige con mensaje de error.
+ * - Verifica en base de datos si el usuario está activo; si está inactivo,
+ *   NO emite token y redirige a `FRONTEND_URL/cuenta-inactiva`.
  * @param {import('express').Request} req
  * @param {import('express').Response} res
  */

@@ -21,6 +21,13 @@ const db = require('./database');
  */
 // Google OAuth 2.0 Strategy
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  /**
+   * @summary Estrategia OAuth Google con validación de cuenta activa.
+   * @remarks
+   * - Tras localizar/crear el usuario, se verifica `active` antes de `done(...)`.
+   * - Si el usuario está inactivo, se devuelve `done(new Error('Account inactive'), null)`
+   *   para impedir la autenticación y permitir a las rutas redirigir a la UI.
+   */
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -71,6 +78,12 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 
 // Facebook OAuth 2.0 Strategy
 if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
+  /**
+   * @summary Estrategia OAuth Facebook con validación de cuenta activa.
+   * @remarks
+   * - Bloquea el flujo con `Account inactive` si `users[0].active` es falso.
+   * - Evita emitir sesión/JWT para cuentas desactivadas.
+   */
   passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_APP_ID,
     clientSecret: process.env.FACEBOOK_APP_SECRET,
@@ -147,6 +160,12 @@ passport.deserializeUser(async (id, done) => {
  * - No expone el `client_secret` en el navegador; el intercambio de `code`→`access_token` se hace en backend.
  */
 if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+  /**
+   * @summary Estrategia OAuth GitHub con validación de cuenta activa.
+   * @remarks
+   * - Verifica `active` en coincidencias por `oauth_id` o por `email`.
+   * - Si está inactivo, aborta con error para que el caller redirija a la UI.
+   */
   passport.use(new GitHubStrategy({
     clientID: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,

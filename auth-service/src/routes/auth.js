@@ -67,11 +67,22 @@ router.get('/google/callback', (req, res, next) => {
   })(req, res, next);
 });
 
-// OAuth - Facebook (no utilizado en despliegue actual; rutas conservadas por compatibilidad)
+// OAuth - Facebook 
+/**
+ * @summary Inicio de OAuth con Facebook.
+ * @remarks
+ * - Redirige al proveedor solicitando alcance de correo electrónico.
+ */
 router.get('/facebook', passport.authenticate('facebook', { 
   scope: ['email'] 
 }));
 
+/**
+ * @summary Callback de OAuth Facebook.
+ * @remarks
+ * - Maneja errores del proveedor y usuarios inactivos (redirige a `/cuenta-inactiva`).
+ * - Si la autenticación fue exitosa, lo manda a `oauthCallback` para emitir JWT y redirigir a la UI.
+ */
 router.get('/facebook/callback', (req, res, next) => {
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:4200';
   passport.authenticate('facebook', (err, user, info) => {
