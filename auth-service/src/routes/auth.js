@@ -98,4 +98,14 @@ router.get('/users', verifyToken, requireAdmin, authController.listUsers);
  */
 router.patch('/users/:id/role', verifyToken, requireAdmin, authController.updateUserRole);
 
+/**
+ * @summary Actualiza el estado activo de un usuario (solo ADMIN).
+ */
+router.patch('/users/:id/active', verifyToken, requireAdmin, authController.updateUserActive);
+
+/**
+ * @summary Resetear contraseña de usuario local (solo ADMIN). Devuelve clave temporal.
+ */
+router.post('/users/:id/reset-password', verifyToken, requireAdmin, authController.resetUserPassword);
+
 module.exports = router;

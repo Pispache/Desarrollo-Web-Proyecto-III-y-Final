@@ -62,7 +62,6 @@ export class AuthService {
       this.scheduleAutoLogout();
       this._authed$.next(true);
     }
-
     // Sincronización entre pestañas: BroadcastChannel (principal)
     try {
       if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -142,10 +141,12 @@ export class AuthService {
 
   // OAuth login methods
   loginWithGoogle(): void {
+    try { sessionStorage.setItem('ui.boot', '1'); window.dispatchEvent(new Event('uiBootOn')); } catch {}
     window.location.href = `${this.base}/google`;
   }
 
   loginWithFacebook(): void {
+    try { sessionStorage.setItem('ui.boot', '1'); window.dispatchEvent(new Event('uiBootOn')); } catch {}
     window.location.href = `${this.base}/facebook`;
   }
 
@@ -157,6 +158,7 @@ export class AuthService {
    * redirige a https://tobarumg.lat/api/auth/github.
    */
   loginWithGitHub(): void {
+    try { sessionStorage.setItem('ui.boot', '1'); window.dispatchEvent(new Event('uiBootOn')); } catch {}
     window.location.href = `${this.base}/github`;
   }
 
@@ -191,6 +193,34 @@ export class AuthService {
         }
       })
     );
+  }
+
+  /**
+   * Activa/desactiva un usuario (solo admin). El backend impide cambiarse a sí mismo.
+   */
+  updateUserActive(userId: number, active: boolean): Observable<{ success: boolean; user: any }> {
+    const token = this.getToken();
+    return this.http.patch<{ success: boolean; user: any }>(`${this.base}/users/${userId}/active`, { active }, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    }).pipe(
+      tap(res => {
+        const me = this.getCurrentUser();
+        if (res.success && me && me.id === userId) {
+          const updated = { ...me, active: res.user?.active };
+          this.safeSetItem(USER_KEY, JSON.stringify(updated));
+        }
+      })
+    );
+  }
+
+  /**
+   * @summary Reinicia la contraseña de un usuario (solo administradores). Devuelve una clave temporal si procede.
+   */
+  resetUserPassword(userId: number): Observable<{ success: boolean; temporaryPassword?: string }> {
+    const token = this.getToken();
+    return this.http.post<{ success: boolean; temporaryPassword?: string }>(`${this.base}/users/${userId}/reset-password`, {}, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {}
+    });
   }
 
   // Obtener usuario actual

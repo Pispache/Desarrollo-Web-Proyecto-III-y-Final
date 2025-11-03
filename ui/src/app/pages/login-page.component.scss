@@ -97,6 +97,27 @@
       outline: none;
       &:focus { border-color: #10b981; }
     }
+
+    /* Input con ícono (como en /registro) */
+    .input-group.fancy {
+      .input-group-text {
+        background: #0b1220;
+        border: 1px solid #374151;
+        border-right: none;
+        color: #9ca3af;
+        border-top-left-radius: 8px;
+        border-bottom-left-radius: 8px;
+      }
+      .form-control {
+        background: #0b1220;
+        color: #e5e7eb;
+        border: 1px solid #374151;
+        border-left: none;
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+        &:focus { border-color: #10b981; box-shadow: none; }
+      }
+    }
   }
 
   button {
@@ -163,20 +184,18 @@
 }
 
 /* ===== Tema claro: coherente con el resto de la app ===== */
-[data-theme="light"] :host {
-  background:
-    linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
+/* ===== Refuerzo de modo claro con mayor especificidad ===== */
+:host-context(html[data-theme="light"]) {
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
 }
 
-[data-theme="light"] :host::before,
-[data-theme="light"] :host::after {
-  /* Suavizar los overlays en claro */
-  opacity: 0.06;
-  background:
-    linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
+:host-context(html[data-theme="light"])::before,
+:host-context(html[data-theme="light"])::after {
+  opacity: 0.04;
+  background: linear-gradient(180deg, #f3f6fb 0%, #eef2f7 60%, #f3f6fb 100%);
 }
 
-[data-theme="light"] .login-wrapper {
+:host-context(html[data-theme="light"]) .login-wrapper {
   background: #ffffff;
   color: #111827;
   box-shadow: 0 10px 24px rgba(0,0,0,0.08);
@@ -192,8 +211,31 @@
     border-color: transparent;
     box-shadow: 0 0 0 3px rgba(37,99,235,.15);
   }
+  .form-group .input-group.fancy {
+    .input-group-text {
+      background: #ffffff;
+      color: #6b7280;
+      border: 1px solid rgba(0,0,0,0.2);
+      border-right: none;
+    }
+    .form-control {
+      background: #ffffff;
+      color: #111827;
+      border: 1px solid rgba(0,0,0,0.2);
+      border-left: none;
+    }
+    .form-control:focus {
+      border-color: transparent;
+      box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+    }
+  }
   button {
     background: linear-gradient(135deg, #4f46e5, #06b6d4);
     color: #ffffff;
+  }
+
+  .oauth-section {
+    border-top-color: rgba(0,0,0,0.1);
+    .oauth-divider { color: #6b7280; }
   }
 }

@@ -145,7 +145,7 @@
             </span>
           </span>
           <span class="chip-text text-start">
-            <span class="name line-1">{{ username || 'Usuario' }}</span>
+            <span class="name line-1" [attr.title]="username || 'Usuario'">{{ displayName }}</span>
             <small class="role line-2 text-muted" *ngIf="role">{{ role | uppercase }}</small>
           </span>
         </button>

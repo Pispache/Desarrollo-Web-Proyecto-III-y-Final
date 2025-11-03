@@ -29,7 +29,9 @@ export class AppComponent implements OnInit, OnDestroy {
   private lastAuthed = false;
   private cameFromLogin = false;
   private bootStartedAt: number | null = null;
-  private readonly MIN_BOOT_MS = 3000;
+  private readonly MIN_BOOT_MS = 1500;
+  private readonly OAUTH_BOOT_MS = 1900;
+  private oauthFlow = false;
   constructor(
     private sound: SoundService,
     private auth: AuthService,
@@ -46,6 +48,13 @@ export class AppComponent implements OnInit, OnDestroy {
         this.booting = true; this.syncBootBodyClass();
         sessionStorage.removeItem('ui.boot');
       }
+      // Protección extra para flujos OAuth: si venimos con ?token= en la URL inicial
+      const hasOAuthToken = typeof window !== 'undefined' && (window.location.href || '').includes('token=');
+      if (hasOAuthToken && !this.booting) {
+        this.booting = true; this.syncBootBodyClass();
+        this.cameFromLogin = true;
+        this.oauthFlow = true;
+      }
     } catch {}
 
     this.sub = this.auth.authed$.subscribe(isAuthed => {
@@ -61,11 +70,17 @@ export class AppComponent implements OnInit, OnDestroy {
           this.showNavbar = false;
           this.router.navigateByUrl('/', { replaceUrl: true });
         } else {
-          // Ya estamos fuera de /login (p.ej. login por formulario): mostrar navbar ya
-          this.showNavbar = true;
-          this.booting = false; this.syncBootBodyClass();
-          this.didInitialBoot = true; // no volver a mostrar overlay
-          this.cameFromLogin = false;
+          // Si venimos del login y aún no se completó el boot inicial, no apagues aquí el overlay.
+          // Deja que NavigationEnd cierre con mínimo via endBootWithMinimum().
+          if (!this.didInitialBoot && this.cameFromLogin) {
+            this.showNavbar = false;
+          } else {
+            // Ya estamos fuera de /login y no es primer boot: mostrar navbar y apagar overlay.
+            this.showNavbar = true;
+            this.booting = false; this.syncBootBodyClass();
+            this.didInitialBoot = true; // no volver a mostrar overlay
+            this.cameFromLogin = false;
+          }
         }
       } else {
         this.showNavbar = false;
@@ -99,6 +114,10 @@ export class AppComponent implements OnInit, OnDestroy {
             sessionStorage.removeItem('ui.boot');
           }
         } catch {}
+        // Si no hay marca pero la URL lleva token= (OAuth callback directo), tratar como login
+        const urlStr = (ev.url || '');
+        const hasToken = urlStr.includes('token=');
+        if (hasToken) { this.cameFromLogin = true; this.oauthFlow = true; }
         if (!this.didInitialBoot && (this.cameFromLogin)) {
           this.startBoot();
         }
@@ -182,12 +201,14 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.booting) { this.syncBootBodyClass(); return; }
     const started = this.bootStartedAt ?? Date.now();
     const elapsed = Date.now() - started;
-    const remain = Math.max(0, this.MIN_BOOT_MS - elapsed) + extraDelayMs;
+    const minMs = this.oauthFlow ? this.OAUTH_BOOT_MS : this.MIN_BOOT_MS;
+    const remain = Math.max(0, minMs - elapsed) + extraDelayMs;
     if (this.bootTimeout) { clearTimeout(this.bootTimeout); this.bootTimeout = undefined; }
     setTimeout(() => {
       this.booting = false;
       this.syncBootBodyClass();
       this.bootStartedAt = null;
+      this.oauthFlow = false;
     }, remain);
   }
 

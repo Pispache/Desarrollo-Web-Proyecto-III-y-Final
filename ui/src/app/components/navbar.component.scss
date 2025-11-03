@@ -284,7 +284,7 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    max-width: none; /* siempre expandido en desktop */
+    max-width: clamp(220px, 30vw, 380px); /* visible por defecto, adaptable */
     transition: transform .2s ease, background .2s ease, box-shadow .2s ease, border-color .2s ease;
     overflow: hidden;
     text-decoration: none;
@@ -308,15 +308,19 @@
   }
 
   /* Texto de dos líneas con truncamientos independientes */
-  .user-chip .chip-text { display: grid; line-height: 1.1; max-width: 100%; }
-  .user-chip .chip-text { min-width: 0; } /* permitir que el texto haga ellipsis dentro del flex */
+  .user-chip .chip-text { display: flex; flex-direction: column; line-height: 1.1; max-width: 100%; }
+  .user-chip .chip-text { min-width: 160px; flex: 1 1 auto; } /* asegurar ancho visible */
   .user-chip .chip-text .line-1,
-  .user-chip .chip-text .line-2 {
-    display: block;
-    white-space: normal; /* mostrar completo por defecto */
-    overflow: visible;
-    text-overflow: clip;
-    max-width: 100%;
+  .user-chip .chip-text .line-2 { display: block; max-width: 100%; }
+  .user-chip .chip-text .line-1 { /* nombre */
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: #fff;
+    font-weight: 600;
+  }
+  .user-chip .chip-text .line-2 { /* rol */
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    color: rgba(255,255,255,0.85);
+    font-size: 0.78rem;
   }
 
   /* Expandir al abrir para mostrar texto completo hasta el máximo */

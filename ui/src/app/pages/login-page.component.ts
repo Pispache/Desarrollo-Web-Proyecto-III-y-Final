@@ -22,7 +22,7 @@
 
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, NgForm } from '@angular/forms';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 
@@ -119,9 +119,15 @@ export class LoginPageComponent {
     });
   }
 
-  submit() {
+  submit(f?: NgForm) {
     this.error = '';
-    const e = this.email.trim();
+    // Validación de formulario: si hay referencia y es inválido, marcar todo y abortar
+    if (f && f.invalid) {
+      Object.values(f.controls).forEach(c => c.markAsTouched());
+      this.error = 'Por favor completa los campos requeridos.';
+      return;
+    }
+    const e = (this.email || '').trim();
     const p = this.password;
     if (!e || !p) { this.error = 'Ingrese email y contraseña'; return; }
     this.loading = true;

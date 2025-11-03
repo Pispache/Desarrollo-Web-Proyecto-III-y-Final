@@ -3,36 +3,36 @@ const { body } = require('express-validator');
 exports.validateRegister = [
   body('email')
     .isEmail()
-    .withMessage('Must be a valid email')
+    .withMessage('Debe ser un email válido')
     .normalizeEmail(),
   body('password')
-    .isLength({ min: 8 })
-    .withMessage('Password must be at least 8 characters')
+    .isLength({ min: 6 })
+    .withMessage('La contraseña debe tener al menos 6 caracteres')
     .matches(/[A-Z]/)
-    .withMessage('Password must contain at least one uppercase letter')
+    .withMessage('La contraseña debe incluir al menos una letra mayúscula')
     .matches(/[a-z]/)
-    .withMessage('Password must contain at least one lowercase letter')
+    .withMessage('La contraseña debe incluir al menos una letra minúscula')
     .matches(/[0-9]/)
-    .withMessage('Password must contain at least one number'),
+    .withMessage('La contraseña debe incluir al menos un número'),
   body('name')
     .trim()
     .isLength({ min: 1, max: 255 })
-    .withMessage('Name is required and must be less than 255 characters'),
+    .withMessage('El nombre es obligatorio y debe tener menos de 255 caracteres'),
   body('username')
     .optional()
     .trim()
     .isLength({ min: 3, max: 100 })
-    .withMessage('Username must be between 3 and 100 characters')
+    .withMessage('El nombre de usuario debe tener entre 3 y 100 caracteres')
     .matches(/^[a-zA-Z0-9_]+$/)
-    .withMessage('Username can only contain letters, numbers and underscores')
+    .withMessage('El nombre de usuario solo puede contener letras, números y guiones bajos')
 ];
 
 exports.validateLogin = [
   body('email')
     .isEmail()
-    .withMessage('Must be a valid email')
+    .withMessage('Debe ser un email válido')
     .normalizeEmail(),
   body('password')
     .notEmpty()
-    .withMessage('Password is required')
+    .withMessage('La contraseña es obligatoria')
 ];

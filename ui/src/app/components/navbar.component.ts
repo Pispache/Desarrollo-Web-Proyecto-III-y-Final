@@ -39,6 +39,12 @@ export class NavbarComponent implements OnInit, OnDestroy {
   private authSubscription?: Subscription;
   private routerSubscription?: Subscription;
 
+  get displayName(): string {
+    const n = this.username || 'Usuario';
+    if (n.length > 15) return n.slice(0, 15) + '…';
+    return n;
+  }
+
   constructor(
     private authService: AuthService,
     private router: Router,

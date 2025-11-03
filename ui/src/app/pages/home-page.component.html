@@ -338,65 +338,47 @@
     </div>
 
     <div class="col-12 col-xl-6">
-      <div class="card shadow-sm h-100">
-        <div class="card-header">
-          <h6 class="mb-0"><i class="bi bi-stopwatch me-2"></i>Reloj del Partido</h6>
-        </div>
-        <div class="card-body">
-          <app-clock
-            *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED'"
-            [gameId]="d.game.gameId"
-            [status]="d.game.status"
-            [quarter]="d.game.quarter"
-            [homeScore]="d.game.homeScore"
-            [awayScore]="d.game.awayScore"
-            [showTeamFouls]="false"
-            [canEdit]="isAuthed()"
-            [(autoAdvance)]="autoAdvanceEnabled"
-            (advanceQuarter)="onExpire()"
-            (resetGame)="onResetGame()">
-          </app-clock>
-        </div>
-      </div>
+      <!-- Unificado: el propio <app-clock> dibuja su card (clock-card). -->
+      <app-clock
+        *ngIf="d.game.status === 'IN_PROGRESS' || d.game.status === 'SUSPENDED'"
+        [gameId]="d.game.gameId"
+        [status]="d.game.status"
+        [quarter]="d.game.quarter"
+        [homeScore]="d.game.homeScore"
+        [awayScore]="d.game.awayScore"
+        [showTeamFouls]="false"
+        [canEdit]="isAuthed()"
+        [(autoAdvance)]="autoAdvanceEnabled"
+        (advanceQuarter)="onExpire()"
+        (resetGame)="onResetGame()">
+      </app-clock>
     </div>
   </div>
 
   <!-- Fila 2: Control Panels lado a lado -->
   <div class="row g-3 mt-1">
     <div class="col-12 col-xl-6">
-      <div class="card shadow-sm h-100">
-        <div class="card-header header-contrast-high">
-          <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Control Panel - LOCAL</h6>
-        </div>
-        <div class="card-body">
-          <app-control-panel
-            [game]="d.game"
-            side="HOME"
-            [isSuspended]="d.game.status === 'SUSPENDED'"
-            [canEdit]="isAuthed()"
-            (changed)="view(d.game.gameId)"
-            (resetRequested)="onResetRequested()">
-          </app-control-panel>
-        </div>
-      </div>
+      <!-- Unificado: el propio <app-control-panel> dibuja su layout/card -->
+      <app-control-panel
+        [game]="d.game"
+        side="HOME"
+        [isSuspended]="d.game.status === 'SUSPENDED'"
+        [canEdit]="isAuthed()"
+        (changed)="view(d.game.gameId)"
+        (resetRequested)="onResetRequested()">
+      </app-control-panel>
     </div>
 
     <div class="col-12 col-xl-6">
-      <div class="card shadow-sm h-100">
-        <div class="card-header header-contrast-high">
-          <h6 class="mb-0"><i class="bi bi-sliders me-2"></i>Control Panel - VISITANTE</h6>
-        </div>
-        <div class="card-body">
-          <app-control-panel
-            [game]="d.game"
-            side="AWAY"
-            [isSuspended]="d.game.status === 'SUSPENDED'"
-            [canEdit]="isAuthed()"
-            (changed)="view(d.game.gameId)"
-            (resetRequested)="onResetRequested()">
-          </app-control-panel>
-        </div>
-      </div>
+      <!-- Unificado: el propio <app-control-panel> dibuja su layout/card -->
+      <app-control-panel
+        [game]="d.game"
+        side="AWAY"
+        [isSuspended]="d.game.status === 'SUSPENDED'"
+        [canEdit]="isAuthed()"
+        (changed)="view(d.game.gameId)"
+        (resetRequested)="onResetRequested()">
+      </app-control-panel>
     </div>
   </div>
 

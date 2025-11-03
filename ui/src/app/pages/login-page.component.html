@@ -26,15 +26,33 @@
   <div class="info" *ngIf="info">{{ info }}</div>
 
   <!-- Login por email y contraseña -->
-  <form (ngSubmit)="submit()" #f="ngForm" autocomplete="on">
+  <form (ngSubmit)="submit(f)" #f="ngForm" autocomplete="on" novalidate>
     <div class="form-group">
       <label>Email</label>
-      <input type="email" name="email" [(ngModel)]="email" required autofocus />
+      <div class="input-group fancy">
+        <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+        <input type="email" class="form-control" name="email" [(ngModel)]="email" #emailModel="ngModel" required autofocus placeholder="correo@dominio.com"
+               [class.is-invalid]="emailModel?.invalid && (emailModel?.dirty || emailModel?.touched || f.submitted)"
+               [attr.aria-invalid]="emailModel?.invalid ? true : null" />
+      </div>
+      <div class="invalid-feedback d-block" *ngIf="emailModel?.invalid && (emailModel?.dirty || emailModel?.touched || f.submitted)">
+        <span *ngIf="emailModel?.errors?.['required']">El email es obligatorio.</span>
+        <span *ngIf="emailModel?.errors?.['email']">Debe ser un email válido.</span>
+      </div>
     </div>
 
     <div class="form-group">
       <label>Contraseña</label>
-      <input type="password" name="password" [(ngModel)]="password" required />
+      <div class="input-group fancy">
+        <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
+        <input type="password" class="form-control" name="password" [(ngModel)]="password" #passwordModel="ngModel" required minlength="6" placeholder="Tu contraseña"
+               [class.is-invalid]="passwordModel?.invalid && (passwordModel?.dirty || passwordModel?.touched || f.submitted)"
+               [attr.aria-invalid]="passwordModel?.invalid ? true : null" />
+      </div>
+      <div class="invalid-feedback d-block" *ngIf="passwordModel?.invalid && (passwordModel?.dirty || passwordModel?.touched || f.submitted)">
+        <span *ngIf="passwordModel?.errors?.['required']">La contraseña es obligatoria.</span>
+        <span *ngIf="passwordModel?.errors?.['minlength']">La contraseña debe tener al menos 6 caracteres.</span>
+      </div>
     </div>
 
     <button type="submit" [disabled]="loading">{{ loading ? 'Entrando...' : 'Entrar' }}</button>

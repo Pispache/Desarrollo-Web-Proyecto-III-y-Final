@@ -18,7 +18,10 @@
             <label class="form-label">Nombre</label>
             <div class="input-group fancy">
               <span class="input-group-text"><i class="bi bi-person"></i></span>
-              <input class="form-control" [(ngModel)]="regName" name="regName" required placeholder="Tu nombre" />
+              <input class="form-control" [(ngModel)]="regName" name="regName" #nameModel="ngModel" required placeholder="Tu nombre" />
+            </div>
+            <div class="invalid-feedback d-block" *ngIf="nameModel?.invalid && (nameModel?.dirty || nameModel?.touched)">
+              El nombre es obligatorio.
             </div>
           </div>
 
@@ -26,7 +29,11 @@
             <label class="form-label">Email</label>
             <div class="input-group fancy">
               <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-              <input type="email" class="form-control" [(ngModel)]="regEmail" name="regEmail" required placeholder="correo@dominio.com" />
+              <input type="email" class="form-control" [(ngModel)]="regEmail" name="regEmail" #emailModel="ngModel" required placeholder="correo@dominio.com" />
+            </div>
+            <div class="invalid-feedback d-block" *ngIf="emailModel?.invalid && (emailModel?.dirty || emailModel?.touched)">
+              <span *ngIf="emailModel?.errors?.['required']">El email es obligatorio.</span>
+              <span *ngIf="emailModel?.errors?.['email']">Debe ser un email válido.</span>
             </div>
           </div>
 
@@ -34,7 +41,12 @@
             <label class="form-label">Contraseña</label>
             <div class="input-group fancy">
               <span class="input-group-text"><i class="bi bi-shield-lock"></i></span>
-              <input type="password" class="form-control" [(ngModel)]="regPassword" name="regPassword" required placeholder="Mínimo 6 caracteres" />
+              <input type="password" class="form-control" [(ngModel)]="regPassword" name="regPassword" #passModel="ngModel" required minlength="6" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{6,}" placeholder="Mínimo 6 caracteres" />
+            </div>
+            <div class="invalid-feedback d-block" *ngIf="passModel?.invalid && (passModel?.dirty || passModel?.touched)">
+              <span *ngIf="passModel?.errors?.['required']">La contraseña es obligatoria.</span>
+              <span *ngIf="passModel?.errors?.['minlength']">La contraseña debe tener al menos 6 caracteres.</span>
+              <span *ngIf="passModel?.errors?.['pattern']">Debe incluir mayúscula, minúscula y número.</span>
             </div>
           </div>
 

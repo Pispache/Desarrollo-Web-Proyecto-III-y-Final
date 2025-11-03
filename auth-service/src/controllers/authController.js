@@ -1,5 +1,4 @@
- 
-/**
+ /**
  * @summary Controladores de autenticación para el Auth Service (Node/Express).
  * @remarks
  * - Expone endpoints de registro, login/email y flujo OAuth (callback).\
@@ -38,13 +37,74 @@ function generateToken(user) {
     sub: user.id.toString(),
     name: user.name || user.username
   };
-
   return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRES_IN || '1h',
     issuer: process.env.JWT_ISSUER || 'MarcadorApi',
     audience: process.env.JWT_AUDIENCE || 'MarcadorUi'
   });
 }
+
+// ===== Admin: resetear contraseña de usuario local =====
+exports.resetUserPassword = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    if (!userId) return res.status(400).json({ success: false, message: 'Se requiere id de usuario' });
+
+    // Verificar que el usuario exista y sea local (tenga password)
+    const rows = await db.query('SELECT id, email, password FROM users WHERE id = ?', [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    const u = rows[0];
+    if (!u.password) {
+      return res.status(400).json({ success: false, message: 'No se puede resetear: usuario con OAuth' });
+    }
+
+    // Generar contraseña temporal segura
+    const temp = Math.random().toString(36).slice(-8) + 'A1'; // 10+ chars con mayúscula y número
+    const hashed = await bcrypt.hash(temp, 10);
+    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
+
+    return res.json({ success: true, temporaryPassword: temp });
+  } catch (error) {
+    console.error('resetUserPassword error:', error);
+    return res.status(500).json({ success: false, message: 'No se pudo resetear la contraseña' });
+  }
+};
+
+// Actualizar estado activo (solo ADMIN, no puede modificarse a sí mismo)
+/**
+ * @summary Actualiza el estado activo de un usuario (solo administradores) y evita auto-modificación.
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ */
+exports.updateUserActive = async (req, res) => {
+  try {
+    const userId = parseInt(req.params.id, 10);
+    const { active } = req.body || {};
+    if (typeof active === 'undefined') {
+      return res.status(400).json({ success: false, message: 'Field "active" is required' });
+    }
+    if (!req.userClaims) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+    // Evitar que un admin cambie su propio estado activo
+    const meId = parseInt(req.userClaims.id, 10);
+    if (meId === userId) {
+      return res.status(400).json({ success: false, message: 'No puedes cambiar tu propio estado' });
+    }
+
+    await db.query('UPDATE users SET active = ? WHERE id = ?', [active ? 1 : 0, userId]);
+    const rows = await db.query('SELECT id, email, username, name, role, active, avatar, last_login_at FROM users WHERE id = ?', [userId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, user: rows[0] });
+  } catch (error) {
+    console.error('updateUserActive error:', error);
+    res.status(500).json({ success: false, message: 'Failed to update user active' });
+  }
+};
 
 // Register with email/password
 /**
@@ -70,7 +130,7 @@ exports.register = async (req, res) => {
     if (existing.length > 0) {
       return res.status(400).json({
         success: false,
-        message: 'Email already registered'
+        message: 'El correo ya está registrado'
       });
     }
     
@@ -94,7 +154,7 @@ exports.register = async (req, res) => {
     const token = generateToken(user);
     res.status(201).json({
       success: true,
-      message: 'Registration successful',
+      message: 'Registro Correcto',
       user,
       token: {
         access_token: token,
@@ -103,10 +163,10 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Register error:', error);
+    console.error('Error de Registro:', error);
     res.status(500).json({
       success: false,
-      message: 'Registration failed',
+      message: 'El registro fallo',
       error: error.message
     });
   };
@@ -136,7 +196,7 @@ exports.login = async (req, res) => {
     if (users.length === 0) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Credenciales Invalidas'
       });
     }
     
@@ -146,7 +206,7 @@ exports.login = async (req, res) => {
     if (!user.password) {
       return res.status(401).json({
         success: false,
-        message: 'This account uses OAuth. Please login with ' + user.oauth_provider
+        message: 'Esta cuenta utiliza OAuth. Por favor, inicie sesión con ' + user.oauth_provider
       });
     }
     
@@ -155,7 +215,7 @@ exports.login = async (req, res) => {
     if (!isValid) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Credenciales Invalidas'
       });
     }
     
@@ -163,7 +223,7 @@ exports.login = async (req, res) => {
     if (!user.active) {
       return res.status(403).json({
         success: false,
-        message: 'Account is inactive'
+        message: 'La cuenta está inactiva'
       });
     }
     
@@ -177,7 +237,7 @@ exports.login = async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Login successful',
+      message: 'Inicio de sesión exitoso',
       user: {
         id: user.id,
         email: user.email,
@@ -193,10 +253,10 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Error de Login:', error);
     res.status(500).json({
       success: false,
-      message: 'Login failed',
+      message: 'Login Fallido',
       error: error.message
     });
   }
@@ -213,12 +273,12 @@ exports.logout = (req, res) => {
     if (err) {
       return res.status(500).json({
         success: false,
-        message: 'Logout failed'
+        message: 'Error al cerrar sesión'
       });
     }
     res.json({
       success: true,
-      message: 'Logged out successfully'
+      message: 'Cierre de sesión exitoso'
     });
   });
 };
@@ -236,7 +296,7 @@ exports.me = async (req, res) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         success: false,
-        message: 'No token provided'
+        message: 'No token proporcionado'
       });
     }
     
@@ -251,7 +311,7 @@ exports.me = async (req, res) => {
     if (users.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'User not found'
+        message: 'Usuario no encontrado'
       });
     }
     
@@ -263,18 +323,18 @@ exports.me = async (req, res) => {
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token'
+        message: 'Token Invalido'
       });
     }
     if (error.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
-        message: 'Token expired'
+        message: 'Token expirado'
       });
     }
     res.status(500).json({
       success: false,
-      message: 'Failed to get user info'
+      message: 'Error al obtener información del usuario'
     });
   }
 };
@@ -292,7 +352,7 @@ exports.validateToken = async (req, res) => {
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return res.status(401).json({
         valid: false,
-        message: 'No token provided'
+        message: 'No token proporcionado'
       });
     }
     
@@ -307,7 +367,7 @@ exports.validateToken = async (req, res) => {
     if (users.length === 0 || !users[0].active) {
       return res.status(401).json({
         valid: false,
-        message: 'User not found or inactive'
+        message: 'Usuario no encontrado o inactivo'
       });
     }
     
@@ -324,7 +384,7 @@ exports.validateToken = async (req, res) => {
   } catch (error) {
     res.status(401).json({
       valid: false,
-      message: error.name === 'TokenExpiredError' ? 'Token expired' : 'Invalid token'
+      message: error.name === 'TokenExpiredError' ? 'Token expirado' : 'Token Invalido'
     });
   }
 };
@@ -378,14 +438,15 @@ exports.listUsers = async (req, res) => {
   try {
     const rows = await db.query(
       `SELECT id, email, username, name, role, active, avatar,
-              COALESCE(DATE_FORMAT(last_login_at, '%Y-%m-%d %H:%i:%s'), NULL) AS last_login_at
+              COALESCE(DATE_FORMAT(last_login_at, '%Y-%m-%d %H:%i:%s'), NULL) AS last_login_at,
+              (password IS NOT NULL) AS has_password
          FROM users
          ORDER BY created_at DESC, id DESC`
     );
     res.json({ success: true, users: rows });
   } catch (error) {
     console.error('listUsers error:', error);
-    res.status(500).json({ success: false, message: 'Failed to list users' });
+    res.status(500).json({ success: false, message: 'Error al listar usuarios' });
   }
 };
 
@@ -402,13 +463,13 @@ exports.updateUserRole = async (req, res) => {
     const { role } = req.body || {};
 
     if (!userId || !role) {
-      return res.status(400).json({ success: false, message: 'User id and role are required' });
+      return res.status(400).json({ success: false, message: 'Se requiere el id del usuario y el rol' });
     }
 
     const allowed = ['viewer', 'operator', 'admin'];
     const newRole = String(role).toLowerCase();
     if (!allowed.includes(newRole)) {
-      return res.status(400).json({ success: false, message: 'Invalid role' });
+      return res.status(400).json({ success: false, message: 'Rol Invalido' });
     }
 
     await db.query('UPDATE users SET role = ? WHERE id = ?', [newRole, userId]);
@@ -423,6 +484,6 @@ exports.updateUserRole = async (req, res) => {
     res.json({ success: true, user: rows[0] });
   } catch (error) {
     console.error('updateUserRole error:', error);
-    res.status(500).json({ success: false, message: 'Failed to update user role' });
+    res.status(500).json({ success: false, message: 'No se pudo actualizar el rol del usuario' });
   }
 };

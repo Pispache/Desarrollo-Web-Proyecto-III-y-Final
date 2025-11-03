@@ -132,7 +132,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   async onDeleteTeam(t: TeamDto) {
-    const ok = await this.notify.confirm(`Â¿Eliminar el equipo "${t.name}"? Esta acciÃ³n no se puede deshacer.`, 'Confirmar');
+    const ok = await this.notify.confirm(`¿Eliminar el equipo "${t.name}"? Esta Accion no se puede deshacer.`, 'Confirmar');
     if (!ok) return;
     this.deletingId = t.teamId;
     this.api.deleteTeam(t.teamId).subscribe({
@@ -298,17 +298,17 @@ export class HomePageComponent implements OnInit, OnDestroy {
       if (this.detail) {
         this.view(this.detail.game.gameId);
       }
-      this.notify.showSuccess('Ã‰xito', successMessage);
+      this.notify.showSuccess('Exito', successMessage);
     }).catch(error => {
       console.error('Error en handleStatusChange:', error);
-      const errorMessage = error?.error?.error || 'OcurriÃ³ un error al actualizar el estado del partido.';
+      const errorMessage = error?.error?.error || 'Ocurrio un error al actualizar el estado del partido.';
       this.notify.showError('Error', errorMessage, true);
     });
   }
 
   // Game status control methods
   async finishGame(gameId: number) {
-    const ok = await this.notify.confirm('Â¿EstÃ¡ seguro que desea marcar este partido como finalizado?', 'Confirmar');
+    const ok = await this.notify.confirm('¿Estas seguro que desea marcar este partido como finalizado?', 'Confirmar');
     if (ok) {
       this.handleStatusChange(
         this.api.finish(gameId).toPromise(),
@@ -318,7 +318,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   async suspendGame(gameId: number) {
-    const ok = await this.notify.confirm('Â¿EstÃ¡ seguro que desea suspender este partido? PodrÃ¡ reanudarlo mÃ¡s tarde.', 'Confirmar');
+    const ok = await this.notify.confirm('¿Estas seguro que desea suspender este partido? PodrÃ¡ reanudarlo mÃ¡s tarde.', 'Confirmar');
     if (ok) {
       this.handleStatusChange(
         this.api.suspendGame(gameId).toPromise(),
@@ -335,7 +335,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
   }
 
   async cancelGame(gameId: number) {
-    const ok = await this.notify.confirm('Â¿EstÃ¡ seguro que desea cancelar este partido? Esta acciÃ³n no se puede deshacer.', 'Confirmar');
+    const ok = await this.notify.confirm('¿Estas seguro que desea cancelar este partido? Esta acciÃ³n no se puede deshacer.', 'Confirmar');
     if (ok) {
       this.api.cancelGame(gameId).subscribe({
         next: () => {
@@ -343,7 +343,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
           if (this.detail?.game.gameId === gameId) {
             this.view(gameId);
           }
-          this.notify.showSuccess('Ã‰xito', 'Partido cancelado correctamente.');
+          this.notify.showSuccess('Exito', 'Partido cancelado correctamente.');
         },
         error: (error) => {
           console.error('Error al cancelar el partido:', error);
@@ -356,7 +356,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
 
   // Iniciar un partido programado
   async startGame(gameId: number) {
-    const ok = await this.notify.confirm('Â¿EstÃ¡ seguro que desea iniciar este partido?', 'Confirmar');
+    const ok = await this.notify.confirm('¿Está seguro que desea iniciar este partido?', 'Confirmar');
     if (ok) {
       this.api.start(gameId).subscribe({
         next: () => {
@@ -364,7 +364,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
           this.view(gameId);
           // Iniciar el reloj backend y notificar a los suscriptores (Display)
           this.clock.start(gameId);
-          this.notify.showSuccess('Ã‰xito', 'Partido iniciado');
+          this.notify.showSuccess('Exito', 'Partido iniciado');
         },
         error: (err: any) => {
           console.error('Error al iniciar el partido:', err);
@@ -393,7 +393,7 @@ export class HomePageComponent implements OnInit, OnDestroy {
       error: (err) => {
         // Mostrar pista si falta autenticaciÃ³n o hay problema de red
         const msg = err?.status === 401
-          ? 'Inicia sesiÃ³n para ver los equipos (401).'
+          ? 'Inicia sesión para ver los equipos (401).'
           : 'No se pudieron cargar los equipos.';
         try { this.notify.showInfo('Equipos', msg, 3000); } catch {}
       }

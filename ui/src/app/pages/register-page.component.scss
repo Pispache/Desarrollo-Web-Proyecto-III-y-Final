@@ -103,6 +103,30 @@
 [data-theme="light"] .register-page .btn.btn-primary {
   background: linear-gradient(135deg, #4f46e5, #06b6d4); color: #ffffff;
 }
+
+/* Contraste del botón 'Volver a iniciar sesión' en modo claro */
+[data-theme="light"] .register-page .card-header .btn.btn-outline-secondary {
+  color: #374151; /* slate-700 */
+  border-color: #cbd5e1; /* slate-300 */
+  background: #ffffff;
+}
+[data-theme="light"] .register-page .card-header .btn.btn-outline-secondary:hover {
+  color: #111827; /* slate-900 */
+  background: #f3f4f6; /* gray-100 */
+  border-color: #cbd5e1;
+}
+
+/* Refuerzo por encapsulación: usar :host-context para asegurar aplicación en claro */
+:host-context(html[data-theme="light"]) .register-page .card {
+  background: #ffffff; color: #111827; box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+}
+:host-context(html[data-theme="light"]) .register-page .card-header { background: #f8f9fa; color: #111827; border-bottom: 1px solid rgba(0,0,0,0.12); }
+:host-context(html[data-theme="light"]) .register-page .card-body .form-label { color: #6b7280; }
+:host-context(html[data-theme="light"]) .register-page .card-body .form-control { background:#ffffff; color:#111827; border:1px solid rgba(0,0,0,0.2); }
+:host-context(html[data-theme="light"]) .register-page .card-body .form-control:focus { border-color:transparent; box-shadow:0 0 0 3px rgba(37,99,235,.15); }
+:host-context(html[data-theme="light"]) .register-page .btn.btn-primary { background: linear-gradient(135deg, #22c55e, #14b8a6); color:#ffffff; }
+:host-context(html[data-theme="light"]) .register-page .card-header .btn.btn-outline-secondary { color:#374151; border-color:#cbd5e1; background:#ffffff; }
+:host-context(html[data-theme="light"]) .register-page .card-header .btn.btn-outline-secondary:hover { color:#111827; background:#f3f4f6; border-color:#cbd5e1; }
 /* El bloque anterior ya establece min-height y centrado; eliminamos duplicados */
 
 :root:not([data-theme="light"]) .register-page .card {

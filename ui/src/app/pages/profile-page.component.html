@@ -1,43 +1,115 @@
 <div class="profile-wrapper profile-page">
-  <h2>Perfil — Administración de usuarios</h2>
+  <div class="page-card">
+    <div class="page-card__header">
+      <div>
+        <h2 class="m-0">Perfil — Administración de usuarios</h2>
+        <div class="subtitle">Gestiona roles y estados de cuentas</div>
+      </div>
+      <div class="status-pill" *ngIf="users?.length">{{ users.length }} usuarios</div>
+    </div>
 
-  <div *ngIf="loading">Cargando...</div>
-  <div *ngIf="error" class="error">{{ error }}</div>
+    <div *ngIf="loading" class="loading-row">
+      <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+      Cargando...
+    </div>
+    <div *ngIf="error" class="error">{{ error }}</div>
 
-  <div class="table-responsive" *ngIf="!loading && !error">
-    <table class="table table-dark table-striped table-hover">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Email</th>
-          <th>Nombre</th>
-          <th>Username</th>
-          <th>Rol</th>
-          <th>Activo</th>
-          <th>Último acceso</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let u of users">
-          <td>{{ u.id }}</td>
-          <td>{{ u.email }}</td>
-          <td>{{ u.name || '-' }}</td>
-          <td>{{ u.username || '-' }}</td>
-          <td>
-            <div class="d-flex align-items-center gap-2">
-              <select class="form-select form-select-sm w-auto"
-                      [disabled]="saving[u.id]"
-                      [ngModel]="u.role"
-                      (ngModelChange)="onRoleChange(u, $event)">
-                <option *ngFor="let r of roles" [ngValue]="r">{{ r | uppercase }}</option>
-              </select>
-              <span *ngIf="saving[u.id]" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-            </div>
-          </td>
-          <td>{{ (u.active ? 'Sí' : 'No') }}</td>
-          <td>{{ u.last_login_at || '-' }}</td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="table-tools" *ngIf="!loading && !error">
+      <div class="input-group search">
+        <span class="input-group-text"><i class="bi bi-search"></i></span>
+        <input class="form-control" [(ngModel)]="q" placeholder="Buscar por email o username" />
+      </div>
+      <div class="right-tools">
+        <label class="me-2">Filas</label>
+        <select class="form-select form-select-sm w-auto" [(ngModel)]="pageSize">
+          <option [ngValue]="5">5</option>
+          <option [ngValue]="10">10</option>
+          <option [ngValue]="20">20</option>
+          <option [ngValue]="50">50</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="table-responsive" *ngIf="!loading && !error">
+      <table class="table table-hover users-table modern-table">
+        <thead>
+          <tr>
+            <th class="col-id clickable" (click)="setSort('id')">ID <span class="sort" [class.asc]="sort.key==='id' && sort.dir===1" [class.desc]="sort.key==='id' && sort.dir===-1"></span></th>
+            <th class="clickable" (click)="setSort('email')">Usuario <span class="sort" [class.asc]="sort.key==='email' && sort.dir===1" [class.desc]="sort.key==='email' && sort.dir===-1"></span></th>
+            <th class="clickable" (click)="setSort('name')">Nombre <span class="sort" [class.asc]="sort.key==='name' && sort.dir===1" [class.desc]="sort.key==='name' && sort.dir===-1"></span></th>
+            <th class="clickable" (click)="setSort('username')">Username <span class="sort" [class.asc]="sort.key==='username' && sort.dir===1" [class.desc]="sort.key==='username' && sort.dir===-1"></span></th>
+            <th class="clickable" (click)="setSort('role')">Rol <span class="sort" [class.asc]="sort.key==='role' && sort.dir===1" [class.desc]="sort.key==='role' && sort.dir===-1"></span></th>
+            <th>Activo</th>
+            <th class="clickable" (click)="setSort('last_login_at')">Último acceso <span class="sort" [class.asc]="sort.key==='last_login_at' && sort.dir===1" [class.desc]="sort.key==='last_login_at' && sort.dir===-1"></span></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let u of paged">
+            <td class="mono">#{{ u.id }}</td>
+            <td>
+              <div class="user-cell">
+                <div class="avatar" *ngIf="u.avatar; else fallbackAvatar" [style.backgroundImage]="'url(' + u.avatar + ')'"></div>
+                <ng-template #fallbackAvatar>
+                  <div class="avatar avatar-fallback">{{ (u.email || '?') | slice:0:1 | uppercase }}</div>
+                </ng-template>
+                <div class="stack">
+                  <div class="email">{{ u.email }}</div>
+                  <div class="muted">ID {{ u.id }}</div>
+                </div>
+              </div>
+            </td>
+            <td>{{ u.name || '-' }}</td>
+            <td class="muted">{{ u.username || '-' }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <select class="form-select form-select-sm w-auto"
+                        [disabled]="saving[u.id]"
+                        [ngModel]="u.role"
+                        (ngModelChange)="onRoleChange(u, $event)">
+                  <option *ngFor="let r of roles" [ngValue]="r">{{ r | uppercase }}</option>
+                </select>
+                <span *ngIf="saving[u.id]" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+              </div>
+            </td>
+            <td>
+              <div class="form-check form-switch m-0" *ngIf="canToggleActive(u); else activeLabel">
+                <input class="form-check-input" type="checkbox"
+                       [checked]="!!u.active"
+                       [disabled]="saving[u.id]"
+                       (change)="onActiveToggle(u, $any($event.target).checked)" />
+              </div>
+              <ng-template #activeLabel>
+                <span class="badge" [class.badge-success]="u.active" [class.badge-danger]="!u.active">
+                  {{ (u.active ? 'Activo' : 'Inactivo') }}
+                </span>
+              </ng-template>
+            </td>
+            <td>
+              <span class="badge badge-soft">{{ u.last_login_at ? (u.last_login_at | date:'dd/MM/yyyy HH:mm':'America/Guatemala') : '-' }}</span>
+            </td>
+            <td class="text-end actions-cell">
+              <ng-container *ngIf="isLocalUser(u); else noLocal">
+                <button class="btn btn-sm btn-outline-secondary" (click)="toggleActions(u.id); $event.stopPropagation()">Acciones</button>
+                <div class="actions-menu" *ngIf="openMenuId===u.id" (click)="$event.stopPropagation()">
+                  <div class="item" [class.disabled]="saving[u.id] || !isAdmin()" (click)="onActionReset(u)">
+                    <i class="bi bi-key me-2"></i> Resetear contraseña
+                  </div>
+                </div>
+              </ng-container>
+              <ng-template #noLocal>
+                <span class="text-muted small">No disponible</span>
+              </ng-template>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="pagination-bar" *ngIf="!loading && !error && sorted.length > pageSize">
+      <button class="btn btn-sm btn-outline-secondary" (click)="goto(page-1)" [disabled]="page<=1">Anterior</button>
+      <span class="px-2">Página {{ page }} de {{ totalPages }}</span>
+      <button class="btn btn-sm btn-outline-secondary" (click)="goto(page+1)" [disabled]="page>=totalPages">Siguiente</button>
+    </div>
   </div>
 </div>
