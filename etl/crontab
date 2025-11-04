@@ -1,49 +1,18 @@
-# Tareas programadas para el ETL - Marcador de Baloncesto
-# Este archivo define cuándo y cómo se ejecutan las sincronizaciones automáticas
+# Crontab - ETL Marcador de Baloncesto
+# Formato: minuto hora día mes día_semana comando
 
-# ¿Cómo leer esto?
-# Cada línea tiene 5 números que indican cuándo se ejecuta:
-# minuto hora día mes día_semana comando
-# 
-# Por ejemplo: */5 * * * * significa "cada 5 minutos"
-#              0 2 * * * significa "a las 2 AM todos los días"
-#              0 3 * * 0 significa "a las 3 AM solo los domingos"
-
-# Configuración básica
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 MAILTO=""
 
-# ========================================
-# Sincronización del ETL
-# ========================================
-# Aquí defines cada cuánto quieres que se sincronicen los datos.
-# Descomenta la línea que prefieras (quita el # al inicio).
-
-# Opción 1: Cada 2 minutos (bueno para desarrollo y pruebas)
-# */2 * * * * cd /app && python3 main.py >> /var/log/etl/cron.log 2>&1
-
-# Opción 2: Cada 5 minutos (recomendado para producción) ← ACTIVO
+# Sincronización cada 5 minutos
 */5 * * * * cd /app && python3 main.py >> /var/log/etl/cron.log 2>&1
 
-# Opción 3: Cada 15 minutos (si no hay mucho movimiento)
-# */15 * * * * cd /app && python3 main.py >> /var/log/etl/cron.log 2>&1
-
-# Opción 4: Cada hora (para sistemas con pocas actualizaciones)
-# 0 * * * * cd /app && python3 main.py >> /var/log/etl/cron.log 2>&1
-
-# ========================================
-# Tareas de mantenimiento
-# ========================================
-
-# Verificar que todo esté sincronizado correctamente
-# Se ejecuta todos los días a las 2 AM
+# Verificación diaria (2 AM)
 0 2 * * * /app/scripts/verify-etl.sh >> /var/log/etl/verify.log 2>&1
 
-# Limpiar logs viejos para no llenar el disco
-# Borra logs de más de 30 días, cada domingo a las 3 AM
+# Limpieza de logs antiguos (domingos 3 AM)
 0 3 * * 0 find /var/log/etl -name "*.log" -mtime +30 -delete
 
-# Hacer backup de los checkpoints
-# Guarda una copia de seguridad todos los días a las 4 AM
+# Backup de checkpoints (4 AM)
 0 4 * * * PGPASSWORD="$POSTGRES_PASSWORD" psql -h postgres -U postgres -d reportsdb -c "COPY etl_state TO STDOUT" > /var/backups/etl_checkpoints_$(date +\%Y\%m\%d).csv 2>&1
