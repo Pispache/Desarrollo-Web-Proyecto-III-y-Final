@@ -70,7 +70,7 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     service: 'auth-service-nodejs',
     timestamp: new Date().toISOString(),
-    database: db.pool ? 'connected' : 'disconnected'
+    database: db.isReady() ? 'connected' : 'disconnected'
   });
 });
 
@@ -109,7 +109,7 @@ db.initialize()
       console.log(`🚀 Auth Service running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-      console.log(`💾 Database: MySQL connected`);
+      console.log(`💾 Database: MongoDB connected`);
     });
   })
   .catch(err => {
@@ -118,8 +118,8 @@ db.initialize()
   });
 
 // Graceful shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM received, closing server...');
-  db.pool?.end();
+  await db.disconnect();
   process.exit(0);
 });

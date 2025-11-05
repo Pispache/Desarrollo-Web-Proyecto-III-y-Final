@@ -1,103 +1,81 @@
-const mysql = require('mysql2/promise');
+const mongoose = require('mongoose');
 
-const config = {
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT) || 3306,
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'auth_db',
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
-};
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/auth_db';
 
-let pool;
+let isConnected = false;
 
 async function initialize() {
   try {
-    // Create connection pool
-    pool = mysql.createPool(config);
+    if (isConnected) {
+      console.log('✅ MongoDB already connected');
+      return mongoose.connection;
+    }
+
+    // Configuración de conexión
+    const options = {
+      maxPoolSize: 10,
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    };
+
+    // Conectar a MongoDB
+    await mongoose.connect(MONGODB_URI, options);
     
-    // Test connection
-    const connection = await pool.getConnection();
-    console.log('✅ MySQL connected successfully');
-    connection.release();
-    
-    // Create tables if they don't exist
-    await createTables();
-    
-    return pool;
+    isConnected = true;
+    console.log('✅ MongoDB connected successfully');
+    console.log(`📊 Database: ${mongoose.connection.name}`);
+
+    // Event listeners
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ MongoDB connection error:', err);
+      isConnected = false;
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('⚠️  MongoDB disconnected');
+      isConnected = false;
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('✅ MongoDB reconnected');
+      isConnected = true;
+    });
+
+    return mongoose.connection;
   } catch (error) {
-    console.error('❌ MySQL connection error:', error.message);
+    console.error('❌ MongoDB connection error:', error.message);
+    isConnected = false;
     throw error;
   }
 }
 
-async function createTables() {
-  const connection = await pool.getConnection();
-  
+async function disconnect() {
   try {
-    // Users table
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(255) UNIQUE NOT NULL,
-        username VARCHAR(100) UNIQUE,
-        password VARCHAR(255),
-        name VARCHAR(255),
-        avatar VARCHAR(500),
-        oauth_provider VARCHAR(50),
-        oauth_id VARCHAR(255),
-        role ENUM('viewer', 'operator', 'admin') DEFAULT 'viewer',
-        email_verified BOOLEAN DEFAULT FALSE,
-        active BOOLEAN DEFAULT TRUE,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        last_login_at TIMESTAMP NULL,
-        INDEX idx_email (email),
-        INDEX idx_oauth (oauth_provider, oauth_id),
-        INDEX idx_role (role)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    
-    // OAuth tokens table
-    await connection.query(`
-      CREATE TABLE IF NOT EXISTS oauth_tokens (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        provider VARCHAR(50) NOT NULL,
-        access_token TEXT,
-        refresh_token TEXT,
-        expires_at TIMESTAMP NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-        INDEX idx_user_provider (user_id, provider)
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
-    `);
-    
-    console.log('✅ Database tables created/verified');
+    if (isConnected) {
+      await mongoose.disconnect();
+      isConnected = false;
+      console.log('✅ MongoDB disconnected gracefully');
+    }
   } catch (error) {
-    console.error('❌ Error creating tables:', error.message);
+    console.error('❌ Error disconnecting from MongoDB:', error);
     throw error;
-  } finally {
-    connection.release();
   }
 }
 
-async function query(sql, params) {
-  try {
-    const [results] = await pool.execute(sql, params);
-    return results;
-  } catch (error) {
-    console.error('Database query error:', error);
-    throw error;
-  }
+function getConnection() {
+  return mongoose.connection;
+}
+
+function isReady() {
+  return isConnected && mongoose.connection.readyState === 1;
 }
 
 module.exports = {
   initialize,
-  query,
-  get pool() {
-    return pool;
+  disconnect,
+  getConnection,
+  isReady,
+  get connection() {
+    return mongoose.connection;
   }
 };

@@ -1,24 +1,36 @@
 /**
- * @summary Configuración de Passport para autenticación OAuth 2.0 con GitHub.
+ * @summary Configuración de Passport para autenticación OAuth 2.0.
  * @remarks
- * - Este módulo define la serialización de usuario en sesión y la estrategia de GitHub
- *   usando el flujo Authorization Code.
- * - Requiere las variables de entorno: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`,
- *   `GITHUB_CALLBACK_URL`.
- * - Persiste/actualiza usuarios en MySQL vía `db.query()` y almacena el último inicio de sesión.
+ * - Este módulo define la serialización de usuario en sesión y las estrategias OAuth
+ *   (Google, Facebook, GitHub) usando el flujo Authorization Code.
+ * - Requiere las variables de entorno para cada proveedor OAuth.
+ * - Persiste/actualiza usuarios en MongoDB vía Mongoose y almacena el último inicio de sesión.
  */
 const passport = require('passport');
 const GitHubStrategy = require('passport-github2').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const FacebookStrategy = require('passport-facebook').Strategy;
-const db = require('./database');
+const User = require('../models/User');
 
 /**
  * @summary Serializa el usuario en la sesión.
- * @param {object} user Objeto de usuario persistido (con `id`).
- * @param {(err: any, id?: number) => void} done Callback de finalización.
- * @returns {void}
  */
+passport.serializeUser((user, done) => {
+  done(null, user._id.toString());
+});
+
+/**
+ * @summary Deserializa el usuario desde la sesión.
+ */
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
+
 // Google OAuth 2.0 Strategy
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   /**
@@ -40,36 +52,78 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       const avatar = profile.photos?.[0]?.value || null;
       const oauthId = profile.id;
       const username = (email?.split('@')[0]) || null;
+      
       if (!email) return done(new Error('No email from Google'), null);
 
-      let users = await db.query('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?', ['google', oauthId]);
-      if (users.length > 0) {
-        await db.query('UPDATE users SET name = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', [name || users[0].name, avatar || users[0].avatar, users[0].id]);
-        const found = users[0];
-        if (!found.active) return done(new Error('Account inactive'), null);
-        return done(null, found);
+      // Buscar usuario existente por OAuth
+      let user = await User.findByOAuth('google', oauthId);
+      
+      if (user) {
+        // Actualizar información y último login
+        user.name = name || user.name;
+        user.avatar = avatar || user.avatar;
+        user.lastLoginAt = new Date();
+        
+        // Actualizar o agregar token OAuth
+        const tokenIndex = user.oauthTokens.findIndex(t => t.provider === 'google');
+        if (tokenIndex >= 0) {
+          user.oauthTokens[tokenIndex].accessToken = accessToken;
+          user.oauthTokens[tokenIndex].refreshToken = refreshToken;
+        } else {
+          user.oauthTokens.push({
+            provider: 'google',
+            accessToken,
+            refreshToken
+          });
+        }
+        
+        await user.save();
+        
+        if (!user.active) return done(new Error('Account inactive'), null);
+        return done(null, user);
       }
-      users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-      if (users.length > 0) {
-        await db.query('UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', ['google', oauthId, avatar || users[0].avatar, users[0].id]);
-        const found2 = users[0];
-        if (!found2.active) return done(new Error('Account inactive'), null);
-        return done(null, found2);
+      
+      // Buscar por email
+      user = await User.findByEmail(email);
+      
+      if (user) {
+        // Vincular OAuth a cuenta existente
+        user.oauthProvider = 'google';
+        user.oauthId = oauthId;
+        user.avatar = avatar || user.avatar;
+        user.lastLoginAt = new Date();
+        user.oauthTokens.push({
+          provider: 'google',
+          accessToken,
+          refreshToken
+        });
+        await user.save();
+        
+        if (!user.active) return done(new Error('Account inactive'), null);
+        return done(null, user);
       }
-      const result = await db.query(
-        `INSERT INTO users (email, username, name, avatar, oauth_provider, oauth_id, email_verified, last_login_at)
-         VALUES (?, ?, ?, ?, ?, ?, TRUE, NOW())`,
-        [email, username, name, avatar, 'google', oauthId]
-      );
-      const newUser = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
-      await db.query(
-        `INSERT INTO oauth_tokens (user_id, provider, access_token, refresh_token, expires_at)
-         VALUES (?, ?, ?, ?, NULL)`,
-        [result.insertId, 'google', accessToken || null, refreshToken || null]
-      );
-      const created = newUser[0];
-      if (!created.active) return done(new Error('Account inactive'), null);
-      done(null, created);
+      
+      // Crear nuevo usuario
+      user = new User({
+        email,
+        username,
+        name,
+        avatar,
+        oauthProvider: 'google',
+        oauthId,
+        emailVerified: true,
+        lastLoginAt: new Date(),
+        oauthTokens: [{
+          provider: 'google',
+          accessToken,
+          refreshToken
+        }]
+      });
+      
+      await user.save();
+      
+      if (!user.active) return done(new Error('Account inactive'), null);
+      done(null, user);
     } catch (error) {
       done(error, null);
     }
@@ -81,7 +135,7 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
   /**
    * @summary Estrategia OAuth Facebook con validación de cuenta activa.
    * @remarks
-   * - Bloquea el flujo con `Account inactive` si `users[0].active` es falso.
+   * - Bloquea el flujo con `Account inactive` si el usuario está desactivado.
    * - Evita emitir sesión/JWT para cuentas desactivadas.
    */
   passport.use(new FacebookStrategy({
@@ -97,68 +151,82 @@ if (process.env.FACEBOOK_APP_ID && process.env.FACEBOOK_APP_SECRET) {
       const avatar = profile.photos?.[0]?.value || null;
       const oauthId = profile.id;
       const username = (email?.split('@')[0]) || null;
+      
       if (!email) return done(new Error('No email from Facebook'), null);
 
-      let users = await db.query('SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?', ['facebook', oauthId]);
-      if (users.length > 0) {
-        await db.query('UPDATE users SET name = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', [name || users[0].name, avatar || users[0].avatar, users[0].id]);
-        const found = users[0];
-        if (!found.active) return done(new Error('Account inactive'), null);
-        return done(null, found);
+      // Buscar usuario existente por OAuth
+      let user = await User.findByOAuth('facebook', oauthId);
+      
+      if (user) {
+        user.name = name || user.name;
+        user.avatar = avatar || user.avatar;
+        user.lastLoginAt = new Date();
+        
+        const tokenIndex = user.oauthTokens.findIndex(t => t.provider === 'facebook');
+        if (tokenIndex >= 0) {
+          user.oauthTokens[tokenIndex].accessToken = accessToken;
+          user.oauthTokens[tokenIndex].refreshToken = refreshToken;
+        } else {
+          user.oauthTokens.push({
+            provider: 'facebook',
+            accessToken,
+            refreshToken
+          });
+        }
+        
+        await user.save();
+        
+        if (!user.active) return done(new Error('Account inactive'), null);
+        return done(null, user);
       }
-      users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-      if (users.length > 0) {
-        await db.query('UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar = ?, last_login_at = NOW() WHERE id = ?', ['facebook', oauthId, avatar || users[0].avatar, users[0].id]);
-        const found2 = users[0];
-        if (!found2.active) return done(new Error('Account inactive'), null);
-        return done(null, found2);
+      
+      // Buscar por email
+      user = await User.findByEmail(email);
+      
+      if (user) {
+        user.oauthProvider = 'facebook';
+        user.oauthId = oauthId;
+        user.avatar = avatar || user.avatar;
+        user.lastLoginAt = new Date();
+        user.oauthTokens.push({
+          provider: 'facebook',
+          accessToken,
+          refreshToken
+        });
+        await user.save();
+        
+        if (!user.active) return done(new Error('Account inactive'), null);
+        return done(null, user);
       }
-      const result = await db.query(
-        `INSERT INTO users (email, username, name, avatar, oauth_provider, oauth_id, email_verified, last_login_at)
-         VALUES (?, ?, ?, ?, ?, ?, TRUE, NOW())`,
-        [email, username, name, avatar, 'facebook', oauthId]
-      );
-      const newUser = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
-      await db.query(
-        `INSERT INTO oauth_tokens (user_id, provider, access_token, refresh_token, expires_at)
-         VALUES (?, ?, ?, ?, NULL)`,
-        [result.insertId, 'facebook', accessToken || null, refreshToken || null]
-      );
-      const created = newUser[0];
-      if (!created.active) return done(new Error('Account inactive'), null);
-      done(null, created);
+      
+      // Crear nuevo usuario
+      user = new User({
+        email,
+        username,
+        name,
+        avatar,
+        oauthProvider: 'facebook',
+        oauthId,
+        emailVerified: true,
+        lastLoginAt: new Date(),
+        oauthTokens: [{
+          provider: 'facebook',
+          accessToken,
+          refreshToken
+        }]
+      });
+      
+      await user.save();
+      
+      if (!user.active) return done(new Error('Account inactive'), null);
+      done(null, user);
     } catch (error) {
       done(error, null);
     }
   }));
 }
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
 
-/**
- * @summary Deserializa el usuario desde la sesión.
- * @param {number} id Identificador de usuario almacenado en la sesión.
- * @param {(err: any, user?: object|null) => void} done Callback de finalización.
- * @returns {Promise<void>}
- */
-passport.deserializeUser(async (id, done) => {
-  try {
-    const users = await db.query('SELECT * FROM users WHERE id = ?', [id]);
-    done(null, users[0]);
-  } catch (error) {
-    done(error, null);
-  }
-});
-
-/**
- * @summary Estrategia de GitHub OAuth 2.0 (Authorization Code).
- * @remarks
- * - Usa `passport-github2` para iniciar el flujo y procesar el `callback`.
- * - Inserta/actualiza el usuario por `oauth_provider='github'` y `oauth_id`.
- * - Actualiza `name`, `avatar` y `last_login_at`. Si falta `username`, se deriva del email.
- * - No expone el `client_secret` en el navegador; el intercambio de `code`→`access_token` se hace en backend.
- */
+// GitHub OAuth 2.0 Strategy
 if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
   /**
    * @summary Estrategia OAuth GitHub con validación de cuenta activa.
@@ -173,7 +241,6 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
     scope: ['user:email']
   },
   async (accessToken, refreshToken, profile, done) => {
-    // Nota: este callback se ejecuta tras el intercambio de `code` por `access_token`.
     try {
       const email = profile.emails?.[0]?.value;
       const name = profile.displayName || profile.username || null;
@@ -184,50 +251,72 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
         return done(new Error('No email from GitHub'), null);
       }
       
-      let users = await db.query(
-        'SELECT * FROM users WHERE oauth_provider = ? AND oauth_id = ?',
-        ['github', profile.id]
-      );
+      // Buscar usuario existente por OAuth
+      let user = await User.findByOAuth('github', profile.id);
       
-      if (users.length > 0) {
-        await db.query(
-          'UPDATE users SET name = ?, avatar = ?, last_login_at = NOW() WHERE id = ?',
-          [name || users[0].name, avatar || users[0].avatar, users[0].id]
-        );
-        const found = users[0];
-        if (!found.active) return done(new Error('Account inactive'), null);
-        return done(null, found);
+      if (user) {
+        user.name = name || user.name;
+        user.avatar = avatar || user.avatar;
+        user.lastLoginAt = new Date();
+        
+        const tokenIndex = user.oauthTokens.findIndex(t => t.provider === 'github');
+        if (tokenIndex >= 0) {
+          user.oauthTokens[tokenIndex].accessToken = accessToken;
+          user.oauthTokens[tokenIndex].refreshToken = refreshToken;
+        } else {
+          user.oauthTokens.push({
+            provider: 'github',
+            accessToken,
+            refreshToken
+          });
+        }
+        
+        await user.save();
+        
+        if (!user.active) return done(new Error('Account inactive'), null);
+        return done(null, user);
       }
       
-      users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+      // Buscar por email
+      user = await User.findByEmail(email);
       
-      if (users.length > 0) {
-        await db.query(
-          'UPDATE users SET oauth_provider = ?, oauth_id = ?, avatar = ?, last_login_at = NOW() WHERE id = ?',
-          ['github', profile.id, avatar || users[0].avatar, users[0].id]
-        );
-        const found2 = users[0];
-        if (!found2.active) return done(new Error('Account inactive'), null);
-        return done(null, found2);
+      if (user) {
+        user.oauthProvider = 'github';
+        user.oauthId = profile.id;
+        user.avatar = avatar || user.avatar;
+        user.lastLoginAt = new Date();
+        user.oauthTokens.push({
+          provider: 'github',
+          accessToken,
+          refreshToken
+        });
+        await user.save();
+        
+        if (!user.active) return done(new Error('Account inactive'), null);
+        return done(null, user);
       }
       
-      const result = await db.query(
-        `INSERT INTO users (email, username, name, avatar, oauth_provider, oauth_id, email_verified, last_login_at)
-         VALUES (?, ?, ?, ?, ?, ?, TRUE, NOW())`,
-        [email, username, name, avatar, 'github', profile.id]
-      );
+      // Crear nuevo usuario
+      user = new User({
+        email,
+        username,
+        name,
+        avatar,
+        oauthProvider: 'github',
+        oauthId: profile.id,
+        emailVerified: true,
+        lastLoginAt: new Date(),
+        oauthTokens: [{
+          provider: 'github',
+          accessToken,
+          refreshToken
+        }]
+      });
       
-      const newUser = await db.query('SELECT * FROM users WHERE id = ?', [result.insertId]);
+      await user.save();
       
-      await db.query(
-        `INSERT INTO oauth_tokens (user_id, provider, access_token, refresh_token, expires_at)
-         VALUES (?, ?, ?, ?, NULL)`,
-        [result.insertId, 'github', accessToken || null, refreshToken || null]
-      );
-      
-      const created = newUser[0];
-      if (!created.active) return done(new Error('Account inactive'), null);
-      done(null, created);
+      if (!user.active) return done(new Error('Account inactive'), null);
+      done(null, user);
     } catch (error) {
       done(error, null);
     }

@@ -1,0 +1,300 @@
+{
+  "info": {
+    "name": "Auth Service - MongoDB",
+    "description": "Colección de pruebas para el microservicio de autenticación con MongoDB",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5001/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        },
+        "description": "Verifica que el servicio esté funcionando y conectado a MongoDB"
+      }
+    },
+    {
+      "name": "Register",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 201) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.collectionVariables.set('token', jsonData.token.access_token);",
+              "    pm.environment.set('token', jsonData.token.access_token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@ejemplo.com\",\n  \"password\": \"Password123!\",\n  \"name\": \"Usuario Test\",\n  \"username\": \"testuser\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "register"]
+        },
+        "description": "Registra un nuevo usuario. El token se guarda automáticamente."
+      }
+    },
+    {
+      "name": "Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "if (pm.response.code === 200) {",
+              "    var jsonData = pm.response.json();",
+              "    pm.collectionVariables.set('token', jsonData.token.access_token);",
+              "    pm.environment.set('token', jsonData.token.access_token);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@ejemplo.com\",\n  \"password\": \"Password123!\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "login"]
+        },
+        "description": "Inicia sesión con email y contraseña. El token se guarda automáticamente."
+      }
+    },
+    {
+      "name": "Get Current User (/me)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "me"]
+        },
+        "description": "Obtiene información del usuario actual usando el token JWT"
+      }
+    },
+    {
+      "name": "Validate Token",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/validate",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "validate"]
+        },
+        "description": "Valida que el token JWT sea válido"
+      }
+    },
+    {
+      "name": "List Users (Admin)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/users",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "users"]
+        },
+        "description": "Lista todos los usuarios (requiere rol admin)"
+      }
+    },
+    {
+      "name": "Update User Role (Admin)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"role\": \"admin\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/users/:userId/role",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "users", ":userId", "role"],
+          "variable": [
+            {
+              "key": "userId",
+              "value": "USER_ID_AQUI"
+            }
+          ]
+        },
+        "description": "Actualiza el rol de un usuario (requiere rol admin)"
+      }
+    },
+    {
+      "name": "Update User Active Status (Admin)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"active\": false\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/users/:userId/active",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "users", ":userId", "active"],
+          "variable": [
+            {
+              "key": "userId",
+              "value": "USER_ID_AQUI"
+            }
+          ]
+        },
+        "description": "Activa o desactiva un usuario (requiere rol admin)"
+      }
+    },
+    {
+      "name": "Reset User Password (Admin)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/users/:userId/reset-password",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "users", ":userId", "reset-password"],
+          "variable": [
+            {
+              "key": "userId",
+              "value": "USER_ID_AQUI"
+            }
+          ]
+        },
+        "description": "Resetea la contraseña de un usuario y devuelve una temporal (requiere rol admin)"
+      }
+    },
+    {
+      "name": "OAuth - Google (Browser)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/google",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "google"]
+        },
+        "description": "Inicia el flujo OAuth con Google (abrir en navegador)"
+      }
+    },
+    {
+      "name": "OAuth - Facebook (Browser)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/facebook",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "facebook"]
+        },
+        "description": "Inicia el flujo OAuth con Facebook (abrir en navegador)"
+      }
+    },
+    {
+      "name": "OAuth - GitHub (Browser)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/github",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "github"]
+        },
+        "description": "Inicia el flujo OAuth con GitHub (abrir en navegador)"
+      }
+    },
+    {
+      "name": "Logout",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/logout",
+          "host": ["{{baseUrl}}"],
+          "path": ["auth", "logout"]
+        },
+        "description": "Cierra la sesión del usuario"
+      }
+    }
+  ]
+}

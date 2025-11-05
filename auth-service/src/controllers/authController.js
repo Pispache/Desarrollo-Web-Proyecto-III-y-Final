@@ -1,29 +1,32 @@
- /**
+/**
  * @summary Controladores de autenticación para el Auth Service (Node/Express).
  * @remarks
- * - Expone endpoints de registro, login/email y flujo OAuth (callback).\
- * - Genera un JWT compatible con la API .NET (incluye claims de rol esperados).\
+ * - Expone endpoints de registro, login/email y flujo OAuth (callback).
+ * - Genera un JWT compatible con la API .NET (incluye claims de rol esperados).
  * - Provee endpoints auxiliares: información del usuario actual, validación de token y administración de roles.
+ * - Migrado a MongoDB con Mongoose.
  */
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
-const db = require('../config/database');
+const User = require('../models/User');
 
 // Generate JWT token compatible with .NET
 /**
  * @summary Genera un JWT con claims compatibles con la API .NET.
- * @param {{ id:number, email:string, username?:string, name?:string, role?:string }} user Usuario persistido.
+ * @param {object} user Usuario de Mongoose.
  * @returns {string} Token JWT firmado con `JWT_SECRET`.
  */
 function generateToken(user) {
-  // Mapear rol de MySQL (viewer/operator/admin) al claim de .NET esperado por la API (ADMIN/USUARIO)
-  const mysqlRole = (user.role || '').toString().trim().toLowerCase();
-  const dotnetRole = mysqlRole === 'admin' ? 'ADMIN' : 'USUARIO';
+  // Mapear rol de MongoDB (viewer/operator/admin) al claim de .NET esperado por la API (ADMIN/USUARIO)
+  const userRole = (user.role || '').toString().trim().toLowerCase();
+  const dotnetRole = userRole === 'admin' ? 'ADMIN' : 'USUARIO';
 
+  const userId = user._id.toString();
+  
   const payload = {
     // Claims estándar
-    id: user.id,
+    id: userId,
     email: user.email,
     username: user.username,
     role: user.role, // mantener tal cual para compatibilidad con la UI
@@ -31,10 +34,10 @@ function generateToken(user) {
     // Claims compatibles con .NET
     'http://schemas.microsoft.com/ws/2008/06/identity/claims/role': dotnetRole,
     'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name': user.username || user.email,
-    'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': user.id.toString(),
+    'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier': userId,
 
     // Claims adicionales
-    sub: user.id.toString(),
+    sub: userId,
     name: user.name || user.username
   };
   return jwt.sign(payload, process.env.JWT_SECRET, {
@@ -47,23 +50,22 @@ function generateToken(user) {
 // ===== Admin: resetear contraseña de usuario local =====
 exports.resetUserPassword = async (req, res) => {
   try {
-    const userId = parseInt(req.params.id, 10);
+    const userId = req.params.id;
     if (!userId) return res.status(400).json({ success: false, message: 'Se requiere id de usuario' });
 
     // Verificar que el usuario exista y sea local (tenga password)
-    const rows = await db.query('SELECT id, email, password FROM users WHERE id = ?', [userId]);
-    if (rows.length === 0) {
+    const user = await User.findById(userId).select('+password');
+    if (!user) {
       return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
     }
-    const u = rows[0];
-    if (!u.password) {
+    if (!user.password) {
       return res.status(400).json({ success: false, message: 'No se puede resetear: usuario con OAuth' });
     }
 
     // Generar contraseña temporal segura
     const temp = Math.random().toString(36).slice(-8) + 'A1'; // 10+ chars con mayúscula y número
-    const hashed = await bcrypt.hash(temp, 10);
-    await db.query('UPDATE users SET password = ? WHERE id = ?', [hashed, userId]);
+    user.password = temp; // El pre-save hook lo hasheará automáticamente
+    await user.save();
 
     return res.json({ success: true, temporaryPassword: temp });
   } catch (error) {
@@ -75,12 +77,10 @@ exports.resetUserPassword = async (req, res) => {
 // Actualizar estado activo (solo ADMIN, no puede modificarse a sí mismo)
 /**
  * @summary Actualiza el estado activo de un usuario (solo administradores) y evita auto-modificación.
- * @param {import('express').Request} req
- * @param {import('express').Response} res
  */
 exports.updateUserActive = async (req, res) => {
   try {
-    const userId = parseInt(req.params.id, 10);
+    const userId = req.params.id;
     const { active } = req.body || {};
     if (typeof active === 'undefined') {
       return res.status(400).json({ success: false, message: 'Field "active" is required' });
@@ -89,17 +89,20 @@ exports.updateUserActive = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Unauthorized' });
     }
     // Evitar que un admin cambie su propio estado activo
-    const meId = parseInt(req.userClaims.id, 10);
+    const meId = req.userClaims.id;
     if (meId === userId) {
       return res.status(400).json({ success: false, message: 'No puedes cambiar tu propio estado' });
     }
 
-    await db.query('UPDATE users SET active = ? WHERE id = ?', [active ? 1 : 0, userId]);
-    const rows = await db.query('SELECT id, email, username, name, role, active, avatar, last_login_at FROM users WHERE id = ?', [userId]);
-    if (rows.length === 0) {
+    const user = await User.findById(userId);
+    if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
-    res.json({ success: true, user: rows[0] });
+
+    user.active = !!active;
+    await user.save();
+
+    res.json({ success: true, user: user.toPublicJSON() });
   } catch (error) {
     console.error('updateUserActive error:', error);
     res.status(500).json({ success: false, message: 'Failed to update user active' });
@@ -109,9 +112,6 @@ exports.updateUserActive = async (req, res) => {
 // Register with email/password
 /**
  * @summary Registro de usuario con email y contraseña.
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @returns {Promise<void>}
  */
 exports.register = async (req, res) => {
   try {
@@ -126,36 +126,33 @@ exports.register = async (req, res) => {
     const { email, password, name, username } = req.body;
     
     // Check if user exists
-    const existing = await db.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existing.length > 0) {
+    const existing = await User.findByEmail(email);
+    if (existing) {
       return res.status(400).json({
         success: false,
         message: 'El correo ya está registrado'
       });
     }
     
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-    
     // Create user
-    const result = await db.query(
-      `INSERT INTO users (email, username, password, name, role, active)
-       VALUES (?, ?, ?, ?, 'viewer', TRUE)`,
-      [email, username || email.split('@')[0], hashedPassword, name]
-    );
+    const user = new User({
+      email,
+      username: username || email.split('@')[0],
+      password, // El pre-save hook lo hasheará automáticamente
+      name,
+      role: 'viewer',
+      active: true,
+      emailVerified: true, // Auto-verificado para simplificar
+      lastLoginAt: new Date()
+    });
     
-    // Marcar como verificado emitir token
-    // Nota: si quieres exigir verificación, cambia a FALSE y no emitas token hasta verificar.
-    await db.query('UPDATE users SET email_verified = TRUE WHERE id = ?', [result.insertId]);
-    // Registrar último acceso en el registro inicial (auto-login tras registro)
-    await db.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [result.insertId]);
-    const users = await db.query('SELECT id, email, username, name, role, avatar FROM users WHERE id = ?', [result.insertId]);
-    const user = users[0];
+    await user.save();
+    
     const token = generateToken(user);
     res.status(201).json({
       success: true,
       message: 'Registro Correcto',
-      user,
+      user: user.toPublicJSON(),
       token: {
         access_token: token,
         token_type: 'Bearer',
@@ -169,15 +166,12 @@ exports.register = async (req, res) => {
       message: 'El registro fallo',
       error: error.message
     });
-  };
+  }
 };
 
 // Login with email/password
 /**
  * @summary Login con email/contraseña.
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @returns {Promise<void>}
  */
 exports.login = async (req, res) => {
   try {
@@ -191,27 +185,25 @@ exports.login = async (req, res) => {
     
     const { email, password } = req.body;
     
-    // Find user
-    const users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-    if (users.length === 0) {
+    // Find user (incluir password para comparación)
+    const user = await User.findByEmail(email).select('+password');
+    if (!user) {
       return res.status(401).json({
         success: false,
         message: 'Credenciales Invalidas'
       });
     }
     
-    const user = users[0];
-    
     // Check if user has password (not OAuth user)
     if (!user.password) {
       return res.status(401).json({
         success: false,
-        message: 'Esta cuenta utiliza OAuth. Por favor, inicie sesión con ' + user.oauth_provider
+        message: 'Esta cuenta utiliza OAuth. Por favor, inicie sesión con ' + user.oauthProvider
       });
     }
     
     // Verify password
-    const isValid = await bcrypt.compare(password, user.password);
+    const isValid = await user.comparePassword(password);
     if (!isValid) {
       return res.status(401).json({
         success: false,
@@ -227,10 +219,9 @@ exports.login = async (req, res) => {
       });
     }
     
-    // Do not block login based on email verification
-    
     // Update last login
-    await db.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [user.id]);
+    user.lastLoginAt = new Date();
+    await user.save();
     
     // Generate token
     const token = generateToken(user);
@@ -238,14 +229,7 @@ exports.login = async (req, res) => {
     res.json({
       success: true,
       message: 'Inicio de sesión exitoso',
-      user: {
-        id: user.id,
-        email: user.email,
-        username: user.username,
-        name: user.name,
-        role: user.role,
-        avatar: user.avatar
-      },
+      user: user.toPublicJSON(),
       token: {
         access_token: token,
         token_type: 'Bearer',
@@ -265,8 +249,6 @@ exports.login = async (req, res) => {
 // Logout
 /**
  * @summary Cierra la sesión de Passport del usuario actual.
- * @param {import('express').Request} req
- * @param {import('express').Response} res
  */
 exports.logout = (req, res) => {
   req.logout((err) => {
@@ -286,9 +268,6 @@ exports.logout = (req, res) => {
 // Get current user
 /**
  * @summary Obtiene información del usuario actual a partir del JWT.
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @returns {Promise<void>}
  */
 exports.me = async (req, res) => {
   try {
@@ -303,12 +282,9 @@ exports.me = async (req, res) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    const users = await db.query(
-      'SELECT id, email, username, name, role, avatar, email_verified, last_login_at FROM users WHERE id = ?',
-      [decoded.id]
-    );
+    const user = await User.findById(decoded.id);
     
-    if (users.length === 0) {
+    if (!user) {
       return res.status(404).json({
         success: false,
         message: 'Usuario no encontrado'
@@ -317,7 +293,7 @@ exports.me = async (req, res) => {
     
     res.json({
       success: true,
-      user: users[0]
+      user: user.toPublicJSON()
     });
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
@@ -342,9 +318,6 @@ exports.me = async (req, res) => {
 // Validate token (for other microservices)
 /**
  * @summary Valida un JWT para uso entre microservicios.
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @returns {Promise<void>}
  */
 exports.validateToken = async (req, res) => {
   try {
@@ -359,12 +332,9 @@ exports.validateToken = async (req, res) => {
     const token = authHeader.substring(7);
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     
-    const users = await db.query(
-      'SELECT id, email, username, name, role, active FROM users WHERE id = ?',
-      [decoded.id]
-    );
+    const user = await User.findById(decoded.id);
     
-    if (users.length === 0 || !users[0].active) {
+    if (!user || !user.active) {
       return res.status(401).json({
         valid: false,
         message: 'Usuario no encontrado o inactivo'
@@ -374,11 +344,11 @@ exports.validateToken = async (req, res) => {
     res.json({
       valid: true,
       user: {
-        id: users[0].id,
-        email: users[0].email,
-        username: users[0].username,
-        name: users[0].name,
-        role: users[0].role
+        id: user._id.toString(),
+        email: user.email,
+        username: user.username,
+        name: user.name,
+        role: user.role
       }
     });
   } catch (error) {
@@ -391,14 +361,12 @@ exports.validateToken = async (req, res) => {
 
 // OAuth callback
 /**
- * @summary Callback de OAuth GitHub tras el intercambio de código por token.
+ * @summary Callback de OAuth tras el intercambio de código por token.
  * @remarks
- * - Si hay usuario, genera un JWT y redirige a `BACKEND_AUTH_BASE/login?token=...`.
+ * - Si hay usuario, genera un JWT y redirige a `FRONTEND_URL/login?token=...`.
  * - Si falta usuario o hay error, redirige con mensaje de error.
  * - Verifica en base de datos si el usuario está activo; si está inactivo,
- *   NO emite token y redirige a `FRONTEND_URL/cuenta-inactiva`.
- * @param {import('express').Request} req
- * @param {import('express').Response} res
+ *   NO emite token y redirige a `FRONTEND_URL/login?error=account_inactive`.
  */
 exports.oauthCallback = async (req, res) => {
   try {
@@ -412,19 +380,20 @@ exports.oauthCallback = async (req, res) => {
     
     // Comprobar estado activo antes de emitir token
     try {
-      if (req.user?.id) {
-        const rows = await db.query('SELECT active FROM users WHERE id = ?', [req.user.id]);
-        const isActive = rows && rows[0] && !!rows[0].active;
-        if (!isActive) {
+      if (req.user?._id) {
+        const user = await User.findById(req.user._id);
+        if (!user || !user.active) {
           const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
           return res.redirect(`${frontendUrl}/login?error=account_inactive`);
         }
         // Marcar último acceso para usuarios OAuth
-        await db.query('UPDATE users SET last_login_at = NOW() WHERE id = ?', [req.user.id]);
+        user.lastLoginAt = new Date();
+        await user.save();
       }
     } catch (e) {
       console.warn('OAuth callback - active check failed:', e?.message);
     }
+    
     // Generate token for OAuth user
     const token = generateToken(req.user);
     console.log('OAuth callback - Token generated:', token.substring(0, 20) + '...');
@@ -441,24 +410,31 @@ exports.oauthCallback = async (req, res) => {
   }
 };
 
-
 // Listar usuarios (solo ADMIN)
 /**
  * @summary Lista usuarios (solo administradores).
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @returns {Promise<void>}
  */
 exports.listUsers = async (req, res) => {
   try {
-    const rows = await db.query(
-      `SELECT id, email, username, name, role, active, avatar,
-              COALESCE(DATE_FORMAT(last_login_at, '%Y-%m-%d %H:%i:%s'), NULL) AS last_login_at,
-              (password IS NOT NULL) AS has_password
-         FROM users
-         ORDER BY created_at DESC, id DESC`
-    );
-    res.json({ success: true, users: rows });
+    const users = await User.find()
+      .select('email username name role active avatar lastLoginAt password')
+      .sort({ createdAt: -1, _id: -1 })
+      .lean();
+    
+    // Agregar campo has_password
+    const usersWithPasswordFlag = users.map(u => ({
+      id: u._id,
+      email: u.email,
+      username: u.username,
+      name: u.name,
+      role: u.role,
+      active: u.active,
+      avatar: u.avatar,
+      last_login_at: u.lastLoginAt,
+      has_password: !!u.password
+    }));
+    
+    res.json({ success: true, users: usersWithPasswordFlag });
   } catch (error) {
     console.error('listUsers error:', error);
     res.status(500).json({ success: false, message: 'Error al listar usuarios' });
@@ -468,13 +444,10 @@ exports.listUsers = async (req, res) => {
 // Actualizar rol de usuario (solo ADMIN)
 /**
  * @summary Actualiza el rol de un usuario (solo administradores).
- * @param {import('express').Request} req
- * @param {import('express').Response} res
- * @returns {Promise<void>}
  */
 exports.updateUserRole = async (req, res) => {
   try {
-    const userId = parseInt(req.params.id, 10);
+    const userId = req.params.id;
     const { role } = req.body || {};
 
     if (!userId || !role) {
@@ -487,16 +460,15 @@ exports.updateUserRole = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Rol Invalido' });
     }
 
-    await db.query('UPDATE users SET role = ? WHERE id = ?', [newRole, userId]);
-
-    const rows = await db.query(
-      'SELECT id, email, username, name, role, active, avatar, last_login_at FROM users WHERE id = ?', [userId]
-    );
-    if (rows.length === 0) {
+    const user = await User.findById(userId);
+    if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
     }
 
-    res.json({ success: true, user: rows[0] });
+    user.role = newRole;
+    await user.save();
+
+    res.json({ success: true, user: user.toPublicJSON() });
   } catch (error) {
     console.error('updateUserRole error:', error);
     res.status(500).json({ success: false, message: 'No se pudo actualizar el rol del usuario' });

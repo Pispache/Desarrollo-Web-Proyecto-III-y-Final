@@ -82,23 +82,23 @@ services:
     profiles: ["ui", "all"]
 
   # ============================
-  # Base de datos MySQL para Auth Service
+  # Base de datos MongoDB para Auth Service (NoSQL)
   # ============================
-  mysql:
-    image: mysql:8.0
-    container_name: marcador_mysql
+  mongodb:
+    image: mongo:7.0
+    container_name: marcador_mongodb
     restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-RootAuth2025!}
-      - MYSQL_DATABASE=auth_db
-      - MYSQL_USER=auth_user
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-AuthPass2025!}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:-MongoAuth2025!}
+      - MONGO_INITDB_DATABASE=auth_db
     ports:
-      - "127.0.0.1:3307:3306"
+      - "127.0.0.1:27017:27017"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-RootAuth2025!}"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -115,16 +115,12 @@ services:
     container_name: marcador_auth
     restart: unless-stopped
     depends_on:
-      mysql:
+      mongodb:
         condition: service_healthy
     environment:
       - NODE_ENV=production
       - PORT=5000
-      - DB_HOST=mysql
-      - DB_PORT=3306
-      - DB_USER=auth_user
-      - DB_PASSWORD=${MYSQL_PASSWORD:-AuthPass2025!}
-      - DB_NAME=auth_db
+      - MONGODB_URI=mongodb://${MONGO_ROOT_USER:-admin}:${MONGO_ROOT_PASSWORD:-MongoAuth2025!}@mongodb:27017/auth_db?authSource=admin
       - JWT_SECRET=${JWT_SECRET}
       - JWT_EXPIRES_IN=1h
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
@@ -237,5 +233,6 @@ services:
     profiles: ["reports", "all"]
 
 volumes:
-  mysql_data:
+  mongodb_data:
+  mongodb_config:
   pg_data:

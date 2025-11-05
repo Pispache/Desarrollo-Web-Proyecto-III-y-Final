@@ -1,18 +1,18 @@
 {
   "name": "auth-service",
   "version": "1.0.0",
-  "description": "Microservicio de autenticación OAuth 2.0 con Node.js + MySQL",
+  "description": "Microservicio de autenticación OAuth 2.0 con Node.js + MongoDB",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js"
   },
-  "keywords": ["oauth", "authentication", "jwt", "microservice", "nodejs", "mysql"],
+  "keywords": ["oauth", "authentication", "jwt", "microservice", "nodejs", "mongodb"],
   "author": "Grupo 8 - UMG",
   "license": "MIT",
   "dependencies": {
     "express": "^4.18.2",
-    "mysql2": "^3.6.5",
+    "mongoose": "^8.0.3",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
     "passport": "^0.7.0",
