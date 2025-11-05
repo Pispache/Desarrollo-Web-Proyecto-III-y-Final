@@ -40,7 +40,6 @@ RUN chmod +x /app/scripts/*.sh
 
 # Configurar cron
 RUN chmod 0644 /etc/cron.d/etl-cron && \
-    crontab /etc/cron.d/etl-cron && \
     touch /var/log/etl/cron.log
 
 # Variables de entorno

@@ -6,9 +6,41 @@
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Favicon/Icons -->
-  <link rel="icon" type="image/png" href="assets/favicon.png" sizes="32x32">
-  <link rel="icon" type="image/png" href="assets/favicon-64.png" sizes="64x64">
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" sizes="180x180">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <script>
+    (function () {
+      try {
+        var smallHref = 'favicon.ico';
+        var bigHref = 'assets/favicon-64.png';
+
+        function setFavicon(href, sizes, type) {
+          document.querySelectorAll('link[rel="icon"], link[rel="shortcut icon"]').forEach(function (el) {
+            el.parentNode.removeChild(el);
+          });
+          var link = document.createElement('link');
+          link.rel = 'icon';
+          if (type) link.type = type;
+          if (sizes) link.sizes = sizes;
+          link.href = href;
+          document.head.appendChild(link);
+        }
+
+        if (document.readyState !== 'complete') {
+          setFavicon(bigHref, '64x64', 'image/png');
+        }
+        window.addEventListener('load', function () {
+          setFavicon(smallHref, '', 'image/x-icon');
+        });
+        document.addEventListener('readystatechange', function () {
+          if (document.readyState === 'complete') {
+            setFavicon(smallHref, '', 'image/x-icon');
+          } else {
+            setFavicon(bigHref, '64x64', 'image/png');
+          }
+        });
+      } catch (e) { /* noop */ }
+    })();
+  </script>
   <meta name="theme-color" content="#0b1428">
   <script>
     (function() {
