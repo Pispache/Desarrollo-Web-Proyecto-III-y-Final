@@ -11,6 +11,9 @@ La arquitectura utiliza contenedores para la interfaz de usuario (Angular + Ngin
 Esta aplicacion implementa un sistema completo de marcador de balonceso orientado a su uso en tiempo real durante partidos, con control de reloj de juego , manejo de cuartos, registro de eventos de puntuación y faltas panel de control para el operador, y una vista publica del tablero. 
 
 ---
+
+Preparacion para Documentacion.
+
 ## Arquitectura General 
 La arquitectura se divide en trez piezas principales que se comunicacn a través de HTTP en un red de contenedores. La interfaz Angular consume la API REST para consultar el estado del juego actual y registar eventos. La Api persiste el estado en SQL Server , emitiendo reglas de negocio como validaciones de faltas, avance de cuarto al agotar el tiempo y la posibilidad de deshacer eventos. Un contenedor auxiliar inicializa la base con scripts de creación y datos semilla. Esta separación favorece el despliegue y el escalonamiento independiente. 
 
