@@ -83,6 +83,12 @@ export class TournamentPageComponent implements OnInit {
         if (Array.isArray(data.quarterfinals)) this.knockout.quarterfinals = data.quarterfinals;
         if (Array.isArray(data.semifinals)) this.knockout.semifinals = data.semifinals;
         if (Array.isArray(data.final)) this.knockout.final = data.final;
+        if (data.champion && typeof data.champion === 'object') {
+          this.knockout.champion = {
+            teamId: typeof data.champion.teamId === 'number' ? data.champion.teamId : null,
+            side: data.champion.side === 'home' || data.champion.side === 'away' ? data.champion.side : null
+          } as any;
+        }
       }
     } catch {}
   }
@@ -240,6 +246,7 @@ export class TournamentPageComponent implements OnInit {
     quarterfinals: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
     semifinals: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
     final: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
+    champion: { teamId: null as number | null, side: null as ('home'|'away'|null) }
   };
 
   // Initialize default bracket placeholders (8, 4, 2, 1 matches)
@@ -274,6 +281,15 @@ export class TournamentPageComponent implements OnInit {
       const isHome = matchIndex % 2 === 0;
       this.setSlot('final', 0, isHome ? 'home' : 'away', winnerId);
     }
+    this.saveKnockoutToLocal();
+  }
+
+  setChampionFromFinal(side: 'home' | 'away') {
+    const final = this.knockout.final[0];
+    if (!final) return;
+    const teamId = side === 'home' ? (final.homeTeamId ?? null) : (final.awayTeamId ?? null);
+    if (!teamId) return;
+    this.knockout.champion = { teamId, side } as any;
     this.saveKnockoutToLocal();
   }
 

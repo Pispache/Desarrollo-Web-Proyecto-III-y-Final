@@ -265,10 +265,25 @@
               <option [ngValue]="null">Seleccionar equipo visita</option>
               <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
+            <div class="mt-1 d-flex gap-2">
+              <button class="btn btn-sm btn-warning" (click)="setChampionFromFinal('home')" [disabled]="!m.homeTeamId">Campeón local</button>
+              <button class="btn btn-sm btn-warning" (click)="setChampionFromFinal('away')" [disabled]="!m.awayTeamId">Campeón visita</button>
+            </div>
           </div>
         </div>
       </div>
+      <div class="mt-2" *ngIf="knockout.champion.teamId as champId">
+        <div class="alert alert-success p-2" style="display:inline-block;">
+          <strong>{{ knockout.champion.side === 'home' ? 'Local' : 'Visita' }} es campeón:</strong>
+          <span class="ms-1">{{ teamNameById(champId) }}</span>
+        </div>
+      </div>
+      <div class="mt-2" *ngIf="knockout.champion.side === 'home' || knockout.champion.side === 'away'">
+        <div class="alert alert-info p-2" style="display:inline-block;">
+          <strong>{{ knockout.champion.side === 'home' ? 'CAMPEON LOCAL' : 'CAMPEON VISITA' }}</strong>
+        </div>
+      </div>
     </div>
-    </div>
-  </section>
+  </div>
+</section>
 </div>
