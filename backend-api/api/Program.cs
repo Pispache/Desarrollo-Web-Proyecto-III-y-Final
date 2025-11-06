@@ -144,8 +144,6 @@ if (!string.IsNullOrWhiteSpace(jwtSecret))
     app.UseAuthorization();
 }
 
-// Seed de AdminUsers deshabilitado: gestión de usuarios via auth-service
-
 /// <summary>
 /// Registro de endpoints de juegos, reloj y torneos.
 /// </summary>

@@ -192,6 +192,7 @@ export class ApiService {
   ) {
     return this.post(`/games/${id}/subtract-point`, {
       team,
+      points: 1,
       playerId: opts?.playerId ?? null,
       playerNumber: opts?.playerNumber ?? null
     });

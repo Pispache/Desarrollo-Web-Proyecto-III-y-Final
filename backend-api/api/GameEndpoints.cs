@@ -36,6 +36,15 @@ public class ScoreDto
     public int? PlayerNumber { get; set; }
 }
 /// <summary>
+/// Comando para restar un punto al marcador.
+/// </summary>
+public class SubtractDto
+{
+    public string Team { get; set; } = "";
+    public int? PlayerId { get; set; }
+    public int? PlayerNumber { get; set; }
+}
+/// <summary>
 /// Datos de falta cometida por el jugadoraso
 /// </summary>
 public class FoulDto
@@ -844,7 +853,7 @@ END;";
         /// <summary>
         /// Restar un punto.
         /// </summary>
-        g.MapPost("/games/{id:int}/subtract-point", async (int id, [FromBody] ScoreDto dto) =>
+        g.MapPost("/games/{id:int}/subtract-point", async (int id, [FromBody] SubtractDto dto) =>
         {
             if (dto is null || string.IsNullOrEmpty(dto.Team))
                 return Results.BadRequest(new { error = "Datos inválidos." });
@@ -888,7 +897,7 @@ END;";
 
             tx.Commit();
             return Results.NoContent();
-        }).AddEndpointFilter<ValidationFilter<ScoreDto>>().WithOpenApi();
+        }).AddEndpointFilter<ValidationFilter<SubtractDto>>().WithOpenApi();
 
         g.MapPost("/games/{id:int}/foul", async (
             int id, 

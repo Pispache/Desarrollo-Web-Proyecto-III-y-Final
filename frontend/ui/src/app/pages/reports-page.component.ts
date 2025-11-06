@@ -212,10 +212,19 @@ export class ReportsPageComponent implements OnInit {
     this.showTeamSuggestions = false;
   }
 
-  onTeamChange(event: Event) {
-    const select = event.target as HTMLSelectElement;
-    const value = select.value;
-    this.selectedTeamId = value ? parseInt(value, 10) : null;
+  onTeamChange(eventOrValue: any) {
+    // Soporta (ngModelChange) pasando el valor directamente o (change) pasando el Event
+    if (eventOrValue && typeof eventOrValue === 'object' && 'target' in eventOrValue) {
+      const select = eventOrValue.target as HTMLSelectElement;
+      const value = select?.value ?? '';
+      this.selectedTeamId = value ? parseInt(value, 10) : null;
+    } else {
+      const value = eventOrValue;
+      // Puede venir como string o number desde ngModelChange
+      this.selectedTeamId = (value === null || value === undefined || value === '')
+        ? null
+        : parseInt(String(value), 10);
+    }
     console.log('[DEBUG] Team changed to:', this.selectedTeamId);
   }
 

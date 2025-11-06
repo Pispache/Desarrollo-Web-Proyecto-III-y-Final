@@ -50,7 +50,7 @@ services:
         condition: service_completed_successfully
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ASPNETCORE_URLS=${ASPNETCORE_URLS}
+      - ASPNETCORE_URLS=${ASPNETCORE_URLS:-http://0.0.0.0:8080}
       - DB_CONNECTION_STRING=Server=db,1435;Database=${DB_NAME};User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;
       - JWT_SECRET=${JWT_SECRET}
       - JWT_ISSUER=${JWT_ISSUER}
@@ -58,12 +58,9 @@ services:
       - JWT_EXPIRES_MINUTES=${JWT_EXPIRES_MINUTES}
       - ADMIN_USERNAME=${ADMIN_USERNAME}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      # Opción sencilla: archivo JSON montado dentro del contenedor
-      - ADMIN_USERS_FILE=/app/users.json
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
-      - ./users.json:/app/users.json:ro
       - ./backend-api/api/wwwroot:/app/wwwroot
     profiles: ["api", "all"]
 
@@ -135,6 +132,12 @@ services:
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost:4200}
       - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:4200,https://tobarumg.lat}
       - SESSION_SECRET=${SESSION_SECRET:-change-this-secret-in-production}
+      # Seed automático de admin en Auth Service (Mongo)
+      - ADMIN_SEED_EMAIL=admin@local.dev
+      - ADMIN_SEED_PASSWORD=Admin123!
+      - ADMIN_SEED_NAME=Admin
+      - ADMIN_SEED_ROLE=admin
+      - ADMIN_SEED_FORCE_PASSWORD=true
     ports:
       - "127.0.0.1:5001:5000"
     healthcheck:
@@ -187,6 +190,8 @@ services:
       - SYSTEM_LOGO_URL=${SYSTEM_LOGO_URL:-http://localhost:8080/uploads/logos/system.svg}
       - POSTGRES_CS=host=postgres port=5432 dbname=${POSTGRES_DB:-reportsdb} user=${POSTGRES_USER:-reports_admin} password=${POSTGRES_PASSWORD:-reports_admin_pwd}
       - PDF_RENDERER_URL=http://pdf-renderer:3000
+      - API_BASE_URL=${API_BASE_URL:-http://api:8080}
+      - UI_BASE_URL=${UI_BASE_URL:-http://ui:4200}
     ports:
       - "127.0.0.1:8081:8081"
     healthcheck:

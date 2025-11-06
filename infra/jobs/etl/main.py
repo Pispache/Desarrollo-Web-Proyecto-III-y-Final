@@ -92,6 +92,11 @@ def log_etl_run(pg_conn, table_name: str, status: str, records_processed: int,
         logger.debug(f"Log ETL registrado para {table_name}: {status}")
     except Exception as e:
         logger.error(f"Error registrando log ETL: {e}")
+        # Limpiar estado de transacción abortada si ocurrió error
+        try:
+            pg_conn.rollback()
+        except Exception:
+            pass
         # No fallar el ETL por un error de logging
 
 def validate_counts(mssql_conn, pg_conn) -> Dict[str, Tuple[int, int, bool]]:
@@ -169,6 +174,10 @@ def sync_teams(mssql_conn, pg_conn):
         duration = round(time.time() - start, 2)
         error_msg = str(e)
         logger.error(f"Error sincronizando {table_name}: {error_msg}")
+        try:
+            pg_conn.rollback()
+        except Exception:
+            pass
         log_etl_run(pg_conn, table_name, "ERROR", 0, duration, error_msg)
         return {"table": table_name, "count": 0, "duration": duration, "last_id": last_id, "status": "ERROR", "error": error_msg}
 
@@ -176,6 +185,7 @@ def sync_players(mssql_conn, pg_conn):
     """Sincroniza jugadores desde SQL Server a PostgreSQL"""
     start = time.time()
     table_name = "players"
+    last_id = 0
     
     try:
         last_id = int(get_checkpoint(pg_conn, "players_last_id"))
@@ -218,6 +228,7 @@ def sync_games(mssql_conn, pg_conn):
     """Sincroniza juegos desde SQL Server a PostgreSQL"""
     start = time.time()
     table_name = "games"
+    last_id = 0
     
     try:
         last_id = int(get_checkpoint(pg_conn, "games_last_id"))
@@ -260,6 +271,7 @@ def sync_game_events(mssql_conn, pg_conn):
     """Sincroniza eventos de juegos desde SQL Server a PostgreSQL"""
     start = time.time()
     table_name = "game_events"
+    last_id = 0
     
     try:
         last_id = int(get_checkpoint(pg_conn, "game_events_last_id"))

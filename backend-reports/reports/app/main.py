@@ -28,6 +28,13 @@ from .pdf.templates import render_teams_html, render_players_html, render_games_
 # /// </remarks>
 app = FastAPI(title="Report Service", version="0.1.0")
 
+# Base URLs parametrizables para servicios externos
+# En Docker: API_BASE_URL=http://api:8080, UI_BASE_URL=http://ui:4200
+# En local:  API_BASE_URL=http://localhost:8080, UI_BASE_URL=http://localhost:4200
+API_BASE_URL = os.getenv("API_BASE_URL", "http://api:8080")
+UI_BASE_URL = os.getenv("UI_BASE_URL", "http://ui:4200")
+LOCALHOST_API = "http://localhost:8080"
+
 @app.get("/health")
 def health():
     """ 
@@ -294,7 +301,7 @@ async def roster_pdf(
                 auth_header = request.headers.get("authorization")
                 # Actualizar nombres de equipos desde API para evitar desincronización
                 try:
-                    g_req = urlreq.Request(f"http://api:8080/api/games/{gameId}")
+                    g_req = urlreq.Request(f"{API_BASE_URL}/api/games/{gameId}")
                     if auth_header:
                         g_req.add_header("Authorization", auth_header)
                     with urlreq.urlopen(g_req, timeout=10) as resp_g:
@@ -307,7 +314,7 @@ async def roster_pdf(
                     print(f"[WARN] Could not refresh game names from API: {ex_names}")
 
                 def fetch_side(side: str):
-                    url = f"http://api:8080/api/games/{gameId}/players/{side}"
+                    url = f"{API_BASE_URL}/api/games/{gameId}/players/{side}"
                     req = urlreq.Request(url)
                     if auth_header:
                         req.add_header("Authorization", auth_header)
@@ -407,13 +414,13 @@ async def roster_pdf(
                 if s.startswith("http://") or s.startswith("https://"):
                     return s
                 if s.startswith("/"):
-                    return f"http://api:8080{s}"
+                    return f"{API_BASE_URL}{s}"
                 return s
 
             def team_logo(team_id: Optional[int]):
                 if team_id is None:
                     return None
-                req = urlreq.Request(f"http://api:8080/api/teams/{team_id}")
+                req = urlreq.Request(f"{API_BASE_URL}/api/teams/{team_id}")
                 if auth_header:
                     req.add_header("Authorization", auth_header)
                 with urlreq.urlopen(req, timeout=10) as resp:
@@ -432,13 +439,13 @@ async def roster_pdf(
                 return None
             s = str(u)
             if s.startswith("http://") or s.startswith("https://"):
-                return s.replace("http://localhost:8080", "http://api:8080")
+                return s.replace(LOCALHOST_API, API_BASE_URL)
             if not s.startswith("/"):
                 s = "/" + s
             # intentar primero API
-            api_url = f"http://api:8080{s}"
+            api_url = f"{API_BASE_URL}{s}"
             # como fallback, UI
-            ui_url = f"http://ui:4200{s}"
+            ui_url = f"{UI_BASE_URL}{s}"
             # no verificamos existencia aquí; dejamos al renderer resolver
             return api_url or ui_url
 
@@ -515,6 +522,7 @@ def list_teams(
 @router.get("/teams/{teamId}/players")
 def list_players_by_team(
     teamId: int,
+    request: Request,
     _=Depends(require_admin)
 ):
     try:
@@ -536,8 +544,39 @@ def list_players_by_team(
                     }
                     for r in cur.fetchall()
                 ]
+        # Fallback a API si no hay jugadores en Postgres
         if not rows:
-            raise HTTPException(status_code=404, detail="Team not found or no players")
+            try:
+                import json
+                from urllib import request as urlreq
+                token = os.getenv("REPORTS_BEARER_TOKEN")
+                req = urlreq.Request(f"{API_BASE_URL}/api/teams/{teamId}/players")
+                # Preferir el Authorization recibido del cliente; si no, usar REPORTS_BEARER_TOKEN
+                auth_header = request.headers.get("authorization")
+                if auth_header:
+                    req.add_header("Authorization", auth_header)
+                elif token:
+                    req.add_header("Authorization", f"Bearer {token}")
+                with urlreq.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read())
+                    items = data.get("items") or data
+                    if isinstance(items, list):
+                        def map_player(p: dict) -> dict:
+                            return {
+                                "player_id": p.get("PlayerId") or p.get("playerId") or p.get("player_id"),
+                                "team_id": p.get("TeamId") or p.get("teamId") or p.get("team_id"),
+                                "number": p.get("Number") if p.get("Number") is not None else p.get("number"),
+                                "name": p.get("Name") or p.get("name"),
+                                "position": p.get("Position") or p.get("position"),
+                                "active": bool(p.get("Active") if p.get("Active") is not None else p.get("active", True)),
+                                "created_at": None,
+                            }
+                        rows = [map_player(p) for p in items]
+            except Exception:
+                pass
+        if not rows:
+            # Devolver lista vacía en lugar de 404 para que la UI pueda seguir funcionando
+            return {"items": []}
         return {"items": rows}
     except HTTPException:
         raise
@@ -561,8 +600,9 @@ def list_games(
         where = []
         params = []
         if status:
-            where.append("status = %s")
-            params.append(status)
+            # Comparación case-insensitive
+            where.append("UPPER(status) = %s")
+            params.append(str(status).upper())
         def parse_dt(s: Optional[str]) -> Optional[datetime]:
             if not s:
                 return None
@@ -597,6 +637,38 @@ def list_games(
                     }
                     for r in cur.fetchall()
                 ]
+
+        # Fallback: si no hay filas en Postgres, intentar leer desde la API principal
+        if not rows:
+            try:
+                import json
+                from urllib import request as urlreq
+                auth_header = None
+                # No tenemos Request aquí; permitir prueba manual agregando JWT via env (opcional)
+                token = os.getenv("REPORTS_BEARER_TOKEN")
+                req = urlreq.Request(f"{API_BASE_URL}/api/games")
+                if token:
+                    req.add_header("Authorization", f"Bearer {token}")
+                with urlreq.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read())
+                    items = data.get("games") or data.get("items") or data
+                    if isinstance(items, list):
+                        def map_game(g: dict) -> dict:
+                            return {
+                                "game_id": g.get("GameId") or g.get("gameId") or g.get("id"),
+                                "home_team": g.get("HomeTeam") or g.get("homeTeam"),
+                                "away_team": g.get("AwayTeam") or g.get("awayTeam"),
+                                "home_team_id": g.get("HomeTeamId") or g.get("homeTeamId"),
+                                "away_team_id": g.get("AwayTeamId") or g.get("awayTeamId"),
+                                "quarter": g.get("Quarter") or g.get("quarter"),
+                                "home_score": g.get("HomeScore") or g.get("homeScore"),
+                                "away_score": g.get("AwayScore") or g.get("awayScore"),
+                                "status": g.get("Status") or g.get("status"),
+                                "created_at": g.get("CreatedAt") or g.get("createdAt"),
+                            }
+                        rows = [map_game(g) for g in items]
+            except Exception as _:
+                pass
         return {"items": rows}
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format; use ISO 8601 (YYYY-MM-DD or full ISO)")
@@ -659,13 +731,13 @@ async def teams_pdf(
                 return None
             u = str(url)
             if u.startswith("http://") or u.startswith("https://"):
-                # Si viene con localhost, reescribir al servicio 'api' dentro de la red docker
-                return u.replace("http://localhost:8080", "http://api:8080")
+                # Si viene con localhost, reescribir a la API configurada
+                return u.replace(LOCALHOST_API, API_BASE_URL)
             # Tratar rutas relativas sin slash como raíz
             if not u.startswith("/"):
                 u = "/" + u
             # Preferir API; algunas instalaciones sirven estáticos desde la UI
-            return f"http://api:8080{u}"
+            return f"{API_BASE_URL}{u}"
         # Embebido definitivo de logos como data URI (carpeta de estáticos)
         def build_candidates(u: Optional[str]) -> list:
             if not u:
@@ -677,9 +749,9 @@ async def teams_pdf(
             if not s.startswith('http'):
                 if not s.startswith('/'):
                     s = '/' + s
-                return [f"http://api:8080{s}", f"http://ui:4200{s}"]
+                return [f"{API_BASE_URL}{s}", f"{UI_BASE_URL}{s}"]
             # Absoluta
-            return [s.replace("http://localhost:8080", "http://api:8080")]
+            return [s.replace(LOCALHOST_API, API_BASE_URL)]
 
         def fetch_data_uri(url_like: Optional[str]) -> Optional[str]:
             try:
@@ -977,6 +1049,59 @@ async def games_pdf(
                     }
                     for r in cur.fetchall()
                 ]
+
+        # Fallback: si no hay filas, intentar recoger desde API principal
+        if not rows:
+            try:
+                import json
+                from urllib import request as urlreq
+                token = os.getenv("REPORTS_BEARER_TOKEN")
+                url = "http://api:8080/api/games"
+                # Si hay filtros de status/fecha, aplicarlos luego por software
+                req = urlreq.Request(url)
+                if token:
+                    req.add_header("Authorization", f"Bearer {token}")
+                with urlreq.urlopen(req, timeout=10) as resp:
+                    data = json.loads(resp.read())
+                    items = data.get("games") or data.get("items") or data
+                    if isinstance(items, list):
+                        def to_dt(x):
+                            try:
+                                return datetime.fromisoformat(x)
+                            except Exception:
+                                return None
+                        def match_filters(g: dict) -> bool:
+                            if status:
+                                s = (g.get("Status") or g.get("status") or "").upper()
+                                if s != str(status).upper():
+                                    return False
+                            created = to_dt(g.get("CreatedAt") or g.get("createdAt") or "")
+                            if dt_from and (not created or created < dt_from):
+                                return False
+                            if dt_to and (not created or created > dt_to):
+                                return False
+                            return True
+                        mapped = []
+                        for g in items:
+                            if not match_filters(g):
+                                continue
+                            mapped.append({
+                                "game_id": g.get("GameId") or g.get("gameId") or g.get("id"),
+                                "home_team": g.get("HomeTeam") or g.get("homeTeam"),
+                                "away_team": g.get("AwayTeam") or g.get("awayTeam"),
+                                "home_team_id": g.get("HomeTeamId") or g.get("homeTeamId"),
+                                "away_team_id": g.get("AwayTeamId") or g.get("awayTeamId"),
+                                "quarter": g.get("Quarter") or g.get("quarter"),
+                                "home_score": g.get("HomeScore") or g.get("homeScore"),
+                                "away_score": g.get("AwayScore") or g.get("awayScore"),
+                                "status": g.get("Status") or g.get("status"),
+                                "created_at": g.get("CreatedAt") or g.get("createdAt"),
+                                "home_logo_url": None,
+                                "away_logo_url": None,
+                            })
+                        rows = mapped
+            except Exception:
+                pass
         
         # Generar HTML
         filters = {"from": from_, "to": to, "status": status, "limit": limit, "offset": offset}
@@ -1057,19 +1182,30 @@ async def player_stats_pdf(
                     (playerId,)
                 )
                 prow = cur.fetchone()
+                # Si no existe en Postgres, usar datos mínimos y continuar (stats saldrán en 0 si no hay eventos)
                 if not prow:
-                    raise HTTPException(status_code=404, detail="Player not found")
-                player = {
-                    "name": prow[0],
-                    "number": prow[1],
-                    "position": prow[2],
-                    "team_id": prow[3],
-                    "team_name": prow[4],
-                    # Campos extendidos (no replicados en PG por ahora)
-                    "height_cm": None,
-                    "age": None,
-                    "nationality": None,
-                }
+                    player = {
+                        "name": f"Player {playerId}",
+                        "number": None,
+                        "position": None,
+                        "team_id": None,
+                        "team_name": None,
+                        "height_cm": None,
+                        "age": None,
+                        "nationality": None,
+                    }
+                else:
+                    player = {
+                        "name": prow[0],
+                        "number": prow[1],
+                        "position": prow[2],
+                        "team_id": prow[3],
+                        "team_name": prow[4],
+                        # Campos extendidos (no replicados en PG por ahora)
+                        "height_cm": None,
+                        "age": None,
+                        "nationality": None,
+                    }
 
                 # Condiciones de fecha
                 where = ["player_id = %s"]

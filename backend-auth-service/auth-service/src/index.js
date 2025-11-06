@@ -8,6 +8,7 @@ const session = require('express-session');
 const passport = require('passport');
 const db = require('./config/database');
 const authRoutes = require('./routes/auth');
+const seedAdminFromEnv = require('./seed/admin');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -102,9 +103,10 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Initialize database and start server
+// Initialize database, seed admin (if configured) and start server
 db.initialize()
-  .then(() => {
+  .then(async () => {
+    await seedAdminFromEnv(console);
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Auth Service running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
