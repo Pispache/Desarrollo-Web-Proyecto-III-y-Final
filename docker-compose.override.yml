@@ -15,3 +15,6 @@ services:
       - GOOGLE_CALLBACK_URL=http://localhost:5001/api/auth/google/callback
       - FACEBOOK_CALLBACK_URL=http://localhost:5001/api/auth/facebook/callback
       - GITHUB_CALLBACK_URL=http://localhost:5001/api/auth/github/callback
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
