@@ -32,7 +32,7 @@ services:
       - SA_PASSWORD=${SA_PASSWORD}
     volumes:
       - ./db:/db
-      - ./scripts:/scripts
+      - ./infra/scripts:/scripts
     entrypoint: ["/bin/bash","-c","/scripts/espera_sql.sh db 1435 /scripts/db-init.sh"]
     restart: "no"
     profiles: ["db", "api", "all"]
@@ -40,7 +40,7 @@ services:
   api:
    # API ASP.NET Core 8; expone 8080 hacia la red del host
     build:
-      context: ./api
+      context: ./backend-api/api
       dockerfile: Dockerfile
     container_name: marcador_api
     depends_on:
@@ -64,13 +64,13 @@ services:
       - "127.0.0.1:8080:8080"
     volumes:
       - ./users.json:/app/users.json:ro
-      - ./api/wwwroot:/app/wwwroot
+      - ./backend-api/api/wwwroot:/app/wwwroot
     profiles: ["api", "all"]
 
   ui:
   # UI Angular compilada servida por Nginx; expone 80 interno como 4200 en host
     build:
-      context: ./ui
+      context: ./frontend/ui
       dockerfile: Dockerfile
     container_name: marcador_ui
     depends_on:
@@ -110,7 +110,7 @@ services:
   # ============================
   auth-service:
     build:
-      context: ./auth-service
+      context: ./backend-auth-service/auth-service
       dockerfile: Dockerfile
     container_name: marcador_auth
     restart: unless-stopped
@@ -172,7 +172,7 @@ services:
   # ============================
   report-service:
     build:
-      context: ./reports
+      context: ./backend-reports/reports
       dockerfile: Dockerfile
     container_name: marcador_reports
     depends_on:
@@ -201,7 +201,7 @@ services:
   # ============================
   pdf-renderer:
     build:
-      context: ./pdf-renderer
+      context: ./backend-pdf-renderer/pdf-renderer
       dockerfile: Dockerfile
     container_name: marcador_pdf
     ports:
@@ -218,7 +218,7 @@ services:
   # ============================
   etl:
     build:
-      context: ./etl
+      context: ./backend-etl/etl
       dockerfile: Dockerfile
     container_name: marcador_etl
     depends_on:
