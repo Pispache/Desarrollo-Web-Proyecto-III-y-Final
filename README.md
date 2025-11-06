@@ -16,7 +16,7 @@ Aplicación web para gestionar un marcador de baloncesto en tiempo real con cont
 | 1. Descripción General | [Click aquí para ir a la sección](#descripción-general) |
 | 2. Arquitectura General | [Click aquí para ir a la sección](#arquitectura-general) |
 | 3. Backend (.NET 8) | [Click aquí para ir a la sección](#construcción-del-backend) |
-| 4. Base de Datos | [Click aquí para ir a la sección](#base-de-datos--sql-server-2022) |
+| 4. Base de Datos | [Click aquí para ir a la sección](#base-de-datos---sql-server-2022---mongo) |
 | 5. Frontend (Angular) | [Click aquí para ir a la sección](#frontend) |
 | 6. Docker & Deployment | [Click aquí para ir a la sección](#despliegue-con-docker-compose) |
 | 7. Requisitos del Sistema | [Click aquí para ir a la sección](#requisitos-mínimos-de-ejecución) |
@@ -34,12 +34,12 @@ Aplicación web para gestionar un marcador de baloncesto en tiempo real con cont
 
 Aplicación para uso en tiempo real en partidos de baloncesto:
 
-- Control de reloj por cuarto
-- Registro de puntos y faltas
-- Avance automático de cuarto
-- Opción para deshacer eventos
-- Panel de operador y vista pública
-- Eventos auditables y consistentes
+- Control de reloj por cuarto  
+- Registro de puntos y faltas  
+- Avance automático de cuarto  
+- Opción para deshacer eventos  
+- Panel de operador y vista pública  
+- Eventos auditables y consistentes  
 
 ---
 
@@ -54,20 +54,17 @@ Sistema dividido en tres piezas principales:
 Flujo:  
 UI → API → BD → UI
 
-## Arquitectura General
+### Tabla de servicios
 
-| Microservicio / Componente | Lenguaje / Framework                | Base de datos      | Tipo BD                   | Observaciones |
-|-----------------------------|-------------------------------------|--------------------|---------------------------|----------------|
-| **Auth-Service**            | C# (.NET 8, ASP.NET Core Web API)  | SQL Server 2022    | Relacional                | Autenticación/Autorización, emisión de JWT, gestión de roles/menús. |
-| **Matches-Service**         | C# (.NET 8, ASP.NET Core + SignalR) | SQL Server 2022    | Relacional                | Partidos, marcador, faltas y cronómetro en tiempo real (SignalR). |
-| **Tournament-Service**      | C# (.NET 8, ASP.NET Core)          | SQL Server 2022    | Relacional                | Torneos, calendario y organización de jornadas. |
-| **Teams-Service**           | Java (Spring Boot)                 | PostgreSQL 16      | Relacional                | Catálogo de equipos. |
-| **Players-Service**         | Node.js (Express)                  | MySQL 8            | Relacional                | Gestión de jugadores. |
-| **Report-Service**          | Python 3.12 (FastAPI)              | MongoDB 6+         | Utiliza ETL-Service       | Endpoints de reportes agregados para paneles. |
-| **ETL-Service**             | Python (httpx, pymongo)            | MongoDB (destino)  | No relacional (documentos) | Extrae de SQL Server/PostgreSQL/MySQL, transforma y consolida en MongoDB. |
-
-
-Separación favorece despliegue y escalabilidad independiente.
+| Microservicio / Componente | Lenguaje / Framework | Base de datos | Tipo BD | Observaciones |
+|---------------------------|---------------------|---------------|---------|--------------|
+| Auth-Service | C# (.NET 8) | SQL Server 2022 | Relacional | JWT, roles |
+| Matches-Service | C# (.NET 8 + SignalR) | SQL Server | Relacional | Marcador y clock realtime |
+| Tournament-Service | C# (.NET 8) | SQL Server | Relacional | Torneos y jornadas |
+| Teams-Service | Java Spring Boot | PostgreSQL | Relacional | Equipos |
+| Players-Service | Node.js Express | MySQL | Relacional | Jugadores |
+| Report-Service | Python FastAPI | MongoDB | No SQL | Reportería |
+| ETL-Service | Python | MongoDB | No SQL | Consolidación datos |
 
 ---
 
@@ -75,9 +72,9 @@ Separación favorece despliegue y escalabilidad independiente.
 
 - ASP.NET Core 8 — Minimal APIs  
 - Entity Framework Core  
-- DbContext mapeando Teams, Games y GameEvents  
+- DbContext para Teams, Games, GameEvents  
 
-Reglas clave:
+Reglas:
 
 - No marcador negativo  
 - No tiempo negativo  
@@ -92,11 +89,11 @@ Tablas principales:
 
 - Games  
 - GameEvents  
-- Teams (opcional)  
+- Teams  
 
 Características:
 
-- PK/FK  
+- Claves primarias y foráneas  
 - Índices por partido y timestamp  
 - Historial completo de eventos  
 
@@ -116,7 +113,7 @@ Funciones:
 - Cambio de cuarto  
 - Deshacer eventos  
 
-Servido con Nginx (proxy a `/api`).
+Servido con Nginx (proxy `/api`).
 
 ---
 
@@ -141,14 +138,14 @@ DB_NAME=MarcadorDB
 
 | Comando | Descripción |
 |--------|-------------|
-| `docker-compose --profile all up --build` | Levanta todo el proyecto y construye imágenes |
+| `docker-compose --profile all up --build` | Levanta todo y construye imágenes |
 | `docker-compose up` | Inicia sin reconstruir imágenes |
-| `docker-compose up -d` | Ejecuta en segundo plano |
-| `docker-compose down` | Detiene y elimina contenedores/redes |
+| `docker-compose up -d` | Modo segundo plano |
+| `docker-compose down` | Elimina contenedores y redes |
 | `docker-compose build` | Construye imágenes sin ejecutar |
 | `docker-compose ps` | Lista contenedores |
 | `docker-compose logs -f` | Logs en tiempo real |
-| `docker-compose restart` | Reinicia contenedores |
+| `docker-compose restart` | Reinicia todo |
 
 ---
 
@@ -156,7 +153,7 @@ DB_NAME=MarcadorDB
 
 ### Windows 10/11
 - Docker Desktop + WSL2  
-- 8 GB RAM (mínimo)  
+- 8 GB RAM  
 
 ### Linux / macOS
 - Docker Engine/Desktop  
@@ -166,9 +163,9 @@ DB_NAME=MarcadorDB
 
 ## Observabilidad, Registros y Auditoría
 
-- Historial de eventos = fuente de verdad  
+- Historial de eventos  
 - Logs estructurados en API  
-- Nginx con rotación de logs  
+- Logs Nginx rotados  
 - Endpoint `/health`  
 
 ---
@@ -177,36 +174,36 @@ DB_NAME=MarcadorDB
 
 | Problema | Solución |
 |---------|----------|
-SQL no inicia | Contraseña no cumple reglas |
-Nginx no conecta | API no levantada o proxy mal configurado |
-Angular falla en build | Borrar `package-lock.json` y rebuild |
+SQL no inicia | Revisar contraseña de SA |
+Nginx no conecta | API caída o proxy mal configurado |
+Angular falla | Borrar `node_modules` y `package-lock.json` |
 
 ---
 
 ## Limitaciones y Consideraciones de Diseño
 
-- Reloj corre en cliente (latencia cero)  
+- Reloj corre en cliente  
 - Sincronización recomendada  
-- Seguridad básica (mejorable)  
-- Falta test E2E (sugerido agregar)  
+- Seguridad básica  
+- Falta test E2E  
 
 ---
 
 ## Extensiones y Mejoras Futuras
 
-- WebSockets / SignalR  
-- Estadísticas y reportes  
+- SignalR / WebSockets globales  
+- Reportes avanzados  
 - Exportar PDF/Excel  
-- Accesibilidad y shortcuts  
+- Mejor accesibilidad  
 
 ---
 
 ## Mantenimiento y Operación
 
-- Respaldar volúmenes SQL  
-- Versionar scripts BD  
+- Backup de volúmenes SQL  
+- Versionado de scripts BD  
 - EF migrations  
-- Versionado semántico Docker  
+- Versionado semántico  
 
 ---
 
@@ -223,12 +220,10 @@ Angular falla en build | Borrar `package-lock.json` y rebuild |
 ## Autores
 
 | Nombre | Carné |
-|--------|------------|
+|--------|-------|
 | ANGEL ENRIQUE IBAÑEZ LINARES | 7690-22-19119 |
 | BRYAN MANUEL PINEDA OROZCO | 7690-16-8869 |
 | CESAR ALBERTO TECUN LEIVA | 7690-22-11766 |
 | EDRAS FERNANDO TATUACA ALVARADO | 7690-22-11542 |
 | JOSE DANIEL TOBAR REYES | 7690-21-1325 |
 | PABLO ANTONIO ISPACHE ARRIAGA | 7690-17-940 |
----
-
