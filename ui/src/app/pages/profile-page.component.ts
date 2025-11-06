@@ -15,7 +15,7 @@ import { NotificationService } from '../services/notification.service';
 export class ProfilePageComponent {
   loading = false;
   error = '';
-  users: Array<{ id:number; email:string; username:string; name:string; role:string; active:number|boolean; avatar?:string; last_login_at?:string; has_password?: boolean }>=[];
+  users: Array<{ id:number; email:string; username:string; name:string; role:string; active:number|boolean; avatar?:string; last_login_at?:string; has_password?: boolean; oauthProvider?: string }>=[];
   roles: Array<'viewer'|'operator'|'admin'> = ['viewer','operator','admin'];
   saving: Record<number, boolean> = {};
   private myId: number | null = null;
@@ -23,7 +23,7 @@ export class ProfilePageComponent {
 
   // Filtro/orden/paginación
   q = '';
-  sort: { key: 'id'|'email'|'username'|'name'|'role'|'last_login_at'; dir: 1|-1 } = { key: 'id', dir: 1 };
+  sort: { key: 'id'|'email'|'username'|'name'|'role'|'last_login_at'|'oauthProvider'; dir: 1|-1 } = { key: 'id', dir: 1 };
   page = 1;
   pageSize = 10;
 

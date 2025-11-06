@@ -38,6 +38,7 @@
             <th class="clickable" (click)="setSort('email')">Usuario <span class="sort" [class.asc]="sort.key==='email' && sort.dir===1" [class.desc]="sort.key==='email' && sort.dir===-1"></span></th>
             <th class="clickable" (click)="setSort('name')">Nombre <span class="sort" [class.asc]="sort.key==='name' && sort.dir===1" [class.desc]="sort.key==='name' && sort.dir===-1"></span></th>
             <th class="clickable" (click)="setSort('username')">Username <span class="sort" [class.asc]="sort.key==='username' && sort.dir===1" [class.desc]="sort.key==='username' && sort.dir===-1"></span></th>
+            <th class="clickable" (click)="setSort('oauthProvider')">Plataforma <span class="sort" [class.asc]="sort.key==='oauthProvider' && sort.dir===1" [class.desc]="sort.key==='oauthProvider' && sort.dir===-1"></span></th>
             <th class="clickable" (click)="setSort('role')">Rol <span class="sort" [class.asc]="sort.key==='role' && sort.dir===1" [class.desc]="sort.key==='role' && sort.dir===-1"></span></th>
             <th>Activo</th>
             <th class="clickable" (click)="setSort('last_login_at')">Último acceso <span class="sort" [class.asc]="sort.key==='last_login_at' && sort.dir===1" [class.desc]="sort.key==='last_login_at' && sort.dir===-1"></span></th>
@@ -61,6 +62,7 @@
             </td>
             <td>{{ u.name || '-' }}</td>
             <td class="muted">{{ u.username || '-' }}</td>
+            <td class="muted">{{ (u.oauthProvider || (u.has_password ? 'local' : '-')) | uppercase }}</td>
             <td>
               <div class="d-flex align-items-center gap-2">
                 <select class="form-select form-select-sm w-auto"
