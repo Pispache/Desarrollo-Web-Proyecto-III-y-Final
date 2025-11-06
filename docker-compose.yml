@@ -12,7 +12,7 @@ services:
     ports:
       - "127.0.0.1:1435:1435"
     volumes:
-      - ./db:/db
+      - ./infra/db:/db
     healthcheck:
       test: ["CMD-SHELL", "bash -lc 'echo > /dev/tcp/127.0.0.1/1435'"]
       interval: 5s
@@ -31,7 +31,7 @@ services:
     environment:
       - SA_PASSWORD=${SA_PASSWORD}
     volumes:
-      - ./db:/db
+      - ./infra/db:/db
       - ./infra/scripts:/scripts
     entrypoint: ["/bin/bash","-c","/scripts/espera_sql.sh db 1435 /scripts/db-init.sh"]
     restart: "no"
@@ -159,7 +159,7 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
-      - ./db/pg/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./infra/db/pg/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
@@ -201,7 +201,7 @@ services:
   # ============================
   pdf-renderer:
     build:
-      context: ./backend-pdf-renderer/pdf-renderer
+      context: ./infra/services/pdf-renderer
       dockerfile: Dockerfile
     container_name: marcador_pdf
     ports:
@@ -218,7 +218,7 @@ services:
   # ============================
   etl:
     build:
-      context: ./backend-etl/etl
+      context: ./infra/jobs/etl
       dockerfile: Dockerfile
     container_name: marcador_etl
     depends_on:

@@ -2,9 +2,9 @@
   "name": "pdf-renderer",
   "version": "0.1.0",
   "private": true,
-  "main": "server.js",
+  "main": "pdf-renderer-server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node pdf-renderer-server.js" 
   },
   "dependencies": {
     "express": "^4.19.2",
