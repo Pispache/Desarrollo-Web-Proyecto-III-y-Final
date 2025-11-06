@@ -13,20 +13,20 @@ Aplicación web para gestionar un marcador de baloncesto en tiempo real con cont
 
 | Sección | Enlace |
 |--------|--------|
-| 1. Descripción General | [Ir](#descripción-general) |
-| 2. Arquitectura General | [Ir](#arquitectura-general) |
-| 3. Backend (.NET 8) | [Ir](#construcción-del-backend) |
-| 4. Base de Datos | [Ir](#base-de-datos--sql-server-2022) |
-| 5. Frontend (Angular) | [Ir](#frontend) |
-| 6. Docker & Deployment | [Ir](#despliegue-con-docker-compose) |
-| 7. Requisitos del Sistema | [Ir](#requisitos-mínimos-de-ejecución) |
-| 8. Observabilidad / Auditoría | [Ir](#observabilidad-registros-y-auditoría) |
-| 9. Errores Comunes | [Ir](#errores-comunes-y-solución-de-problemas) |
-| 10. Limitaciones | [Ir](#limitaciones-y-consideraciones-de-diseño) |
-| 11. Mejoras Futuras | [Ir](#extensiones-y-mejoras-futuras) |
-| 12. Mantenimiento | [Ir](#mantenimiento-y-operación) |
-| 13. Herramientas Utilizadas | [Ir](#herramientas-utilizadas) |
-| 14. Autores | [Ir](#autores) |
+| 1. Descripción General | [Click aquí para ir a la sección](#descripción-general) |
+| 2. Arquitectura General | [Click aquí para ir a la sección](#arquitectura-general) |
+| 3. Backend (.NET 8) | [Click aquí para ir a la sección](#construcción-del-backend) |
+| 4. Base de Datos | [Click aquí para ir a la sección](#base-de-datos--sql-server-2022) |
+| 5. Frontend (Angular) | [Click aquí para ir a la sección](#frontend) |
+| 6. Docker & Deployment | [Click aquí para ir a la sección](#despliegue-con-docker-compose) |
+| 7. Requisitos del Sistema | [Click aquí para ir a la sección](#requisitos-mínimos-de-ejecución) |
+| 8. Observabilidad / Auditoría | [Click aquí para ir a la sección](#observabilidad-registros-y-auditoría) |
+| 9. Errores Comunes | [Click aquí para ir a la sección](#errores-comunes-y-solución-de-problemas) |
+| 10. Limitaciones | [Click aquí para ir a la sección](#limitaciones-y-consideraciones-de-diseño) |
+| 11. Mejoras Futuras | [Click aquí para ir a la sección](#extensiones-y-mejoras-futuras) |
+| 12. Mantenimiento | [Click aquí para ir a la sección](#mantenimiento-y-operación) |
+| 13. Herramientas Utilizadas | [Click aquí para ir a la sección](#herramientas-utilizadas) |
+| 14. Autores | [Click aquí para ir a la sección](#autores) |
 
 ---
 
@@ -54,6 +54,19 @@ Sistema dividido en tres piezas principales:
 Flujo:  
 UI → API → BD → UI
 
+## Arquitectura General
+
+| Microservicio / Componente | Lenguaje / Framework                | Base de datos      | Tipo BD                   | Observaciones |
+|-----------------------------|-------------------------------------|--------------------|---------------------------|----------------|
+| **Auth-Service**            | C# (.NET 8, ASP.NET Core Web API)  | SQL Server 2022    | Relacional                | Autenticación/Autorización, emisión de JWT, gestión de roles/menús. |
+| **Matches-Service**         | C# (.NET 8, ASP.NET Core + SignalR) | SQL Server 2022    | Relacional                | Partidos, marcador, faltas y cronómetro en tiempo real (SignalR). |
+| **Tournament-Service**      | C# (.NET 8, ASP.NET Core)          | SQL Server 2022    | Relacional                | Torneos, calendario y organización de jornadas. |
+| **Teams-Service**           | Java (Spring Boot)                 | PostgreSQL 16      | Relacional                | Catálogo de equipos. |
+| **Players-Service**         | Node.js (Express)                  | MySQL 8            | Relacional                | Gestión de jugadores. |
+| **Report-Service**          | Python 3.12 (FastAPI)              | MongoDB 6+         | Utiliza ETL-Service       | Endpoints de reportes agregados para paneles. |
+| **ETL-Service**             | Python (httpx, pymongo)            | MongoDB (destino)  | No relacional (documentos) | Extrae de SQL Server/PostgreSQL/MySQL, transforma y consolida en MongoDB. |
+
+
 Separación favorece despliegue y escalabilidad independiente.
 
 ---
@@ -68,12 +81,12 @@ Reglas clave:
 
 - No marcador negativo  
 - No tiempo negativo  
-- Cambio automático de cuarto  
+- Cambio manual de cuarto  
 - Deshacer basado en eventos  
 
 ---
 
-## Base de Datos — SQL Server 2022
+## Base de Datos - SQL Server 2022 - Mongo
 
 Tablas principales:
 
@@ -147,7 +160,7 @@ DB_NAME=MarcadorDB
 
 ### Linux / macOS
 - Docker Engine/Desktop  
-- 8–16 GB RAM recomendado  
+- 2–4 GB RAM recomendado  
 
 ---
 
@@ -210,19 +223,12 @@ Angular falla en build | Borrar `package-lock.json` y rebuild |
 ## Autores
 
 | Nombre | Carné |
-|--------|------|
-Cesar Alberto Tecún Leiva | 7690-22-11766  
-Jose Daniel Tobar Reyes | 7690-21-13125  
-Bryan Manuel Pineda Orozco | 7690-16-8869  
-
-Grupo #8 — Desarrollo Web UMG
-
-- ANGEL ENRIQUE IBAÑEZ LINARES 7690-22-19119
-- BRYAN MANUEL PINEDA OROZCO 7690-16-8869
-- CESAR ALBERTO TECUN LEIVA 7690-22-11766
-- EDRAS FERNANDO TATUACA ALVARADO 7690-22-11542
-- JOSE DANIEL TOBAR REYES 7690-21-1325
-- PABLO ANTONIO ISPACHE ARRIAGA 7690-17-940
-
+|--------|------------|
+| ANGEL ENRIQUE IBAÑEZ LINARES | 7690-22-19119 |
+| BRYAN MANUEL PINEDA OROZCO | 7690-16-8869 |
+| CESAR ALBERTO TECUN LEIVA | 7690-22-11766 |
+| EDRAS FERNANDO TATUACA ALVARADO | 7690-22-11542 |
+| JOSE DANIEL TOBAR REYES | 7690-21-1325 |
+| PABLO ANTONIO ISPACHE ARRIAGA | 7690-17-940 |
 ---
 
