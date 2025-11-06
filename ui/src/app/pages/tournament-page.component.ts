@@ -79,10 +79,27 @@ export class TournamentPageComponent implements OnInit {
       if (!raw) return;
       const data = JSON.parse(raw);
       if (data && typeof data === 'object') {
-        if (Array.isArray(data.roundOf16)) this.knockout.roundOf16 = data.roundOf16;
-        if (Array.isArray(data.quarterfinals)) this.knockout.quarterfinals = data.quarterfinals;
-        if (Array.isArray(data.semifinals)) this.knockout.semifinals = data.semifinals;
-        if (Array.isArray(data.final)) this.knockout.final = data.final;
+        if (Array.isArray(data.roundOf16)) {
+          this.knockout.roundOf16 = data.roundOf16.map((match: { homeTeamId?: number | null; awayTeamId?: number | null; winnerSide?: 'home' | 'away' | null }) => ({
+            ...match,
+            winnerSide: match.winnerSide === 'home' || match.winnerSide === 'away' ? match.winnerSide : null
+          }));
+        }
+        if (Array.isArray(data.quarterfinals)) {
+          this.knockout.quarterfinals = data.quarterfinals.map((match: { homeTeamId?: number | null; awayTeamId?: number | null; winnerSide?: 'home' | 'away' | null }) => ({
+            ...match,
+            winnerSide: match.winnerSide === 'home' || match.winnerSide === 'away' ? match.winnerSide : null
+          }));
+        }
+        if (Array.isArray(data.semifinals)) {
+          this.knockout.semifinals = data.semifinals.map((match: { homeTeamId?: number | null; awayTeamId?: number | null; winnerSide?: 'home' | 'away' | null }) => ({
+            ...match,
+            winnerSide: match.winnerSide === 'home' || match.winnerSide === 'away' ? match.winnerSide : null
+          }));
+        }
+        if (Array.isArray(data.final)) {
+          this.knockout.final = data.final;
+        }
         if (data.champion && typeof data.champion === 'object') {
           this.knockout.champion = {
             teamId: typeof data.champion.teamId === 'number' ? data.champion.teamId : null,
@@ -242,28 +259,29 @@ export class TournamentPageComponent implements OnInit {
   // ====== Knockout stages (UI scaffolding) ======
   // Simple placeholder structures to render brackets for Octavos, Cuartos, Semifinal y Final.
   knockout = {
-    roundOf16: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
-    quarterfinals: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
-    semifinals: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
+    roundOf16: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null; winnerSide?: 'home' | 'away' | null }>,
+    quarterfinals: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null; winnerSide?: 'home' | 'away' | null }>,
+    semifinals: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null; winnerSide?: 'home' | 'away' | null }>,
     final: [] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>,
     champion: { teamId: null as number | null, side: null as ('home'|'away'|null) }
   };
 
   // Initialize default bracket placeholders (8, 4, 2, 1 matches)
   private ensureKnockoutInitialized() {
-    if (this.knockout.roundOf16.length === 0) this.knockout.roundOf16 = new Array(8).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
-    if (this.knockout.quarterfinals.length === 0) this.knockout.quarterfinals = new Array(4).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
-    if (this.knockout.semifinals.length === 0) this.knockout.semifinals = new Array(2).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
+    if (this.knockout.roundOf16.length === 0) this.knockout.roundOf16 = new Array(8).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null, winnerSide: null }));
+    if (this.knockout.quarterfinals.length === 0) this.knockout.quarterfinals = new Array(4).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null, winnerSide: null }));
+    if (this.knockout.semifinals.length === 0) this.knockout.semifinals = new Array(2).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null, winnerSide: null }));
     if (this.knockout.final.length === 0) this.knockout.final = new Array(1).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
   }
 
   // ====== Bracket helpers: advance winners ======
   advanceFromRound(round: 'roundOf16' | 'quarterfinals' | 'semifinals', matchIndex: number, winner: 'home' | 'away') {
-    const source = this.knockout[round] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
+    const source = this.knockout[round] as Array<{ homeTeamId?: number | null; awayTeamId?: number | null; winnerSide?: 'home' | 'away' | null }>;
     const srcMatch = source[matchIndex];
     if (!srcMatch) return;
     const winnerId = winner === 'home' ? srcMatch.homeTeamId ?? null : srcMatch.awayTeamId ?? null;
     if (!winnerId) return;
+    srcMatch.winnerSide = winner;
 
     if (round === 'roundOf16') {
       // Mapping: (0,1)->QF0; (2,3)->QF1; (4,5)->QF2; (6,7)->QF3
