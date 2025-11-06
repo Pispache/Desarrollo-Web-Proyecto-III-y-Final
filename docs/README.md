@@ -9,3 +9,4 @@
 - Manual de usuario (MD): [manual_usuario.md](./manual_usuario.md)
 - ADR de reportes: [ADR-reports.md](./ADR-reports.md)
 - Notas de despliegue: [deploy-notes.md](./deploy-notes.md)
+ - Seguridad y rutas: [security-routes.md](./security-routes.md)

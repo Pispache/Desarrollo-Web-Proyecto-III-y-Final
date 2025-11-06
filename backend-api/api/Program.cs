@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.IO;
 using FluentValidation;
+using Api.Security;
 
 /// <summary>
 /// Punto de entrada de la API del marcador.
@@ -35,47 +36,8 @@ b.Services.AddValidatorsFromAssemblyContaining<TeamUpsertDtoValidator>();
 // ============================
 // Autenticación por JWT (opcional)
 // ============================
-
-/// <summary>
-/// Configuración condicional de autenticación JWT.
-/// </summary>
-/// <remarks>
-/// Si <c>JWT_SECRET</c> está definido, se activan autenticación y autorización:
-/// - Emisor y audiencia se leen de <c>JWT_ISSUER</c> y <c>JWT_AUDIENCE</c> (con valores por defecto).  
-/// - Se agregan dos políticas de autorización: <c>ADMIN</c> y <c>ADMIN_OR_USER</c>.
-/// </remarks>
-var jwtSecret = b.Configuration["JWT_SECRET"];
-if (!string.IsNullOrWhiteSpace(jwtSecret))
-{
-    b.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-        .AddJwtBearer(options =>
-        {
-            options.TokenValidationParameters = new TokenValidationParameters
-            {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = b.Configuration["JWT_ISSUER"] ?? "MarcadorApi",
-                ValidAudience = b.Configuration["JWT_AUDIENCE"] ?? "MarcadorUi",
-                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret))
-            };
-        });
-
-    /// <summary>
-    /// Políticas de autorización para proteger endpoints.
-    /// </summary>
-    /// <remarks>
-    /// - <c>ADMIN</c>: acceso exclusivo a rol administrador.  
-    /// - <c>ADMIN_OR_USER</c>: acceso para roles <c>ADMIN</c> o <c>USUARIO</c>.
-    /// </remarks>
-    b.Services.AddAuthorization(options =>
-    {
-        options.AddPolicy("ADMIN", p => p.RequireRole("ADMIN"));
-        // Allow both ADMIN and USUARIO roles to access certain endpoints
-        options.AddPolicy("ADMIN_OR_USER", p => p.RequireRole("ADMIN", "USUARIO"));
-    });
-}
+// Centralizado en Api.Security.JwtExtensions
+b.Services.AddJwtAuth(b.Configuration);
 
 var app = b.Build();
 
@@ -138,11 +100,7 @@ string GetCs() =>
 /// <summary>
 /// Activación de middlewares de autenticación/autorización si hay JWT configurado.
 /// </summary>
-if (!string.IsNullOrWhiteSpace(jwtSecret))
-{
-    app.UseAuthentication();
-    app.UseAuthorization();
-}
+app.UseJwtIfConfigured();
 
 /// <summary>
 /// Registro de endpoints de juegos, reloj y torneos.

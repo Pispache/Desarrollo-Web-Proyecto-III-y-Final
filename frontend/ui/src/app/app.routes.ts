@@ -3,20 +3,20 @@ import { HomePageComponent } from './pages/home-page.component';
 import { DisplayPageComponent } from './pages/display-page.component';
 import { ResultsPageComponent } from './pages/results-page.component'; 
 import { LoginPageComponent } from './pages/login-page.component';
-import { authGuard } from './guards/auth.guard';
+import { authGuard } from './security/guards/auth.guard';
 import { TeamRegisterPageComponent } from './pages/team-register-page.component';
 import { TeamManagePageComponent } from './pages/team-manage-page.component';
 
 import { PlayersTeamSelectPageComponent } from './pages/players-team-select-page.component';
 import { TournamentPageComponent } from './pages/tournament-page.component';
-import { adminGuard } from './guards/admin.guard';
+import { adminGuard } from './security/guards/admin.guard';
 import { ScoreboardsPageComponent } from './pages/scoreboards-page.component';
 import { ReportsPageComponent } from './pages/reports-page.component';
 import { ProfilePageComponent } from './pages/profile-page.component';
 import { UserProfilePageComponent } from './pages/user-profile-page.component';
 import { RegisterPageComponent } from './pages/register-page.component';
 import { AccountInactivePageComponent } from './pages/account-inactive-page.component';
-import { authClearGuard } from './guards/auth-clear.guard';
+import { authClearGuard } from './security/guards/auth-clear.guard';
 export const routes: Routes = [
   // Login
   { path: 'login', component: LoginPageComponent, canActivate: [authClearGuard] },
@@ -33,7 +33,7 @@ export const routes: Routes = [
 
   { path: 'tablero/:id', component: DisplayPageComponent, canActivate: [authGuard] },   // protegido
   { path: 'tablero', redirectTo: 'tableros', pathMatch: 'full' }, // redirección al listado
-  { path: 'tableros', component: ScoreboardsPageComponent },  // listador de tableros
+  { path: 'tableros', component: ScoreboardsPageComponent, canActivate: [authGuard] },  // protegido: listador de tableros
   { path: 'resultados', component: ResultsPageComponent, canActivate: [authGuard] },    // protegido
   { path: 'reportes', component: ReportsPageComponent, canActivate: [adminGuard] },     // protegido admin
   { path: 'administracion/usuarios', component: ProfilePageComponent, canActivate: [adminGuard] }, // admin: gestión de usuarios

@@ -13,7 +13,7 @@ from datetime import datetime
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request, Body, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from .auth import require_admin
+from .security.auth import require_admin
 from .db import get_connection
 from .pdf.base import render_html_to_pdf
 from .pdf.templates import render_teams_html, render_players_html, render_games_html, render_roster_html, render_player_stats_html

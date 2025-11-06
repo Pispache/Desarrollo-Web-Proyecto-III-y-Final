@@ -1,19 +1,21 @@
 /**
  * summary:
- *   Interceptor HTTP para adjuntar el token JWT y manejar 401 globalmente.
+ *   Interceptor HTTP para adjuntar el token JWT y manejar 401/403 globalmente.
  * remarks:
  *   - Inyecta `Authorization: Bearer <token>` en cada petición si existe.
- *   - Ante 401 fuerza logout y redirige a `/login?reason=expired`.
- *   - Evita duplicar notificaciones y respeta el estado actual de sesión.
+ *   - Ante 401 fuerza logout y redirige a `/login?reason=expired` (selectivo).
+ *   - Ante 403 redirige a `/control` si autenticado o `/login` si no.
  */
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { AuthService } from './auth.service';
+import { Router } from '@angular/router';
+import { AuthService } from '../services/auth.service';
 import { catchError } from 'rxjs/operators';
 import { throwError } from 'rxjs';
 
 export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
+  const router = inject(Router);
   const token = auth.getToken();
   if (token) {
     req = req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
@@ -21,24 +23,22 @@ export const tokenInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError(err => {
       if (err?.status === 401) {
-        // NO cerrar sesión si el error viene de la API de reportes
         const isReportsApi = req.url.includes('localhost:8081') || req.url.includes('/v1/reports');
-        
-        // NO cerrar sesión si el error viene del Auth Service (OAuth)
         const isAuthService = req.url.includes('localhost:5001') || req.url.includes('/api/auth');
-        
-        // NO cerrar sesión si el usuario tiene un token de OAuth
         const user = auth.getCurrentUser();
         const isOAuthUser = user?.oauth_provider !== null && user?.oauth_provider !== undefined;
-        
-        // Solo forzar logout si:
-        // - NO es la API de reportes
-        // - NO es el Auth Service
-        // - NO es un usuario de OAuth (porque el Game Service no acepta esos tokens)
-        // - El usuario está autenticado
         if (!isReportsApi && !isAuthService && !isOAuthUser && auth.isAuthenticated()) {
           auth.logout(true, 'expired', 'interceptor');
         }
+      }
+      else if (err?.status === 403) {
+        try {
+          if (auth.isAuthenticated()) {
+            router.navigateByUrl('/control');
+          } else {
+            router.navigate(['/login'], { queryParams: { reason: 'expired' } });
+          }
+        } catch {}
       }
       return throwError(() => err);
     })

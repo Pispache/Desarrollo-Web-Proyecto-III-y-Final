@@ -1,6 +1,6 @@
 import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
-import { AuthService } from '../services/auth.service';
+import { AuthService } from '../../services/auth.service';
 
 // Guard que siempre se ejecuta al entrar a páginas públicas (login/registro)
 // y asegura que no quede ninguna sesión activa ni estado de UI residual.

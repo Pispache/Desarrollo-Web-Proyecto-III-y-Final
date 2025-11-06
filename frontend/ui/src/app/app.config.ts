@@ -6,7 +6,7 @@ import { provideClientHydration } from '@angular/platform-browser';
 
 // HTTP para el  ApiService
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
-import { tokenInterceptor } from './services/token-interceptor';
+import { tokenInterceptor } from './security/token-interceptor';
 
 // Animaciones 
 import { provideAnimations } from '@angular/platform-browser/animations';

@@ -9,7 +9,7 @@ const express = require('express');
 const router = express.Router();
 const passport = require('passport');
 const authController = require('../controllers/authController');
-const { verifyToken, requireAdmin } = require('../middleware/auth');
+const { verifyToken, requireAdmin } = require('../security/jwt');
 const { validateRegister, validateLogin } = require('../middleware/validators');
 
 /**
