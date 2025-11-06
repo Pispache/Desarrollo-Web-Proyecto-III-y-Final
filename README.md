@@ -36,10 +36,10 @@ Aplicación para uso en tiempo real en partidos de baloncesto:
 
 - Control de reloj por cuarto
 - Registro de puntos y faltas
-- Avance automático de cuarto
+- Avance automático o manual de cuarto
 - Opción para deshacer eventos
-- Panel de operador y vista pública
-- Eventos auditables y consistentes
+- Panel del operador y vista pública
+- Historial auditable del partido
 
 ---
 
@@ -54,20 +54,19 @@ Sistema dividido en tres piezas principales:
 Flujo:  
 UI → API → BD → UI
 
-## Arquitectura General
+---
 
-| Microservicio / Componente | Lenguaje / Framework                | Base de datos      | Tipo BD                   | Observaciones |
-|-----------------------------|-------------------------------------|--------------------|---------------------------|----------------|
-| **Auth-Service**            | C# (.NET 8, ASP.NET Core Web API)  | SQL Server 2022    | Relacional                | Autenticación/Autorización, emisión de JWT, gestión de roles/menús. |
-| **Matches-Service**         | C# (.NET 8, ASP.NET Core + SignalR) | SQL Server 2022    | Relacional                | Partidos, marcador, faltas y cronómetro en tiempo real (SignalR). |
-| **Tournament-Service**      | C# (.NET 8, ASP.NET Core)          | SQL Server 2022    | Relacional                | Torneos, calendario y organización de jornadas. |
-| **Teams-Service**           | Java (Spring Boot)                 | PostgreSQL 16      | Relacional                | Catálogo de equipos. |
-| **Players-Service**         | Node.js (Express)                  | MySQL 8            | Relacional                | Gestión de jugadores. |
-| **Report-Service**          | Python 3.12 (FastAPI)              | MongoDB 6+         | Utiliza ETL-Service       | Endpoints de reportes agregados para paneles. |
-| **ETL-Service**             | Python (httpx, pymongo)            | MongoDB (destino)  | No relacional (documentos) | Extrae de SQL Server/PostgreSQL/MySQL, transforma y consolida en MongoDB. |
+### Arquitectura Extendida
 
-
-Separación favorece despliegue y escalabilidad independiente.
+| Microservicio / Componente | Lenguaje / Framework | Base de Datos | Tipo BD | Función |
+|----------------------------|----------------------|--------------|---------|--------|
+| Auth-Service | .NET 8 | SQL Server | Relacional | JWT, login, roles |
+| Matches-Service | .NET 8 + SignalR | SQL Server | Relacional | Marcador y cronómetro |
+| Tournament-Service | .NET 8 | SQL Server | Relacional | Torneos y jornadas |
+| Teams-Service | Spring Boot | PostgreSQL | Relacional | Equipos |
+| Players-Service | Node.js | MySQL | Relacional | Jugadores |
+| Report-Service | FastAPI | MongoDB | NoSQL | Reportes agregados |
+| ETL-Service | Python | MongoDB | NoSQL | Integración de datos |
 
 ---
 
@@ -75,18 +74,18 @@ Separación favorece despliegue y escalabilidad independiente.
 
 - ASP.NET Core 8 — Minimal APIs  
 - Entity Framework Core  
-- DbContext mapeando Teams, Games y GameEvents  
+- DbContext para Teams, Games y GameEvents  
 
 Reglas clave:
 
 - No marcador negativo  
 - No tiempo negativo  
-- Cambio manual de cuarto  
-- Deshacer basado en eventos  
+- Cambio automático de cuarto  
+- Undo mediante eventos históricos  
 
 ---
 
-## Base de Datos - SQL Server 2022 - Mongo
+## Base de Datos (SQL Server 2022 y MongoDB)
 
 Tablas principales:
 
@@ -96,27 +95,25 @@ Tablas principales:
 
 Características:
 
-- PK/FK  
-- Índices por partido y timestamp  
-- Historial completo de eventos  
+- Llaves PK/FK  
+- Índices por partido y tiempo  
+- Historial permanente de eventos  
 
 ---
 
 ## Frontend
 
-Componentes:
-
-- Display — vista pública  
-- Panel de control — consola del operador  
+- Angular 20  
+- Componentes: Display & Control Panel  
+- HTTP Client + servicios centralizados  
+- Backend accesible vía `/api` proxy Nginx  
 
 Funciones:
 
-- Registrar puntos y faltas  
-- Control de reloj  
-- Cambio de cuarto  
-- Deshacer eventos  
-
-Servido con Nginx (proxy a `/api`).
+- Puntos y faltas
+- Control de reloj
+- Undo
+- Cambio de cuarto
 
 ---
 
@@ -141,94 +138,94 @@ DB_NAME=MarcadorDB
 
 | Comando | Descripción |
 |--------|-------------|
-| `docker-compose --profile all up --build` | Levanta todo el proyecto y construye imágenes |
-| `docker-compose up` | Inicia sin reconstruir imágenes |
-| `docker-compose up -d` | Ejecuta en segundo plano |
-| `docker-compose down` | Detiene y elimina contenedores/redes |
-| `docker-compose build` | Construye imágenes sin ejecutar |
-| `docker-compose ps` | Lista contenedores |
-| `docker-compose logs -f` | Logs en tiempo real |
-| `docker-compose restart` | Reinicia contenedores |
+| `docker-compose --profile all up --build` | Levanta todo y construye imágenes |
+| `docker-compose up` | Inicia sin reconstruir |
+| `docker-compose up -d` | Modo segundo plano |
+| `docker-compose down` | Apaga y limpia |
+| `docker-compose build` | Construye imágenes |
+| `docker-compose ps` | Ver contenedores |
+| `docker-compose logs -f` | Logs en vivo |
+| `docker-compose restart` | Reinicio completo |
 
 ---
 
 ## Requisitos mínimos de ejecución
 
-### Windows 10/11
+### Windows
+
 - Docker Desktop + WSL2  
-- 8 GB RAM (mínimo)  
+- 8 GB RAM mínimo (16 GB recomendado)
 
 ### Linux / macOS
+
 - Docker Engine/Desktop  
-- 2–4 GB RAM recomendado  
+- 2–4 GB RAM mínimo  
 
 ---
 
 ## Observabilidad, Registros y Auditoría
 
-- Historial de eventos = fuente de verdad  
-- Logs estructurados en API  
-- Nginx con rotación de logs  
-- Endpoint `/health`  
+- Logs estructurados  
+- Nginx con rotación  
+- `/health` endpoint  
+- Historial auditable por eventos  
 
 ---
 
-## Errores Comunes y Solución de Problemas
+## Errores Comunes y Solución
 
 | Problema | Solución |
-|---------|----------|
-SQL no inicia | Contraseña no cumple reglas |
-Nginx no conecta | API no levantada o proxy mal configurado |
-Angular falla en build | Borrar `package-lock.json` y rebuild |
+|--------|---------|
+SQL Server falla | Revisar contraseña SAFE |
+Nginx no conecta | API no levantada |
+Angular no compila | Borrar `package-lock.json` y reinstall |
 
 ---
 
-## Limitaciones y Consideraciones de Diseño
+## Limitaciones y Consideraciones
 
-- Reloj corre en cliente (latencia cero)  
-- Sincronización recomendada  
-- Seguridad básica (mejorable)  
-- Falta test E2E (sugerido agregar)  
+- Reloj corre en cliente  
+- Sincronizar estado periódicamente  
+- Seguridad base, mejorable  
+- Falta test e2e  
 
 ---
 
-## Extensiones y Mejoras Futuras
+## Extensiones Futuras
 
 - WebSockets / SignalR  
-- Estadísticas y reportes  
-- Exportar PDF/Excel  
-- Accesibilidad y shortcuts  
+- Estadísticas avanzadas  
+- Exportación PDF/Excel  
+- Shortcuts y UX accesible  
 
 ---
 
-## Mantenimiento y Operación
+## Mantenimiento
 
-- Respaldar volúmenes SQL  
-- Versionar scripts BD  
-- EF migrations  
-- Versionado semántico Docker  
+- Respaldar volúmenes  
+- Versionado de scripts SQL  
+- EF Migrations  
+- Versiones semánticas Docker  
 
 ---
 
 ## Herramientas Utilizadas
 
 - .NET 8  
-- EF Core  
 - SQL Server 2022  
-- Angular 20 + Nginx  
+- Angular 20  
 - Docker Compose  
+- Nginx  
 
 ---
 
 ## Autores
 
 | Nombre | Carné |
-|--------|------------|
+|---------|------------|
 | ANGEL ENRIQUE IBAÑEZ LINARES | 7690-22-19119 |
 | BRYAN MANUEL PINEDA OROZCO | 7690-16-8869 |
 | CESAR ALBERTO TECUN LEIVA | 7690-22-11766 |
 | EDRAS FERNANDO TATUACA ALVARADO | 7690-22-11542 |
 | JOSE DANIEL TOBAR REYES | 7690-21-1325 |
 | PABLO ANTONIO ISPACHE ARRIAGA | 7690-17-940 |
----
-
