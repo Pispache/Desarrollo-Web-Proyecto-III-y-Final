@@ -1,6 +1,6 @@
 # Marcador de Baloncesto — Angular + .NET 8 + SQL Server (Docker)
 
-Proyecto Final — Desarrollo Web  
+Proyecto Final - Desarrollo Web  
 Aplicación web para gestionar un marcador de baloncesto en tiempo real con control de reloj, cuartos, puntuación, faltas, deshacer eventos y vista pública.
 
 **Producción:** https://tobarumg.lat/login  
