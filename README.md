@@ -16,7 +16,7 @@ Aplicación web para gestionar un marcador de baloncesto en tiempo real con cont
 | 1. Descripción General | [Click aquí para ir a la sección](#descripción-general) |
 | 2. Arquitectura General | [Click aquí para ir a la sección](#arquitectura-general) |
 | 3. Backend (.NET 8) | [Click aquí para ir a la sección](#construcción-del-backend) |
-| 4. Base de Datos | [Click aquí para ir a la sección](#base-de-datos--sql-server-2022) |
+| 4. Base de Datos | [Click aquí para ir a la sección](#base-de-datos-sql-server-2022-y-mongodb) |
 | 5. Frontend (Angular) | [Click aquí para ir a la sección](#frontend) |
 | 6. Docker & Deployment | [Click aquí para ir a la sección](#despliegue-con-docker-compose) |
 | 7. Requisitos del Sistema | [Click aquí para ir a la sección](#requisitos-mínimos-de-ejecución) |
