@@ -9,12 +9,7 @@ export interface Tournament {
   created_at?: string;
 }
 
-export interface BracketData {
-  roundOf16: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
-  quarterfinals: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
-  semifinals: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
-  final: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
-}
+// Bracket se maneja ahora vía API principal (/api/tournaments/{id}/bracket)
 
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
@@ -47,15 +42,5 @@ export class ReportsService {
     return this.http.delete<void>(`${this.base}/tournaments/${id}`, { headers });
   }
 
-  getBracket(tournamentId: number): Observable<BracketData> {
-    const token = this.auth.getToken();
-    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
-    return this.http.get<BracketData>(`${this.base}/tournaments/${tournamentId}/bracket`, { headers });
-  }
-
-  saveBracket(tournamentId: number, data: BracketData): Observable<{ ok: boolean }> {
-    const token = this.auth.getToken();
-    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
-    return this.http.put<{ ok: boolean }>(`${this.base}/tournaments/${tournamentId}/bracket`, data, { headers });
-  }
+  // Métodos de bracket fueron movidos a TournamentService
 }

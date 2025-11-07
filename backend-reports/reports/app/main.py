@@ -182,17 +182,18 @@ def put_bracket(tid: int, body: dict = Body(...), _=Depends(require_admin)):
         validate_phase(body.get("quarterfinals"), "Quarterfinals")
         validate_phase(body.get("semifinals"), "Semifinals")
         validate_phase(body.get("final"), "Final")
+        import json
         with get_connection() as conn:
             with conn.cursor() as cur:
                 _ensure_brackets_table(cur)
                 cur.execute(
                     """
                     INSERT INTO tournament_brackets (tournament_id, data, updated_at)
-                    VALUES (%s, %s, NOW())
+                    VALUES (%s, %s::jsonb, NOW())
                     ON CONFLICT (tournament_id)
                     DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
                     """,
-                    (tid, body),
+                    (tid, json.dumps(body)),
                 )
                 conn.commit()
         return {"ok": True}

@@ -133,7 +133,7 @@ export class TournamentPageComponent implements OnInit {
             semifinals: this.knockout.semifinals,
             final: this.knockout.final,
           };
-          this.reports.saveBracket(prevId, payload).subscribe({ next: () => {}, error: () => {} });
+          this.tournament.saveBracket(prevId, payload).subscribe({ next: () => {}, error: () => {} });
         } catch {}
       }
     }
@@ -145,7 +145,7 @@ export class TournamentPageComponent implements OnInit {
     // Reset y cargar bracket del nuevo torneo
     this.resetKnockout();
     const currentRequestTid = id;
-    this.reports.getBracket(id).subscribe({
+    this.tournament.getBracket(id).subscribe({
       next: data => {
         if (this.selectedTournamentId !== currentRequestTid) return; // usuario cambió de torneo; ignorar respuesta vieja
         if (this.isBracketPayloadEmpty(data)) {
@@ -218,7 +218,7 @@ export class TournamentPageComponent implements OnInit {
           semifinals: this.knockout.semifinals,
           final: this.knockout.final,
         };
-        this.reports.saveBracket(this.selectedTournamentId!, payload).subscribe({
+        this.tournament.saveBracket(this.selectedTournamentId!, payload).subscribe({
           next: () => {
             // éxito silencioso
           },
