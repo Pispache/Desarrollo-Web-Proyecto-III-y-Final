@@ -1,3 +1,5 @@
+
+    
 # Marcador de Baloncesto — Angular + .NET 8 + SQL Server (Docker)
 
 Proyecto Final - Desarrollo Web  
@@ -13,20 +15,21 @@ Aplicación web para gestionar un marcador de baloncesto en tiempo real con cont
 
 | Sección | Enlace |
 |--------|--------|
-| 1. Descripción General | [Click aquí para ir a la sección](#descripción-general) |
-| 2. Arquitectura General | [Click aquí para ir a la sección](#arquitectura-general) |
-| 3. Backend (.NET 8) | [Click aquí para ir a la sección](#construcción-del-backend) |
-| 4. Base de Datos | [Click aquí para ir a la sección](#base-de-datos---sql-server-2022---mongo) |
-| 5. Frontend (Angular) | [Click aquí para ir a la sección](#frontend) |
-| 6. Docker & Deployment | [Click aquí para ir a la sección](#despliegue-con-docker-compose) |
-| 7. Requisitos del Sistema | [Click aquí para ir a la sección](#requisitos-mínimos-de-ejecución) |
-| 8. Observabilidad / Auditoría | [Click aquí para ir a la sección](#observabilidad-registros-y-auditoría) |
-| 9. Errores Comunes | [Click aquí para ir a la sección](#errores-comunes-y-solución-de-problemas) |
-| 10. Limitaciones | [Click aquí para ir a la sección](#limitaciones-y-consideraciones-de-diseño) |
-| 11. Mejoras Futuras | [Click aquí para ir a la sección](#extensiones-y-mejoras-futuras) |
-| 12. Mantenimiento | [Click aquí para ir a la sección](#mantenimiento-y-operación) |
-| 13. Herramientas Utilizadas | [Click aquí para ir a la sección](#herramientas-utilizadas) |
-| 14. Autores | [Click aquí para ir a la sección](#autores) |
+| 1. Documentación Técnica | [Click aquí para ir a la sección](docs/README.md) |
+| 2. Descripción General | [Click aquí para ir a la sección](#descripción-general) |
+| 3. Arquitectura General | [Click aquí para ir a la sección](#arquitectura-general) |
+| 4. Backend (.NET 8) | [Click aquí para ir a la sección](#construcción-del-backend) |
+| 5. Base de Datos | [Click aquí para ir a la sección](#base-de-datos---sql-server-2022---mongo) |
+| 6. Frontend (Angular) | [Click aquí para ir a la sección](#frontend) |
+| 7. Docker & Deployment | [Click aquí para ir a la sección](#despliegue-con-docker-compose) |
+| 8. Requisitos del Sistema | [Click aquí para ir a la sección](#requisitos-mínimos-de-ejecución) |
+| 9. Observabilidad / Auditoría | [Click aquí para ir a la sección](#observabilidad-registros-y-auditoría) |
+| 10. Errores Comunes | [Click aquí para ir a la sección](#errores-comunes-y-solución-de-problemas) |
+| 11. Limitaciones | [Click aquí para ir a la sección](#limitaciones-y-consideraciones-de-diseño) |
+| 12. Mejoras Futuras | [Click aquí para ir a la sección](#extensiones-y-mejoras-futuras) |
+| 13. Mantenimiento | [Click aquí para ir a la sección](#mantenimiento-y-operación) |
+| 14. Herramientas Utilizadas | [Click aquí para ir a la sección](#herramientas-utilizadas) |
+| 15. Autores | [Click aquí para ir a la sección](#autores) |
 
 ---
 

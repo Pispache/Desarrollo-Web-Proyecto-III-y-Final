@@ -39,43 +39,65 @@ Esta guía resume la estructura actual del repositorio, perfiles de Docker Compo
 - reports: Postgres + Report Service + PDF Renderer + ETL
 - all: todo el stack
 
-## Puertos (host → contenedor)
+## Puertos Expuestos
 
-- API (.NET): 127.0.0.1:8080 → 8080
-- UI (Nginx): 127.0.0.1:4200 → 80
-- Auth Service: 127.0.0.1:5001 → 5000
-- MongoDB: 127.0.0.1:27017 → 27017
-- Report Service (FastAPI): 127.0.0.1:8081 → 8081
-- PDF Renderer: 127.0.0.1:3001 → 3000
-- SQL Server: 127.0.0.1:1435 → 1435
-- Postgres: 127.0.0.1:5432 → 5432
+# docker-compose.yml
 
-## Comandos
+Base de datos SQL Server (marcador_db)
 
-Construir todo:
+Puerto: 1435
+Acceso: localhost:1435
+API principal (marcador_api)
 
-```bash
-docker compose build
-```
+Puerto: 8080
+Acceso: localhost:8080
+Interfaz de Usuario Angular (marcador_ui)
 
-Levantar todo:
+Puerto: 4200
+Acceso: localhost:4200
+(internamente usa puerto 80)
+MongoDB (marcador_mongodb)
 
-```bash
-docker compose up -d --profile all
-```
+Puerto: 27017
+Acceso: localhost:27017
+Servicio de Autenticación (marcador_auth)
 
-Levantar por dominio:
+Puerto: 5001 (mapea al 5000 interno)
+Acceso: localhost:5001
+PostgreSQL (marcador_pg)
 
-```bash
-# Backend principal (DB + API + UI)
-docker compose up -d --profile db --profile api --profile ui
+Puerto: 5432
+Acceso: localhost:5432
+Servicio de Reportes (marcador_reports)
 
-# Autenticación
-docker compose up -d --profile auth
+Puerto: 8081
+Acceso: localhost:8081
+Renderizador PDF (marcador_pdf)
 
-# Reportes (Postgres, Report Service, PDF, ETL)
-docker compose up -d --profile reports
-```
+Puerto: 3001 (mapea al 3000 interno)
+Acceso: localhost:3001
+
+
+## Levantar por dominio:
+
+# Levantar servicios
+docker compose --profile reports up -d
+
+# Comandos adicionales de gestión
+docker-compose --profile all up --build        # Levanta todo y construye imágenes
+docker-compose up                              # Inicia sin reconstruir imágenes  
+docker-compose up -d                           # Modo segundo plano
+docker-compose down                            # Elimina contenedores y redes
+docker-compose build                           # Construye imágenes sin ejecutar
+docker-compose ps                              # Lista contenedores
+docker-compose logs -f                         # Logs en tiempo real
+docker-compose restart                         # Reinicia todo
+
+# Ver logs específicos
+docker logs -f marcador_etl
+
+# Verificar datos
+./scripts/verify-etl.sh
 
 Logs y apagado:
 
