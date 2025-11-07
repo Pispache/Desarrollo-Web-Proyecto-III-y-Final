@@ -10,6 +10,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const User = require('../models/User');
+const { logEvent } = require('../security/logger');
+const { canAttempt, recordFailure, recordSuccess, remainingLockMs } = require('../security/lockout');
 
 // Generate JWT token compatible with .NET
 /**
@@ -67,9 +69,11 @@ exports.resetUserPassword = async (req, res) => {
     user.password = temp; // El pre-save hook lo hasheará automáticamente
     await user.save();
 
+    try { logEvent('admin_reset_password_success', { targetUserId: userId, byUserId: req.userClaims?.id }); } catch {}
     return res.json({ success: true, temporaryPassword: temp });
   } catch (error) {
     console.error('resetUserPassword error:', error);
+    try { logEvent('admin_reset_password_failed', { targetUserId: req.params?.id, byUserId: req.userClaims?.id, error: String(error?.message || error) }); } catch {}
     return res.status(500).json({ success: false, message: 'No se pudo resetear la contraseña' });
   }
 };
@@ -102,9 +106,11 @@ exports.updateUserActive = async (req, res) => {
     user.active = !!active;
     await user.save();
 
+    try { logEvent('admin_update_active_success', { targetUserId: userId, active: !!active, byUserId: req.userClaims?.id }); } catch {}
     res.json({ success: true, user: user.toPublicJSON() });
   } catch (error) {
     console.error('updateUserActive error:', error);
+    try { logEvent('admin_update_active_failed', { targetUserId: req.params?.id, byUserId: req.userClaims?.id, error: String(error?.message || error) }); } catch {}
     res.status(500).json({ success: false, message: 'Failed to update user active' });
   }
 };
@@ -147,8 +153,9 @@ exports.register = async (req, res) => {
     });
     
     await user.save();
-    
+
     const token = generateToken(user);
+    try { logEvent('auth_register_success', { userId: user._id.toString(), email: user.email }); } catch {}
     res.status(201).json({
       success: true,
       message: 'Registro Correcto',
@@ -161,6 +168,7 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error('Error de Registro:', error);
+    try { logEvent('auth_register_failed', { email: req.body?.email, error: String(error?.message || error) }); } catch {}
     res.status(500).json({
       success: false,
       message: 'El registro fallo',
@@ -182,50 +190,68 @@ exports.login = async (req, res) => {
         errors: errors.array()
       });
     }
-    
+
     const { email, password } = req.body;
-    
-    // Find user (incluir password para comparación)
+
+    const key = `${(email || '').toLowerCase()}#${req.ip || ''}`;
+    if (!canAttempt(key)) {
+      const rem = remainingLockMs(key);
+      try { logEvent('auth_login_locked', { email: (email || '').toLowerCase(), ip: req.ip, remainingMs: rem }); } catch {}
+      return res.status(429).json({
+        success: false,
+        message: 'Cuenta bloqueada temporalmente. Inténtalo más tarde.'
+      });
+    }
+
     const user = await User.findByEmail(email).select('+password');
     if (!user) {
+      recordFailure(key);
+      try { logEvent('auth_login_failed', { reason: 'user_not_found', email: (email || '').toLowerCase(), ip: req.ip }); } catch {}
       return res.status(401).json({
         success: false,
         message: 'Credenciales Invalidas'
       });
     }
-    
+
     // Check if user has password (not OAuth user)
     if (!user.password) {
+      recordFailure(key);
+      try { logEvent('auth_login_failed', { reason: 'oauth_only', userId: user._id.toString(), email: user.email, ip: req.ip }); } catch {}
       return res.status(401).json({
         success: false,
         message: 'Esta cuenta utiliza OAuth. Por favor, inicie sesión con ' + user.oauthProvider
       });
     }
-    
+
     // Verify password
     const isValid = await user.comparePassword(password);
     if (!isValid) {
+      recordFailure(key);
+      try { logEvent('auth_login_failed', { reason: 'invalid_password', userId: user._id.toString(), email: user.email, ip: req.ip }); } catch {}
       return res.status(401).json({
         success: false,
         message: 'Credenciales Invalidas'
       });
     }
-    
+
     // Check if active
     if (!user.active) {
+      recordFailure(key);
+      try { logEvent('auth_login_failed', { reason: 'inactive', userId: user._id.toString(), email: user.email, ip: req.ip }); } catch {}
       return res.status(403).json({
         success: false,
         message: 'La cuenta está inactiva'
       });
     }
-    
+
     // Update last login
     user.lastLoginAt = new Date();
     await user.save();
-    
-    // Generate token
+
     const token = generateToken(user);
-    
+    recordSuccess(key);
+    try { logEvent('auth_login_success', { userId: user._id.toString(), email: user.email, ip: req.ip }); } catch {}
+
     res.json({
       success: true,
       message: 'Inicio de sesión exitoso',
@@ -238,6 +264,7 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error('Error de Login:', error);
+    try { logEvent('auth_login_failed', { reason: 'exception', email: req.body?.email, ip: req.ip, error: String(error?.message || error) }); } catch {}
     res.status(500).json({
       success: false,
       message: 'Login Fallido',
@@ -362,11 +389,14 @@ exports.validateToken = async (req, res) => {
 // OAuth callback
 /**
  * @summary Callback de OAuth tras el intercambio de código por token.
+ * @param {import('express').Request} req Petición de Express con el usuario autenticado por Passport.
+ * @param {import('express').Response} res Respuesta HTTP para redirección al frontend.
+ * @returns {void} Redirige a la UI con fragmento o con error.
  * @remarks
- * - Si hay usuario, genera un JWT y redirige a `FRONTEND_URL/login?token=...`.
- * - Si falta usuario o hay error, redirige con mensaje de error.
- * - Verifica en base de datos si el usuario está activo; si está inactivo,
- *   NO emite token y redirige a `FRONTEND_URL/login?error=account_inactive`.
+ * - Si hay usuario, genera un JWT y redirige a `FRONTEND_URL/login#token=...` (fragmento).
+ * - El uso del fragmento evita fugas del token en cabecera Referer, historial del navegador y logs en servidores intermedios.
+ * - Si falta usuario o hay error, redirige con `?error=...`.
+ * - Verifica en base de datos si el usuario está activo; si está inactivo, NO emite token y redirige con `?error=account_inactive`.
  */
 exports.oauthCallback = async (req, res) => {
   try {
@@ -398,13 +428,15 @@ exports.oauthCallback = async (req, res) => {
     const token = generateToken(req.user);
     console.log('OAuth callback - Token generated:', token.substring(0, 20) + '...');
     
-    // Redirect to frontend with token
+    // Redirect to frontend with token via URL fragment to avoid leaking in Referer/history
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-    const redirectUrl = `${frontendUrl}/login?token=${token}`;
+    const redirectUrl = `${frontendUrl}/login#token=${token}`;
     console.log('OAuth callback - Redirecting to:', redirectUrl);
+    try { logEvent('auth_oauth_success', { userId: req.user?._id?.toString?.(), provider: req.user?.oauthProvider }); } catch {}
     res.redirect(redirectUrl);
   } catch (error) {
     console.error('OAuth callback error:', error);
+    try { logEvent('auth_oauth_failed', { error: String(error?.message || error) }); } catch {}
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
     res.redirect(`${frontendUrl}/login?error=${encodeURIComponent(error.message)}`);
   }
@@ -434,9 +466,11 @@ exports.listUsers = async (req, res) => {
       has_password: !!u.password
     }));
     
+    try { logEvent('admin_list_users', { byUserId: req.userClaims?.id, count: usersWithPasswordFlag.length }); } catch {}
     res.json({ success: true, users: usersWithPasswordFlag });
   } catch (error) {
     console.error('listUsers error:', error);
+    try { logEvent('admin_list_users_failed', { byUserId: req.userClaims?.id, error: String(error?.message || error) }); } catch {}
     res.status(500).json({ success: false, message: 'Error al listar usuarios' });
   }
 };
@@ -468,9 +502,11 @@ exports.updateUserRole = async (req, res) => {
     user.role = newRole;
     await user.save();
 
+    try { logEvent('admin_update_role_success', { targetUserId: userId, role: newRole, byUserId: req.userClaims?.id }); } catch {}
     res.json({ success: true, user: user.toPublicJSON() });
   } catch (error) {
     console.error('updateUserRole error:', error);
+    try { logEvent('admin_update_role_failed', { targetUserId: req.params?.id, byUserId: req.userClaims?.id, error: String(error?.message || error) }); } catch {}
     res.status(500).json({ success: false, message: 'No se pudo actualizar el rol del usuario' });
   }
 };

@@ -19,7 +19,8 @@ def require_admin(creds: HTTPAuthorizationCredentials = Depends(security)):
             token,
             JWT_SECRET,
             algorithms=["HS256"],
-            options={"verify_aud": False, "verify_iss": False}
+            audience=JWT_AUDIENCE,
+            issuer=JWT_ISSUER
         )
 
         roles_collected = []
@@ -46,5 +47,25 @@ def require_admin(creds: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=401, detail="Token expired")
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
+
+
+def require_user_or_admin(creds: HTTPAuthorizationCredentials = Depends(security)):
+    if not JWT_SECRET:
+        raise HTTPException(status_code=500, detail="JWT not configured")
+    token = creds.credentials
+    try:
+        payload = jwt.decode(
+            token,
+            JWT_SECRET,
+            algorithms=["HS256"],
+            audience=JWT_AUDIENCE,
+            issuer=JWT_ISSUER
+        )
+        # No exigimos rol ADMIN; basta con que el token sea válido.
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
     except Exception as e:
         raise HTTPException(status_code=401, detail=f"Invalid token: {str(e)}")
