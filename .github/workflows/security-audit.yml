@@ -1,3 +1,5 @@
+# @summary Auditorías de seguridad y SBOM (A06 y A08).
+# @effects Detecta vulnerabilidades conocidas y documenta la cadena de suministro.
 name: Security Audit & SBOM
 
 on:

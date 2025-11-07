@@ -1,3 +1,9 @@
+/**
+ * @summary Lockout por intentos fallidos (A07: Identification and Authentication Failures).
+ * @remarks Bloquea temporalmente el login tras múltiples fallos dentro de una ventana.
+ * @env AUTH_MAX_ATTEMPTS, AUTH_WINDOW_MS, AUTH_LOCKOUT_MS
+ * @effects Devuelve 429 y emite logs 'auth_login_locked' con tiempo restante.
+ */
 const store = new Map();
 
 const MAX_ATTEMPTS = parseInt(process.env.AUTH_MAX_ATTEMPTS || '5', 10);

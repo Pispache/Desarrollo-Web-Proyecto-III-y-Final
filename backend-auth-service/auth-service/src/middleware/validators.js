@@ -1,5 +1,11 @@
 const { body } = require('express-validator');
 
+/**
+ * @summary Política de contraseñas reforzada (A07: Identification and Authentication Failures).
+ * @remarks Requiere mínimo 10 caracteres, mayúscula, minúscula, número y símbolo.
+ * @effects Rechaza registros que no cumplen la política; reduce riesgo de credenciales débiles.
+ */
+
 exports.validateRegister = [
   body('email')
     .isEmail()
