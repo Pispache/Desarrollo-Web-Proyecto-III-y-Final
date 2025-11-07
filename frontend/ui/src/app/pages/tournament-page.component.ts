@@ -72,6 +72,35 @@ export class TournamentPageComponent implements OnInit {
     this.ensureKnockoutInitialized();
     this.loadKnockoutFromLocal();
   }
+  
+  // Valida que no haya equipos repetidos DENTRO de una misma fase y que no se repita local/visita en el mismo match
+  private validateBracketNoDuplicates(): string | null {
+    const checkArr = (arr: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>, label: string) => {
+      const used = new Map<number, number>();
+      if (!Array.isArray(arr)) return;
+      for (const m of arr) {
+        const h = (m?.homeTeamId ?? null) as number | null;
+        const a = (m?.awayTeamId ?? null) as number | null;
+        if (h && a && h === a) {
+          return `El mismo equipo aparece como local y visita en ${label}. Corrige ese partido.`;
+        }
+        if (h) used.set(h, (used.get(h) || 0) + 1);
+        if (a) used.set(a, (used.get(a) || 0) + 1);
+      }
+      for (const [id, count] of used.entries()) {
+        if (count > 1) {
+          const name = this.teamNameById(id);
+          return `El equipo "${name}" aparece más de una vez en ${label}.`;
+        }
+      }
+      return null;
+    };
+    let msg = checkArr(this.knockout.roundOf16, 'Octavos de final'); if (msg) return msg;
+    msg = checkArr(this.knockout.quarterfinals, 'Cuartos de final'); if (msg) return msg;
+    msg = checkArr(this.knockout.semifinals, 'Semifinal'); if (msg) return msg;
+    msg = checkArr(this.knockout.final, 'Final'); if (msg) return msg;
+    return null;
+  }
 
   // === Tournaments list & selection ===
   loadTournaments() {
@@ -88,14 +117,49 @@ export class TournamentPageComponent implements OnInit {
   }
 
   onSelectTournament(id: number) {
+    // Guardar inmediatamente el bracket del torneo anterior en localStorage
+    const prevId = this.selectedTournamentId;
+    if (prevId) {
+      try {
+        const key = `tournament.knockout.${prevId}`;
+        localStorage.setItem(key, JSON.stringify(this.knockout));
+      } catch {}
+      // Si es admin, persistir de inmediato en servidor para no perder al navegar
+      if (this.isAdmin()) {
+        try {
+          const payload = {
+            roundOf16: this.knockout.roundOf16,
+            quarterfinals: this.knockout.quarterfinals,
+            semifinals: this.knockout.semifinals,
+            final: this.knockout.final,
+          };
+          this.reports.saveBracket(prevId, payload).subscribe({ next: () => {}, error: () => {} });
+        } catch {}
+      }
+    }
+    // Cancelar guardado pendiente al servidor
+    try { clearTimeout(this.saveBracketDebounce); } catch {}
+
     this.selectedTournamentId = id;
     try { localStorage.setItem('tournament.selectedId', String(id)); } catch {}
-    // Reset and load bracket for this tournament
+    // Reset y cargar bracket del nuevo torneo
     this.resetKnockout();
-    // Intentar cargar desde servidor; si falla, desde localStorage
+    const currentRequestTid = id;
     this.reports.getBracket(id).subscribe({
-      next: data => this.applyBracketFrom(data),
-      error: _ => this.loadKnockoutFromLocal()
+      next: data => {
+        if (this.selectedTournamentId !== currentRequestTid) return; // usuario cambió de torneo; ignorar respuesta vieja
+        if (this.isBracketPayloadEmpty(data)) {
+          // Si el servidor está vacío, intentar cargar desde local para no perder trabajo previo
+          const hadLocal = this.loadKnockoutFromLocal();
+          if (!hadLocal) this.applyBracketFrom(data);
+        } else {
+          this.applyBracketFrom(data);
+        }
+      },
+      error: _ => {
+        if (this.selectedTournamentId !== currentRequestTid) return;
+        this.loadKnockoutFromLocal();
+      }
     });
     this.fetchGroups(true);
   }
@@ -138,16 +202,33 @@ export class TournamentPageComponent implements OnInit {
   private saveBracketDebounce?: any;
   private saveBracketToServerDebounced() {
     if (!this.selectedTournamentId) return;
+    if (!this.isAdmin()) return; // solo admins persisten en servidor
     clearTimeout(this.saveBracketDebounce);
     this.saveBracketDebounce = setTimeout(() => {
       try {
+        // Validación local antes de enviar
+        const validationError = this.validateBracketNoDuplicates();
+        if (validationError) {
+          this.notify.showWarning('Bracket inválido', validationError);
+          return;
+        }
         const payload = {
           roundOf16: this.knockout.roundOf16,
           quarterfinals: this.knockout.quarterfinals,
           semifinals: this.knockout.semifinals,
           final: this.knockout.final,
         };
-        this.reports.saveBracket(this.selectedTournamentId!, payload).subscribe({ next: () => {}, error: () => {} });
+        this.reports.saveBracket(this.selectedTournamentId!, payload).subscribe({
+          next: () => {
+            // éxito silencioso
+          },
+          error: (err) => {
+            const msg = err?.error?.detail || err?.message || 'No se pudo guardar la llave del torneo.';
+            this.notify.showError('Error al guardar bracket', String(msg));
+            // console para depurar si hay CORS/401/403
+            try { console.error('saveBracket error', err); } catch {}
+          }
+        });
       } catch {}
     }, 300);
   }
@@ -156,20 +237,22 @@ export class TournamentPageComponent implements OnInit {
       localStorage.setItem(this.storageKeyFor(), JSON.stringify(this.knockout));
     } catch {}
     // También persistir en servidor de forma diferida
-    this.saveBracketToServerDebounced();
+    if (this.isAdmin()) this.saveBracketToServerDebounced();
   }
-  private loadKnockoutFromLocal() {
+  private loadKnockoutFromLocal(): boolean {
     try {
       const raw = localStorage.getItem(this.storageKeyFor());
-      if (!raw) return;
+      if (!raw) return false;
       const data = JSON.parse(raw);
       if (data && typeof data === 'object') {
         if (Array.isArray(data.roundOf16)) this.knockout.roundOf16 = data.roundOf16;
         if (Array.isArray(data.quarterfinals)) this.knockout.quarterfinals = data.quarterfinals;
         if (Array.isArray(data.semifinals)) this.knockout.semifinals = data.semifinals;
         if (Array.isArray(data.final)) this.knockout.final = data.final;
+        return !this.isBracketEmpty(this.knockout);
       }
     } catch {}
+    return false;
   }
 
   private applyBracketFrom(data: any) {
@@ -180,11 +263,27 @@ export class TournamentPageComponent implements OnInit {
       this.knockout.quarterfinals = coerce(data.quarterfinals, 4);
       this.knockout.semifinals = coerce(data.semifinals, 2);
       this.knockout.final = coerce(data.final, 1);
-      // Sincronizar también a localStorage
-      this.saveKnockoutToLocal();
+      // No sobrescribir local si el servidor viene vacío y ya teníamos local no vacío
+      if (!this.isBracketEmpty(this.knockout)) this.saveKnockoutToLocal();
     } catch {
       this.ensureKnockoutInitialized();
     }
+  }
+
+  private isBracketPayloadEmpty(payload: any): boolean {
+    try {
+      const r16 = Array.isArray(payload?.roundOf16) ? payload.roundOf16 : [];
+      const qf = Array.isArray(payload?.quarterfinals) ? payload.quarterfinals : [];
+      const sf = Array.isArray(payload?.semifinals) ? payload.semifinals : [];
+      const f = Array.isArray(payload?.final) ? payload.final : [];
+      const hasId = (arr: any[]) => arr.some(m => (m?.homeTeamId ?? null) || (m?.awayTeamId ?? null));
+      return !hasId(r16) && !hasId(qf) && !hasId(sf) && !hasId(f);
+    } catch { return true; }
+  }
+
+  private isBracketEmpty(b: { roundOf16: any[]; quarterfinals: any[]; semifinals: any[]; final: any[]; }): boolean {
+    const hasId = (arr: any[]) => arr.some(m => (m?.homeTeamId ?? null) || (m?.awayTeamId ?? null));
+    return !hasId(b.roundOf16) && !hasId(b.quarterfinals) && !hasId(b.semifinals) && !hasId(b.final);
   }
 
   addGroup() {
@@ -424,29 +523,50 @@ export class TournamentPageComponent implements OnInit {
   // For UI selects
   allTeamsForSelect(): TeamDto[] { return this.allTeams || []; }
 
-  // Equipos ya usados en el bracket (todas las fases)
-  private usedTeamIdsInBracket(): Set<number> {
+  // Equipos ya usados en una fase específica
+  private usedTeamIdsInPhase(arr: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>): Set<number> {
     const used = new Set<number>();
-    const push = (id?: number | null) => { if (typeof id === 'number' && !isNaN(id)) used.add(id); };
-    const scan = (arr: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }> | undefined) => {
-      if (!Array.isArray(arr)) return;
-      for (const m of arr) { push(m?.homeTeamId ?? null); push(m?.awayTeamId ?? null); }
-    };
-    scan(this.knockout.roundOf16);
-    scan(this.knockout.quarterfinals);
-    scan(this.knockout.semifinals);
-    scan(this.knockout.final);
+    for (const m of (arr || [])) {
+      const h = m?.homeTeamId ?? null; const a = m?.awayTeamId ?? null;
+      if (typeof h === 'number') used.add(h);
+      if (typeof a === 'number') used.add(a);
+    }
     return used;
   }
 
-  // Opciones para selects del bracket: excluye ya usados salvo el seleccionado actualmente; y opcionalmente excluye disallowId (lado contrario del mismo partido)
-  bracketTeamsOptions(currentId?: number | null, disallowId?: number | null): TeamDto[] {
-    const used = this.usedTeamIdsInBracket();
+  // Opciones para selects del bracket por fase: excluye ya usados en ESA fase salvo el seleccionado actualmente; y opcionalmente excluye disallowId (lado contrario del mismo partido)
+  bracketTeamsOptionsPhase(phaseArr: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>, currentId?: number | null, disallowId?: number | null): TeamDto[] {
+    const used = this.usedTeamIdsInPhase(phaseArr || []);
     // Permitir mantener el valor actual
     if (typeof currentId === 'number') used.delete(currentId);
     // Deshabilitar elegir el mismo del lado opuesto del match
     if (typeof disallowId === 'number') used.add(disallowId);
     return (this.allTeams || []).filter(t => !used.has(t.teamId));
+  }
+
+  // ====== Torneos: eliminar (solo ADMIN) ======
+  async deleteSelectedTournament() {
+    if (!this.isAdmin() || !this.selectedTournamentId) return;
+    const tid = this.selectedTournamentId;
+    const ok = await this.notify.confirm('¿Eliminar este torneo? Esta acción no se puede deshacer.', 'Eliminar torneo');
+    if (!ok) return;
+    this.reports.deleteTournament(tid).subscribe({
+      next: () => {
+        // limpiar localStorage del bracket de este torneo
+        try { localStorage.removeItem(`tournament.knockout.${tid}`); } catch {}
+        this.notify.showSuccess('Torneo eliminado', 'El torneo se eliminó correctamente.');
+        // actualizar lista y limpiar selección
+        this.tournaments = this.tournaments.filter(t => t.id !== tid);
+        this.selectedTournamentId = null;
+        this.resetKnockout();
+        this.groups = [];
+        this.fetchGroups(true);
+      },
+      error: (err) => {
+        const msg = err?.error?.detail || 'No se pudo eliminar el torneo';
+        this.notify.showError('Error', String(msg));
+      }
+    });
   }
 
   // ====== Role helpers ======

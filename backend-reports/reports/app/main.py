@@ -14,7 +14,7 @@ from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 import httpx
-from .security.auth import require_admin
+from .security.auth import require_admin, require_user_or_admin
 from .db import get_connection
 from .pdf.base import render_html_to_pdf
 from .pdf.templates import render_teams_html, render_players_html, render_games_html, render_roster_html, render_player_stats_html
@@ -83,7 +83,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"]
 )
 
@@ -142,7 +142,7 @@ def _ensure_brackets_table(cur):
     )
 
 @router.get("/tournaments/{tid}/bracket")
-def get_bracket(tid: int, _=Depends(require_admin)):
+def get_bracket(tid: int, _=Depends(require_user_or_admin)):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
@@ -158,31 +158,30 @@ def put_bracket(tid: int, body: dict = Body(...), _=Depends(require_admin)):
     try:
         if not isinstance(body, dict):
             raise HTTPException(status_code=400, detail="Invalid bracket payload")
-        # Validación: un equipo no puede repetirse en ninguna fase
-        def collect_ids(arr):
+        # Validación: permitir que un equipo avance (aparezca en distintas fases),
+        # pero NO duplicado dentro de la misma fase; y nunca local==visita en un match
+        def validate_phase(arr, label: str):
             ids = []
             if isinstance(arr, list):
                 for m in arr:
                     if isinstance(m, dict):
                         h = m.get("homeTeamId")
                         a = m.get("awayTeamId")
-                        # mismatch dentro del partido
-                        if h is not None and a is not None and h == a and h is not None:
-                            raise HTTPException(status_code=400, detail="A team cannot play against itself in the same match")
+                        if h is not None and a is not None and h == a:
+                            raise HTTPException(status_code=400, detail=f"Same team on both sides in {label}")
                         if isinstance(h, int):
                             ids.append(h)
                         if isinstance(a, int):
                             ids.append(a)
-            return ids
-        used = []
-        used += collect_ids(body.get("roundOf16"))
-        used += collect_ids(body.get("quarterfinals"))
-        used += collect_ids(body.get("semifinals"))
-        used += collect_ids(body.get("final"))
-        # Eliminar None y validar duplicados
-        norm = [x for x in used if isinstance(x, int)]
-        if len(set(norm)) != len(norm):
-            raise HTTPException(status_code=400, detail="A team cannot appear in more than one slot across the bracket")
+            # Duplicados dentro de la fase
+            ids = [x for x in ids if isinstance(x, int)]
+            if len(set(ids)) != len(ids):
+                raise HTTPException(status_code=400, detail=f"A team cannot appear more than once in {label}")
+
+        validate_phase(body.get("roundOf16"), "Round of 16")
+        validate_phase(body.get("quarterfinals"), "Quarterfinals")
+        validate_phase(body.get("semifinals"), "Semifinals")
+        validate_phase(body.get("final"), "Final")
         with get_connection() as conn:
             with conn.cursor() as cur:
                 _ensure_brackets_table(cur)
@@ -275,7 +274,7 @@ def delete_tournament(tid: int, _=Depends(require_admin)):
 # /// - Devuelve: [{ id, name, created_at }]
 # /// </remarks>
 @router.get("/tournaments")
-def list_tournaments(_=Depends(require_admin)):
+def list_tournaments(_=Depends(require_user_or_admin)):
     try:
         with get_connection() as conn:
             with conn.cursor() as cur:
