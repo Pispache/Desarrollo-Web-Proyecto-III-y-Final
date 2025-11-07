@@ -280,6 +280,96 @@ INSERT INTO {TT}TournamentGroups(Name, TournamentId) OUTPUT INSERTED.GroupId VAL
             }
         }).AddEndpointFilter<ValidationFilter<GroupScheduleDto>>().RequireAuthorization("ADMIN").WithOpenApi();
 
+        // ====== Bracket per tournament (like groups) ======
+        // Ensure bracket table
+        try
+        {
+            using var c = new SqlConnection(cs());
+            c.Open();
+            var TT = $"{c.Database}.dbo.";
+            var ensure = $@"
+IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='TournamentBrackets')
+BEGIN
+  CREATE TABLE {TT}TournamentBrackets (
+    TournamentId INT PRIMARY KEY,
+    Data NVARCHAR(MAX) NOT NULL,
+    UpdatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+  );
+END;";
+            c.Execute(ensure);
+        }
+        catch { }
+
+        // GET bracket
+        g.MapGet("/tournaments/{tournamentId:int}/bracket", async (int tournamentId) =>
+        {
+            using var c = Open(cs());
+            var TT = $"{c.Database}.dbo.";
+            var json = await c.ExecuteScalarAsync<string>($"SELECT Data FROM {TT}TournamentBrackets WHERE TournamentId=@t", new { t = tournamentId });
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return Results.Ok(new { roundOf16 = new object[0], quarterfinals = new object[0], semifinals = new object[0], final = new object[0] });
+            }
+            return Results.Content(json, "application/json");
+        }).RequireAuthorization("ADMIN_OR_USER").WithOpenApi();
+
+        // PUT bracket
+        g.MapPut("/tournaments/{tournamentId:int}/bracket", async (int tournamentId, [FromBody] object body) =>
+        {
+            if (body is null) return Results.BadRequest(new { detail = "Invalid bracket payload" });
+            // Basic validation aligned with UI/backend-reports: no duplicates within the same phase and no same team on both sides
+            try
+            {
+                var payload = System.Text.Json.JsonDocument.Parse(System.Text.Json.JsonSerializer.Serialize(body));
+                bool HasDupInPhase(string name)
+                {
+                    if (!payload.RootElement.TryGetProperty(name, out var arr) || arr.ValueKind != System.Text.Json.JsonValueKind.Array) return false;
+                    var used = new HashSet<int>();
+                    foreach (var m in arr.EnumerateArray())
+                    {
+                        int? h = m.TryGetProperty("homeTeamId", out var he) && he.ValueKind == System.Text.Json.JsonValueKind.Number ? he.GetInt32() : (int?)null;
+                        int? a = m.TryGetProperty("awayTeamId", out var ae) && ae.ValueKind == System.Text.Json.JsonValueKind.Number ? ae.GetInt32() : (int?)null;
+                        if (h.HasValue && a.HasValue && h.Value == a.Value) throw new InvalidOperationException($"Same team on both sides in {name}");
+                        if (h.HasValue)
+                        {
+                            if (!used.Add(h.Value)) throw new InvalidOperationException($"A team cannot appear more than once in {name}");
+                        }
+                        if (a.HasValue)
+                        {
+                            if (!used.Add(a.Value)) throw new InvalidOperationException($"A team cannot appear more than once in {name}");
+                        }
+                    }
+                    return false;
+                }
+                HasDupInPhase("roundOf16");
+                HasDupInPhase("quarterfinals");
+                HasDupInPhase("semifinals");
+                HasDupInPhase("final");
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Results.BadRequest(new { detail = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(new { detail = "Invalid bracket payload: " + ex.Message });
+            }
+
+            using (var c = Open(cs()))
+            {
+                var TT = $"{c.Database}.dbo.";
+                var json = System.Text.Json.JsonSerializer.Serialize(body);
+                await c.ExecuteAsync($@"
+MERGE {TT}TournamentBrackets WITH (HOLDLOCK) AS tgt
+USING (SELECT @t AS TournamentId, @d AS Data) AS src
+ON (tgt.TournamentId = src.TournamentId)
+WHEN MATCHED THEN UPDATE SET Data = src.Data, UpdatedAt = SYSUTCDATETIME()
+WHEN NOT MATCHED THEN INSERT(TournamentId, Data) VALUES(src.TournamentId, src.Data);
+", new { t = tournamentId, d = json });
+            }
+            return Results.Ok(new { ok = true });
+        }).RequireAuthorization("ADMIN").WithOpenApi();
+
         static SqlConnection Open(string cs) { var c = new SqlConnection(cs); c.Open(); return c; }
 
         /// <summary>

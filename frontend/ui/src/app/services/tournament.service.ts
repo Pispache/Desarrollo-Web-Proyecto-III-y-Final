@@ -13,6 +13,12 @@ import { Observable, map } from 'rxjs';
 
 export interface TournamentGroupTeamDto { teamId: number; name: string; }
 export interface TournamentGroupDto { groupId: number; name: string; createdAt?: string; teams: TournamentGroupTeamDto[]; }
+export interface BracketData {
+  roundOf16: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
+  quarterfinals: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
+  semifinals: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
+  final: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }>;
+}
 
 @Injectable({ providedIn: 'root' })
 export class TournamentService {
@@ -63,5 +69,18 @@ export class TournamentService {
     const token = this.auth.getToken();
     const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
     return this.http.post<{ created: number }>(`${this.base}/${tournamentId}/groups/${groupId}/schedule`, payload, { headers });
+  }
+
+  // ===== Bracket endpoints (SQL Server) =====
+  getBracket(tournamentId: number): Observable<BracketData> {
+    const token = this.auth.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+    return this.http.get<BracketData>(`${this.base}/${tournamentId}/bracket`, { headers });
+  }
+
+  saveBracket(tournamentId: number, data: BracketData): Observable<{ ok: boolean }> {
+    const token = this.auth.getToken();
+    const headers = token ? new HttpHeaders({ Authorization: `Bearer ${token}` }) : undefined;
+    return this.http.put<{ ok: boolean }>(`${this.base}/${tournamentId}/bracket`, data, { headers });
   }
 }
