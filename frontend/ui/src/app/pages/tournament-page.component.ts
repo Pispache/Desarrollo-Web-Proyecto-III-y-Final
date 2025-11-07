@@ -12,6 +12,7 @@ import { FormsModule } from '@angular/forms';
 import { ApiService, TeamDto } from '../services/api.service';
 import { NotificationService } from '../services/notification.service';
 import { TournamentService, TournamentGroupDto } from '../services/tournament.service';
+import { ReportsService, Tournament } from '../services/reports.service';
 import { AuthService } from '../services/auth.service';
 
 interface Group {
@@ -38,10 +39,14 @@ interface GroupTeam {
 export class TournamentPageComponent implements OnInit {
   groups: Group[] = [];
   newGroupName = '';
+  newTournamentName = '';
+  tournaments: Tournament[] = [];
+  selectedTournamentId: number | null = null;
   allTeams: TeamDto[] = [];
   // seleccion por grupo: groupId -> teamId seleccionado
   selectedByGroup: Record<string, number | ''> = {};
   creatingGroup = false;
+  creatingTournament = false;
   deletingGroupId: number | null = null;
   // Feature flag: true => trabajar en localStorage (sin backend) para pruebas
   private useLocal = false;
@@ -50,10 +55,13 @@ export class TournamentPageComponent implements OnInit {
     private api: ApiService,
     private notify: NotificationService,
     private tournament: TournamentService,
+    private reports: ReportsService,
     private auth: AuthService
   ) {}
 
   ngOnInit(): void {
+    this.loadSelectedTournamentFromLocal();
+    this.loadTournaments();
     this.fetchGroups();
     this.fetchTeams();
     // refrescar opciones si cambian equipos globales
@@ -65,17 +73,94 @@ export class TournamentPageComponent implements OnInit {
     this.loadKnockoutFromLocal();
   }
 
+  // === Tournaments list & selection ===
+  loadTournaments() {
+    this.reports.listTournaments().subscribe(list => {
+      this.tournaments = list || [];
+      if (this.selectedTournamentId && !this.tournaments.some(t => t.id === this.selectedTournamentId)) {
+        // selección previa ya no existe
+        this.selectedTournamentId = null;
+      }
+      if (!this.selectedTournamentId && this.tournaments.length > 0) {
+        this.onSelectTournament(this.tournaments[0].id);
+      }
+    });
+  }
+
+  onSelectTournament(id: number) {
+    this.selectedTournamentId = id;
+    try { localStorage.setItem('tournament.selectedId', String(id)); } catch {}
+    // Reset and load bracket for this tournament
+    this.resetKnockout();
+    // Intentar cargar desde servidor; si falla, desde localStorage
+    this.reports.getBracket(id).subscribe({
+      next: data => this.applyBracketFrom(data),
+      error: _ => this.loadKnockoutFromLocal()
+    });
+    this.fetchGroups(true);
+  }
+
+  private loadSelectedTournamentFromLocal() {
+    try {
+      const raw = localStorage.getItem('tournament.selectedId');
+      if (raw) this.selectedTournamentId = Number(raw) || null;
+    } catch {}
+  }
+
+  // === Tournaments (Postgres via Report Service) ===
+  createTournament() {
+    const name = this.newTournamentName?.trim();
+    if (!name || this.creatingTournament) return;
+    this.creatingTournament = true;
+    this.reports.createTournament(name).subscribe({
+      next: (t) => {
+        this.creatingTournament = false;
+        this.newTournamentName = '';
+        this.notify.showSuccess('Torneo creado', `"${t.name}" ha sido creado.`);
+        // actualizar lista y seleccionar
+        this.tournaments = [t, ...this.tournaments.filter(x => x.id !== t.id)];
+        this.onSelectTournament(t.id);
+      },
+      error: (err) => {
+        const msg = err?.error?.detail || err?.error || 'No se pudo crear el torneo';
+        this.notify.showError('Error', String(msg));
+        this.creatingTournament = false;
+      }
+    });
+  }
+
   // === Knockout persistence in localStorage ===
-  private storageKey = 'tournament.knockout';
+  private storageKeyFor(): string {
+    const tid = this.selectedTournamentId ?? 'none';
+    return `tournament.knockout.${tid}`;
+  }
   onMatchChange() { this.saveKnockoutToLocal(); }
+  private saveBracketDebounce?: any;
+  private saveBracketToServerDebounced() {
+    if (!this.selectedTournamentId) return;
+    clearTimeout(this.saveBracketDebounce);
+    this.saveBracketDebounce = setTimeout(() => {
+      try {
+        const payload = {
+          roundOf16: this.knockout.roundOf16,
+          quarterfinals: this.knockout.quarterfinals,
+          semifinals: this.knockout.semifinals,
+          final: this.knockout.final,
+        };
+        this.reports.saveBracket(this.selectedTournamentId!, payload).subscribe({ next: () => {}, error: () => {} });
+      } catch {}
+    }, 300);
+  }
   private saveKnockoutToLocal() {
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.knockout));
+      localStorage.setItem(this.storageKeyFor(), JSON.stringify(this.knockout));
     } catch {}
+    // También persistir en servidor de forma diferida
+    this.saveBracketToServerDebounced();
   }
   private loadKnockoutFromLocal() {
     try {
-      const raw = localStorage.getItem(this.storageKey);
+      const raw = localStorage.getItem(this.storageKeyFor());
       if (!raw) return;
       const data = JSON.parse(raw);
       if (data && typeof data === 'object') {
@@ -87,9 +172,25 @@ export class TournamentPageComponent implements OnInit {
     } catch {}
   }
 
+  private applyBracketFrom(data: any) {
+    try {
+      if (!data || typeof data !== 'object') { this.ensureKnockoutInitialized(); return; }
+      const coerce = (arr: any, len: number) => Array.isArray(arr) ? arr.slice(0, len).concat(new Array(Math.max(0, len - arr.length)).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }))) : new Array(len).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
+      this.knockout.roundOf16 = coerce(data.roundOf16, 8);
+      this.knockout.quarterfinals = coerce(data.quarterfinals, 4);
+      this.knockout.semifinals = coerce(data.semifinals, 2);
+      this.knockout.final = coerce(data.final, 1);
+      // Sincronizar también a localStorage
+      this.saveKnockoutToLocal();
+    } catch {
+      this.ensureKnockoutInitialized();
+    }
+  }
+
   addGroup() {
     const name = this.newGroupName?.trim();
     if (!name) return;
+    if (!this.selectedTournamentId) return;
     if (this.useLocal) {
       const gid = Date.now();
       const group: Group = { groupId: gid, name, teams: [] };
@@ -101,15 +202,19 @@ export class TournamentPageComponent implements OnInit {
     }
     if (this.creatingGroup) return;
     this.creatingGroup = true;
-    this.tournament.createGroup(name).subscribe({
+    this.tournament.createGroup(this.selectedTournamentId, name).subscribe({
       next: g => {
         this.newGroupName = '';
         this.fetchGroups(true);
         this.creatingGroup = false;
       },
       error: err => {
-        const msg = err?.error?.error || 'No se pudo crear el grupo';
-        this.notify.showError('Error', msg);
+        let msg = err?.error?.error as string | undefined;
+        const errs = err?.error?.errors as Array<{ field: string; message: string }> | undefined;
+        if (!msg && Array.isArray(errs) && errs.length) {
+          msg = errs.map(e => e.message).join('\n');
+        }
+        this.notify.showError('Error', msg || 'No se pudo crear el grupo');
         this.creatingGroup = false;
       }
     });
@@ -127,7 +232,7 @@ export class TournamentPageComponent implements OnInit {
       return;
     }
     this.deletingGroupId = gid;
-    this.tournament.deleteGroup(gid).subscribe({
+    this.tournament.deleteGroup(this.selectedTournamentId!, gid).subscribe({
       next: () => {
         this.deletingGroupId = null;
         this.notify.showSuccess('Grupo eliminado', 'El grupo se eliminó correctamente.');
@@ -158,7 +263,7 @@ export class TournamentPageComponent implements OnInit {
       this.refreshStandings();
       return;
     }
-    this.tournament.addTeam(group.groupId, team.teamId).subscribe({
+    this.tournament.addTeam(this.selectedTournamentId!, group.groupId, team.teamId).subscribe({
       next: () => {
         this.selectedByGroup[String(group.groupId)] = '';
         this.fetchGroups(true);
@@ -177,7 +282,7 @@ export class TournamentPageComponent implements OnInit {
       this.refreshStandings();
       return;
     }
-    this.tournament.removeTeam(group.groupId, teamId).subscribe({
+    this.tournament.removeTeam(this.selectedTournamentId!, group.groupId, teamId).subscribe({
       next: () => this.fetchGroups(true),
       error: () => this.notify.showError('Error', 'No se pudo quitar el equipo')
     });
@@ -198,8 +303,12 @@ export class TournamentPageComponent implements OnInit {
 
   availableTeams(group: Group): TeamDto[] {
     if ((group.teams?.length ?? 0) >= 4) return [];
-    const ids = new Set(group.teams.map(t => t.teamId));
-    return this.allTeams.filter(t => !ids.has(t.teamId));
+    // Excluir equipos ya asignados en cualquier grupo del torneo activo
+    const usedInTournament = new Set<number>();
+    for (const g of this.groups) {
+      for (const t of g.teams) usedInTournament.add(t.teamId);
+    }
+    return this.allTeams.filter(t => !usedInTournament.has(t.teamId));
   }
 
   private fetchGroups(andRefresh = false) {
@@ -208,7 +317,8 @@ export class TournamentPageComponent implements OnInit {
       if (andRefresh) this.refreshStandings();
       return;
     }
-    this.tournament.listGroups().subscribe(list => {
+    if (!this.selectedTournamentId) { this.groups = []; return; }
+    this.tournament.listGroups(this.selectedTournamentId).subscribe(list => {
       this.groups = list.map(dto => this.mapDto(dto));
       if (andRefresh) this.refreshStandings();
     });
@@ -248,6 +358,15 @@ export class TournamentPageComponent implements OnInit {
     if (this.knockout.quarterfinals.length === 0) this.knockout.quarterfinals = new Array(4).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
     if (this.knockout.semifinals.length === 0) this.knockout.semifinals = new Array(2).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
     if (this.knockout.final.length === 0) this.knockout.final = new Array(1).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null }));
+  }
+
+  private resetKnockout() {
+    this.knockout = {
+      roundOf16: new Array(8).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null })),
+      quarterfinals: new Array(4).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null })),
+      semifinals: new Array(2).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null })),
+      final: new Array(1).fill(0).map(() => ({ homeTeamId: null, awayTeamId: null })),
+    };
   }
 
   // ====== Bracket helpers: advance winners ======

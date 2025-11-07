@@ -43,12 +43,12 @@ public static class TournamentEndpoints
     /// <param name="app">Aplicación web donde se mapean las rutas.</param>
     /// <param name="cs">Función que devuelve la cadena de conexión.</param>
     /// <remarks>
-    /// Rutas principales:  
-    /// - <c>GET  /api/tournaments/default/groups</c> — Lista grupos con sus equipos.  
-    /// - <c>POST /api/tournaments/default/groups</c> — Crea un grupo.  
-    /// - <c>DELETE /api/tournaments/default/groups/{groupId}</c> — Elimina un grupo y sus equipos.  
-    /// - <c>POST /api/tournaments/default/groups/{groupId}/teams</c> — Agrega un equipo al grupo (máx. 4).  
-    /// - <c>DELETE /api/tournaments/default/groups/{groupId}/teams/{teamId}</c> — Quita un equipo del grupo.  
+    /// Rutas principales (con <c>tournamentId</c>):  
+    /// - <c>GET  /api/tournaments/{tournamentId}/groups</c> — Lista grupos con sus equipos.  
+    /// - <c>POST /api/tournaments/{tournamentId}/groups</c> — Crea un grupo.  
+    /// - <c>DELETE /api/tournaments/{tournamentId}/groups/{groupId}</c> — Elimina un grupo y sus equipos.  
+    /// - <c>POST /api/tournaments/{tournamentId}/groups/{groupId}/teams</c> — Agrega un equipo al grupo (máx. 4).  
+    /// - <c>DELETE /api/tournaments/{tournamentId}/groups/{groupId}/teams/{teamId}</c> — Quita un equipo del grupo.  
     ///
     /// Seguridad:
     /// - Lectura: <c>ADMIN_OR_USER</c>.  
@@ -70,7 +70,8 @@ BEGIN
   CREATE TABLE {TT}TournamentGroups (
     GroupId INT IDENTITY(1,1) PRIMARY KEY,
     Name NVARCHAR(100) NOT NULL,
-    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    TournamentId INT NOT NULL DEFAULT(1)
   );
 END;
 IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='TournamentGroupTeams')
@@ -81,23 +82,30 @@ BEGIN
     PRIMARY KEY (GroupId, TeamId)
   );
 END;
+-- Add TournamentId column if missing
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = 'TournamentId' AND Object_ID = Object_ID('{TT}TournamentGroups'))
+BEGIN
+  ALTER TABLE {TT}TournamentGroups ADD TournamentId INT NOT NULL DEFAULT(1);
+END;
 ";
             c.Execute(ensureSql);
         }
         catch { /* best-effort */ }
 
         // List groups with teams
-        g.MapGet("/tournaments/default/groups", async () =>
+        g.MapGet("/tournaments/{tournamentId:int}/groups", async (int tournamentId) =>
         {
             using var c = Open(cs());
             var TT = $"{c.Database}.dbo.";
-            var groups = (await c.QueryAsync<GroupRow>($"SELECT GroupId, Name, CreatedAt FROM {TT}TournamentGroups ORDER BY GroupId DESC"))
+            await EnsureSchemaAsync(c);
+            var groups = (await c.QueryAsync<GroupRow>($"SELECT GroupId, Name, CreatedAt FROM {TT}TournamentGroups WHERE TournamentId=@t ORDER BY GroupId DESC", new { t = tournamentId }))
                 .ToList();
             var teams = (await c.QueryAsync<GroupTeamRow>($@"
 SELECT gt.GroupId, gt.TeamId, t.Name
 FROM {TT}TournamentGroupTeams gt
 LEFT JOIN {TT}Teams t ON t.TeamId = gt.TeamId
-"))
+WHERE gt.TournamentId = @t
+", new { t = tournamentId }))
                 .ToList();
 
             var result = groups.Select(gr => new
@@ -118,7 +126,7 @@ LEFT JOIN {TT}Teams t ON t.TeamId = gt.TeamId
         /// - Aplica <c>ValidationFilter&lt;GroupCreateDto&gt;</c> para exigir <c>Name</c> requerido (2-100).\
         /// - En errores, responde 400 con <c>{ success: false, errors: [{ field, message }] }</c>.
         /// </remarks>
-        g.MapPost("/tournaments/default/groups", async ([FromBody] GroupCreateDto body) =>
+        g.MapPost("/tournaments/{tournamentId:int}/groups", async (int tournamentId, [FromBody] GroupCreateDto body) =>
         {
             var name = (body?.Name ?? string.Empty).Trim();
             if (string.IsNullOrWhiteSpace(name)) return Results.BadRequest(new { error = "Nombre es requerido" });
@@ -127,14 +135,14 @@ LEFT JOIN {TT}Teams t ON t.TeamId = gt.TeamId
             // fallback: asegurar esquema por si falló al inicio
             await EnsureSchemaAsync(c);
             // opcional: validar duplicado por nombre
-            var dup = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {TT}TournamentGroups WHERE Name=@n;", new { n = name });
+            var dup = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {TT}TournamentGroups WHERE Name=@n AND TournamentId=@t;", new { n = name, t = tournamentId });
             if (dup > 0) return Results.Conflict(new { error = "Ya existe un grupo con ese nombre" });
             try
             {
                 var id = await c.ExecuteScalarAsync<int>($@"
-INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
-", new { n = name });
-                return Results.Created($"/api/tournaments/default/groups/{id}", new { groupId = id, name });
+INSERT INTO {TT}TournamentGroups(Name, TournamentId) OUTPUT INSERTED.GroupId VALUES(@n, @t);
+", new { n = name, t = tournamentId });
+                return Results.Created($"/api/tournaments/{tournamentId}/groups/{id}", new { groupId = id, name });
             }
             catch (Exception ex)
             {
@@ -143,13 +151,13 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
         }).AddEndpointFilter<ValidationFilter<GroupCreateDto>>().RequireAuthorization("ADMIN").WithOpenApi();
 
         // Delete group (and its memberships)
-        g.MapDelete("/tournaments/default/groups/{groupId:int}", async (int groupId) =>
+        g.MapDelete("/tournaments/{tournamentId:int}/groups/{groupId:int}", async (int tournamentId, int groupId) =>
         {
             using var c = Open(cs());
             var TT = $"{c.Database}.dbo.";
             using var tx = c.BeginTransaction();
-            await c.ExecuteAsync($"DELETE FROM {TT}TournamentGroupTeams WHERE GroupId=@groupId;", new { groupId }, tx);
-            var rows = await c.ExecuteAsync($"DELETE FROM {TT}TournamentGroups WHERE GroupId=@groupId;", new { groupId }, tx);
+            await c.ExecuteAsync($"DELETE FROM {TT}TournamentGroupTeams WHERE GroupId=@groupId AND TournamentId=@t;", new { groupId, t = tournamentId }, tx);
+            var rows = await c.ExecuteAsync($"DELETE FROM {TT}TournamentGroups WHERE GroupId=@groupId AND TournamentId=@t;", new { groupId, t = tournamentId }, tx);
             if (rows == 0) { tx.Rollback(); return Results.NotFound(); }
             tx.Commit();
             return Results.NoContent();
@@ -162,7 +170,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
         /// - Aplica <c>ValidationFilter&lt;GroupAddTeamDto&gt;</c> para asegurar <c>TeamId</c> &gt; 0.\
         /// - En errores, responde 400 con <c>{ success: false, errors: [...] }</c>.
         /// </remarks>
-        g.MapPost("/tournaments/default/groups/{groupId:int}/teams", async (int groupId, [FromBody] GroupAddTeamDto body) =>
+        g.MapPost("/tournaments/{tournamentId:int}/groups/{groupId:int}/teams", async (int tournamentId, int groupId, [FromBody] GroupAddTeamDto body) =>
         {
             var teamId = body?.TeamId ?? 0;
             if (teamId <= 0) return Results.BadRequest(new { error = "teamId inválido" });
@@ -170,12 +178,19 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
             var TT = $"{c.Database}.dbo.";
             await EnsureSchemaAsync(c);
             // Enforce max 4 teams per group
-            var count = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {TT}TournamentGroupTeams WHERE GroupId=@groupId;", new { groupId });
+            var count = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {TT}TournamentGroupTeams WHERE GroupId=@groupId AND TournamentId=@t;", new { groupId, t = tournamentId });
             if (count >= 4) return Results.Conflict(new { error = "Máximo 4 equipos por grupo" });
+
+            // Prevent a team from being in multiple groups within the same tournament
+            var alreadyInTournament = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {TT}TournamentGroupTeams WHERE TeamId=@teamId AND TournamentId=@t;", new { teamId, t = tournamentId });
+            if (alreadyInTournament > 0)
+            {
+                return Results.Conflict(new { error = "El equipo ya pertenece a otro grupo de este torneo" });
+            }
 
             try
             {
-                await c.ExecuteAsync($"INSERT INTO {TT}TournamentGroupTeams(GroupId, TeamId) VALUES(@groupId, @teamId);", new { groupId, teamId });
+                await c.ExecuteAsync($"INSERT INTO {TT}TournamentGroupTeams(GroupId, TeamId, TournamentId) VALUES(@groupId, @teamId, @t);", new { groupId, teamId, t = tournamentId });
             }
             catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601)
             {
@@ -189,11 +204,11 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
         }).AddEndpointFilter<ValidationFilter<GroupAddTeamDto>>().RequireAuthorization("ADMIN").WithOpenApi();
 
         // Remove team from group
-        g.MapDelete("/tournaments/default/groups/{groupId:int}/teams/{teamId:int}", async (int groupId, int teamId) =>
+        g.MapDelete("/tournaments/{tournamentId:int}/groups/{groupId:int}/teams/{teamId:int}", async (int tournamentId, int groupId, int teamId) =>
         {
             using var c = Open(cs());
             var TT = $"{c.Database}.dbo.";
-            var rows = await c.ExecuteAsync($"DELETE FROM {TT}TournamentGroupTeams WHERE GroupId=@groupId AND TeamId=@teamId;", new { groupId, teamId });
+            var rows = await c.ExecuteAsync($"DELETE FROM {TT}TournamentGroupTeams WHERE GroupId=@groupId AND TeamId=@teamId AND TournamentId=@t;", new { groupId, teamId, t = tournamentId });
             if (rows == 0) return Results.NotFound();
             return Results.NoContent();
         }).RequireAuthorization("ADMIN").WithOpenApi();
@@ -205,7 +220,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
         /// - Aplica <c>ValidationFilter&lt;GroupScheduleDto&gt;</c> para validar que <c>Rounds</c> no sea nulo y cada <c>PairDto</c> sea válido.\
         /// - En errores, responde 400 con <c>{ success: false, errors: [...] }</c>.
         /// </remarks>
-        g.MapPost("/tournaments/default/groups/{groupId:int}/schedule", async (int groupId, [FromBody] GroupScheduleDto body) =>
+        g.MapPost("/tournaments/{tournamentId:int}/groups/{groupId:int}/schedule", async (int tournamentId, int groupId, [FromBody] GroupScheduleDto body) =>
         {
             if (body == null || body.Rounds == null)
                 return Results.BadRequest(new { error = "Rounds es requerido" });
@@ -214,7 +229,7 @@ INSERT INTO {TT}TournamentGroups(Name) OUTPUT INSERTED.GroupId VALUES(@n);
             var TT = $"{c.Database}.dbo.";
 
             // Validate group exists
-            var exists = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {TT}TournamentGroups WHERE GroupId=@groupId;", new { groupId });
+            var exists = await c.ExecuteScalarAsync<int>($"SELECT COUNT(1) FROM {TT}TournamentGroups WHERE GroupId=@groupId AND TournamentId=@t;", new { groupId, t = tournamentId });
             if (exists == 0) return Results.NotFound(new { error = "Grupo no existe" });
 
             using var tx = c.BeginTransaction();
@@ -284,7 +299,8 @@ BEGIN
   CREATE TABLE {TT}TournamentGroups (
     GroupId INT IDENTITY(1,1) PRIMARY KEY,
     Name NVARCHAR(100) NOT NULL,
-    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME()
+    CreatedAt DATETIME2 NOT NULL DEFAULT SYSUTCDATETIME(),
+    TournamentId INT NOT NULL DEFAULT(1)
   );
 END;
 IF NOT EXISTS (SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA='dbo' AND TABLE_NAME='TournamentGroupTeams')
@@ -292,9 +308,25 @@ BEGIN
   CREATE TABLE {TT}TournamentGroupTeams (
     GroupId INT NOT NULL,
     TeamId INT NOT NULL,
+    TournamentId INT NOT NULL,
     PRIMARY KEY (GroupId, TeamId)
   );
-END;";
+END;
+-- Add TournamentId column if missing
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = 'TournamentId' AND Object_ID = Object_ID('{TT}TournamentGroups'))
+BEGIN
+  ALTER TABLE {TT}TournamentGroups ADD TournamentId INT NOT NULL DEFAULT(1);
+END;
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE Name = 'TournamentId' AND Object_ID = Object_ID('{TT}TournamentGroupTeams'))
+BEGIN
+  ALTER TABLE {TT}TournamentGroupTeams ADD TournamentId INT NOT NULL DEFAULT(1);
+END;
+-- Unique assignment: one team per tournament across groups
+IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_TournamentGroupTeams_Tournament_Team' AND object_id = OBJECT_ID('{TT}TournamentGroupTeams'))
+BEGIN
+  CREATE UNIQUE INDEX UX_TournamentGroupTeams_Tournament_Team ON {TT}TournamentGroupTeams (TournamentId, TeamId);
+END;
+";
             await c.ExecuteAsync(ensureSql);
         }
     }

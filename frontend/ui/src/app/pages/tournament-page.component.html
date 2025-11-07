@@ -20,7 +20,33 @@
     </div>
   </header>
 
-  <form class="group-form" *ngIf="isAdmin()" (submit)="$event.preventDefault(); addGroup()">
+  <!-- Crear Torneo (solo admins) -->
+  <form class="group-form" *ngIf="isAdmin()" (submit)="$event.preventDefault(); createTournament()" style="margin-top:12px;">
+    <div class="field">
+      <label for="tournamentName">Nombre del torneo</label>
+      <input id="tournamentName" type="text" class="form-control" placeholder="Ej. Liga Apertura 2025" [(ngModel)]="newTournamentName" name="tournamentName" />
+    </div>
+    <button type="submit" class="btn btn-success" [disabled]="!newTournamentName.trim() || creatingTournament">
+      <i class="bi" [ngClass]="creatingTournament ? 'bi-hourglass-split' : 'bi-trophy' "></i>
+      {{ creatingTournament ? 'Creando...' : 'Crear torneo' }}
+    </button>
+  </form>
+
+  <!-- Seleccionar torneo existente -->
+  <div class="group-form" style="margin-top:12px;">
+    <div class="field">
+      <label for="selTournament">Torneo activo</label>
+      <div class="row">
+        <select id="selTournament" class="form-select" [(ngModel)]="selectedTournamentId" name="selTournament" (ngModelChange)="onSelectTournament($event)">
+          <option [ngValue]="null">Selecciona un torneo...</option>
+          <option *ngFor="let t of tournaments" [ngValue]="t.id">{{ t.name }}</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crear grupo solo si hay torneo seleccionado -->
+  <form class="group-form" *ngIf="isAdmin() && selectedTournamentId" (submit)="$event.preventDefault(); addGroup()">
     <div class="field">
       <label for="groupName">Nombre del grupo</label>
       <input id="groupName" type="text" class="form-control" placeholder="Ej. Grupo A" [(ngModel)]="newGroupName" name="groupName" />
@@ -30,7 +56,12 @@
     </button>
   </form>
 
-  <div class="cards">
+  <div *ngIf="!selectedTournamentId" class="empty" style="margin-top:8px;">
+    <i class="bi bi-inboxes"></i>
+    <p>Selecciona o crea un torneo para comenzar a agregar grupos.</p>
+  </div>
+
+  <div class="cards" *ngIf="selectedTournamentId">
     <div class="card" *ngFor="let g of groups">
       <div class="card-header">
         <div class="card-title">

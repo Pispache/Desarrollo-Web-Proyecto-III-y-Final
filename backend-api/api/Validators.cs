@@ -219,7 +219,7 @@ public class GroupCreateDtoValidator : AbstractValidator<GroupCreateDto>
     /// </remarks>
     public GroupCreateDtoValidator()
     {
-        RuleFor(x => x.Name).NotEmpty().MinimumLength(2).MaximumLength(100);
+        RuleFor(x => x.Name).NotEmpty().MinimumLength(1).MaximumLength(100);
     }
 }
 
