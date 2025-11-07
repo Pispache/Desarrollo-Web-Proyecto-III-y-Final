@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/backend-auth-service/auth-service"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/infra/services/pdf-renderer"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "npm"
+    directory: "/frontend/ui"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pip"
+    directory: "/backend-reports/reports"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "nuget"
+    directory: "/backend-api/api"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"}

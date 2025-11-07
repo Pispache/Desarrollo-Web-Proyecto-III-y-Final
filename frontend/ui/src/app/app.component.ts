@@ -42,6 +42,13 @@ export class AppComponent implements OnInit, OnDestroy {
     private zone: NgZone,
   ) {}
 
+  /**
+   * @summary Inicializa la aplicación y detecta callbacks OAuth mediante fragmento `#token`.
+   * @returns {void} Gestiona el overlay de arranque y la navegación inicial tras login.
+   * @remarks
+   * - Si la URL contiene `#token=...`, activa un flujo de boot específico de OAuth.
+   * - Aplica tema guardado, suscribe eventos UI y coordina el overlay hasta la primera ruta autenticada.
+   */
   ngOnInit(): void {
     // Si el login marcó una intención de mostrar overlay, activar al inicio y limpiar
     try {
@@ -51,7 +58,7 @@ export class AppComponent implements OnInit, OnDestroy {
         sessionStorage.removeItem('ui.boot');
       }
       // Protección extra para flujos OAuth: si venimos con ?token= en la URL inicial
-      const hasOAuthToken = typeof window !== 'undefined' && (window.location.href || '').includes('token=');
+      const hasOAuthToken = typeof window !== 'undefined' && ((window.location.hash || '')).includes('token=');
       if (hasOAuthToken && !this.booting) {
         this.booting = true; this.syncBootBodyClass();
         this.cameFromLogin = true;
@@ -119,7 +126,7 @@ export class AppComponent implements OnInit, OnDestroy {
         } catch {}
         // Si no hay marca pero la URL lleva token= (OAuth callback directo), tratar como login
         const urlStr = (ev.url || '');
-        const hasToken = urlStr.includes('token=');
+        const hasToken = (typeof window !== 'undefined' && (window.location.hash || '').includes('token='));
         // Si navegamos a páginas de autenticación, ocultar la navbar de inmediato
         const goingToAuthPages = urlStr.includes('login') || urlStr.includes('registro');
         if (goingToAuthPages) {

@@ -19,7 +19,8 @@ def require_admin(creds: HTTPAuthorizationCredentials = Depends(security)):
             token,
             JWT_SECRET,
             algorithms=["HS256"],
-            options={"verify_aud": False, "verify_iss": False}
+            audience=JWT_AUDIENCE,
+            issuer=JWT_ISSUER
         )
 
         roles_collected = []
