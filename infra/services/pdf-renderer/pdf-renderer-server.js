@@ -1,6 +1,13 @@
 const express = require('express');
 const puppeteer = require('puppeteer');
 
+/**
+ * @summary Mitigación SSRF (A10: Server-Side Request Forgery).
+ * @remarks Intercepción de requests del navegador, bloqueo de localhost/red interna/metadata y uso de allowlist por entorno (PDF_ALLOWED_HOSTS). Pendiente de implementación si no se ha activado.
+ * @env PDF_ALLOWED_HOSTS, PDF_BLOCK_LOCAL, PDF_MAX_NAV_TIMEOUT_MS
+ * @effects Reduce superficie de SSRF durante render HTML→PDF.
+ */
+
 const app = express();
 // Permitir HTML más grande con imágenes embebidas (data URI)
 app.use(express.json({limit: '10mb'}));
