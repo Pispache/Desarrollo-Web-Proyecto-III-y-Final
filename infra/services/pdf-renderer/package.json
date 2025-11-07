@@ -1,0 +1,13 @@
+{
+  "name": "pdf-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "main": "pdf-renderer-server.js",
+  "scripts": {
+    "start": "node pdf-renderer-server.js" 
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "puppeteer": "^21.6.1"
+  }
+}

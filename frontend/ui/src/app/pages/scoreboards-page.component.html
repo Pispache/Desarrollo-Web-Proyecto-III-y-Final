@@ -1,0 +1,105 @@
+<!--
+/// <summary>
+/// Vista de tableros: lista partidos con filtros y paginación.
+/// </summary>
+/// <remarks>
+/// - Busca por nombres de equipos.
+/// - Filtra por estado del partido.
+/// - Pagina y permite navegar a cada tablero.
+/// </remarks>
+-->
+<div class="scoreboards-page py-3">
+  <div class="page-wrap">
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h4 class="page-title mb-0 d-flex align-items-center gap-2">
+      <i class="bi bi-display"></i>
+      Tableros
+    </h4>
+    <a class="btn btn-outline-secondary" [routerLink]="['/']">
+      <i class="bi bi-arrow-left"></i> Volver
+    </a>
+    </div>
+
+  <div class="card shadow-sm border-0 mb-3">
+    <div class="card-body">
+      <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-6 col-xl-4">
+          <label class="form-label mb-1">Buscar</label>
+          <input class="form-control form-control-sm" [(ngModel)]="q" placeholder="Nombre de equipos" />
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+          <label class="form-label mb-1">Estado</label>
+          <select class="form-select form-select-sm" [(ngModel)]="status">
+            <option [ngValue]="'ALL'">Todos</option>
+            <option [ngValue]="'SCHEDULED'">Programado</option>
+            <option [ngValue]="'IN_PROGRESS'">En juego</option>
+            <option [ngValue]="'FINISHED'">Finalizado</option>
+            <option [ngValue]="'CANCELLED'">Cancelado</option>
+            <option [ngValue]="'SUSPENDED'">Suspendido</option>
+          </select>
+        </div>
+        <div class="col-6 col-md-3 col-xl-2">
+          <label class="form-label mb-1">Por página</label>
+          <select class="form-select form-select-sm" [ngModel]="pageSize" (ngModelChange)="changePageSize($event)">
+            <option [ngValue]="10">10</option>
+            <option [ngValue]="20">20</option>
+            <option [ngValue]="50">50</option>
+          </select>
+        </div>
+        <div class="col-12 col-md-3 col-xl-2">
+          <button class="btn btn-primary w-100" (click)="load()" [disabled]="loading">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm border-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead>
+          <tr>
+            <th style="width:90px">ID</th>
+            <th>Equipos</th>
+            <th style="width:140px">Estado</th>
+            <th style="width:120px" class="text-end">Ver</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let g of paged">
+            <td class="text-muted">#{{ g.gameId }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold">{{ g.homeTeam }}</span>
+                <span class="text-muted">vs</span>
+                <span class="fw-semibold">{{ g.awayTeam }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="badge bg-secondary">{{ statusLabel(g.status) }}</span>
+            </td>
+            <td class="text-end">
+              <a class="btn btn-sm btn-primary" [routerLink]="['/tablero', g.gameId]">
+                <i class="bi bi-display"></i> Ver tablero
+              </a>
+            </td>
+          </tr>
+          <tr *ngIf="filtered.length === 0">
+            <td colspan="4" class="text-center text-muted py-3">Sin resultados</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Paginación -->
+  <div class="d-flex justify-content-between align-items-center mt-3 small text-muted">
+    <div>Total: {{ filtered.length }}</div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="btn btn-sm btn-outline-secondary" (click)="goPage(page-1)" [disabled]="page <= 1">«</button>
+      <span>Página {{ page }} de {{ maxPage }}</span>
+      <button class="btn btn-sm btn-outline-secondary" (click)="goPage(page+1)" [disabled]="page >= maxPage">»</button>
+    </div>
+  </div>
+</div>
