@@ -4,7 +4,7 @@
 El sistema implementa OAuth 2.0 como parte de su estrategia de autenticación, permitiendo a los usuarios iniciar sesión usando sus cuentas de:
 - Google
 - GitHub
-- Facebook
+- Facebook (“Para manejar permisos sensibles necesitas verificación de negocio.”)
 
 ## Arquitectura de Autenticación
 
@@ -122,6 +122,7 @@ FACEBOOK_CALLBACK_URL=http://localhost:5001/api/auth/facebook/callback
 ### Facebook
 - Login: `/api/auth/facebook`
 - Callback: `/api/auth/facebook/callback`
+- “Para manejar permisos sensibles necesitas verificación de negocio.”
 
 ## Manejo de Errores
 

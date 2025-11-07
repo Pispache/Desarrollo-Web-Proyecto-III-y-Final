@@ -6,8 +6,8 @@
 
 ## Manuales y Guías
 - **Manuales**
-  - [Manual de Usuario (PDF)](./manual-usuario.pdf)
-  - [Manual Técnico (PDF)](./manual-tecnico.pdf)
+  - [Manual de Usuario (PDF)](./Fase%20final,%20Manual%20de%20Usuario.pdf)
+  - [Manual Técnico (PDF)](./Fase%20Final,%20Manual%20Técnico.pdf)
 - **Documentación Técnica**
   - [Guía del Proyecto](./guia-proyecto.md)
 
