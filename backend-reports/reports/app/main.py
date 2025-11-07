@@ -14,7 +14,7 @@ from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request, 
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 import httpx
-from .security.auth import require_admin
+from .security.auth import require_admin, require_user_or_admin
 from .db import get_connection
 from .pdf.base import render_html_to_pdf
 from .pdf.templates import render_teams_html, render_players_html, render_games_html, render_roster_html, render_player_stats_html
@@ -83,7 +83,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"]
 )
 
@@ -122,6 +122,232 @@ def ping_db(_=Depends(require_admin)):
                 cur.execute("SELECT 1")
                 cur.fetchone()
         return {"db": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# /// <summary>
+# /// Guarda/lee el bracket (eliminación directa) por torneo en Postgres.
+# /// </summary>
+# /// Tabla: tournament_brackets(tournament_id PK, data JSONB, updated_at TIMESTAMP)
+
+def _ensure_brackets_table(cur):
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tournament_brackets (
+            tournament_id INTEGER PRIMARY KEY,
+            data JSONB NOT NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+        );
+        """
+    )
+
+@router.get("/tournaments/{tid}/bracket")
+def get_bracket(tid: int, _=Depends(require_user_or_admin)):
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                _ensure_brackets_table(cur)
+                cur.execute("SELECT data FROM tournament_brackets WHERE tournament_id = %s", (tid,))
+                row = cur.fetchone()
+                return row[0] if row else {"roundOf16": [], "quarterfinals": [], "semifinals": [], "final": []}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/tournaments/{tid}/bracket")
+def put_bracket(tid: int, body: dict = Body(...), _=Depends(require_admin)):
+    try:
+        if not isinstance(body, dict):
+            raise HTTPException(status_code=400, detail="Invalid bracket payload")
+        # Validación: permitir que un equipo avance (aparezca en distintas fases),
+        # pero NO duplicado dentro de la misma fase; y nunca local==visita en un match
+        def validate_phase(arr, label: str):
+            ids = []
+            if isinstance(arr, list):
+                for m in arr:
+                    if isinstance(m, dict):
+                        h = m.get("homeTeamId")
+                        a = m.get("awayTeamId")
+                        if h is not None and a is not None and h == a:
+                            raise HTTPException(status_code=400, detail=f"Same team on both sides in {label}")
+                        if isinstance(h, int):
+                            ids.append(h)
+                        if isinstance(a, int):
+                            ids.append(a)
+            # Duplicados dentro de la fase
+            ids = [x for x in ids if isinstance(x, int)]
+            if len(set(ids)) != len(ids):
+                raise HTTPException(status_code=400, detail=f"A team cannot appear more than once in {label}")
+
+        validate_phase(body.get("roundOf16"), "Round of 16")
+        validate_phase(body.get("quarterfinals"), "Quarterfinals")
+        validate_phase(body.get("semifinals"), "Semifinals")
+        validate_phase(body.get("final"), "Final")
+        import json
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                _ensure_brackets_table(cur)
+                cur.execute(
+                    """
+                    INSERT INTO tournament_brackets (tournament_id, data, updated_at)
+                    VALUES (%s, %s::jsonb, NOW())
+                    ON CONFLICT (tournament_id)
+                    DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()
+                    """,
+                    (tid, json.dumps(body)),
+                )
+                conn.commit()
+        return {"ok": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# /// <summary>
+# /// Actualiza el nombre de un torneo (rename).
+# /// </summary>
+# /// <remarks>
+# /// - PATCH /v1/reports/tournaments/{id}
+# /// - Body: { name: string }
+# /// - 409 si el nombre ya existe.
+# /// </remarks>
+@router.patch("/tournaments/{tid}")
+def update_tournament(tid: int, body: dict = Body(...), _=Depends(require_admin)):
+    try:
+        name = str(body.get("name") or "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="name is required")
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS tournaments (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(150) NOT NULL UNIQUE,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+                    """
+                )
+                try:
+                    cur.execute("UPDATE tournaments SET name = %s WHERE id = %s", (name, tid))
+                    if cur.rowcount == 0:
+                        raise HTTPException(status_code=404, detail="Tournament not found")
+                    conn.commit()
+                except Exception as ex:
+                    conn.rollback()
+                    msg = str(ex)
+                    if "23505" in msg or "unique" in msg.lower():
+                        raise HTTPException(status_code=409, detail="Tournament name already exists")
+                    raise
+        return {"id": tid, "name": name}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# /// <summary>
+# /// Elimina un torneo.
+# /// </summary>
+# /// <remarks>
+# /// - DELETE /v1/reports/tournaments/{id}
+# /// - 204 si elimina; 404 si no existe.
+# /// </remarks>
+@router.delete("/tournaments/{tid}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_tournament(tid: int, _=Depends(require_admin)):
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM tournaments WHERE id = %s", (tid,))
+                if cur.rowcount == 0:
+                    raise HTTPException(status_code=404, detail="Tournament not found")
+                conn.commit()
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# /// <summary>
+# /// Lista torneos almacenados en Postgres.
+# /// </summary>
+# /// <remarks>
+# /// - GET /v1/reports/tournaments
+# /// - Seguridad: requiere ADMIN.
+# /// - Devuelve: [{ id, name, created_at }]
+# /// </remarks>
+@router.get("/tournaments")
+def list_tournaments(_=Depends(require_user_or_admin)):
+    try:
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS tournaments (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(150) NOT NULL UNIQUE,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+                    """
+                )
+                cur.execute("SELECT id, name, created_at FROM tournaments ORDER BY created_at DESC, id DESC")
+                rows = cur.fetchall() or []
+                return [
+                    {"id": int(r[0]), "name": r[1], "created_at": (r[2].isoformat() if r[2] else None)}
+                    for r in rows
+                ]
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# /// <summary>
+# /// Crea un torneo en Postgres.
+# /// </summary>
+# /// <remarks>
+# /// - POST /v1/reports/tournaments
+# /// - Body: { name: string }
+# /// - Seguridad: requiere ADMIN.
+# /// - Efecto: asegura tabla 'tournaments' y crea un registro único por nombre.
+# /// </remarks>
+@router.post("/tournaments", status_code=status.HTTP_201_CREATED)
+def create_tournament(
+    body: dict = Body(...),
+    _=Depends(require_admin)
+):
+    try:
+        name = str(body.get("name") or "").strip()
+        if not name:
+            raise HTTPException(status_code=400, detail="name is required")
+
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                # Ensure table exists (id serial, unique name)
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS tournaments (
+                        id SERIAL PRIMARY KEY,
+                        name VARCHAR(150) NOT NULL UNIQUE,
+                        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+                    );
+                    """
+                )
+                # Try insert
+                try:
+                    cur.execute(
+                        "INSERT INTO tournaments(name) VALUES(%s) RETURNING id",
+                        (name,),
+                    )
+                    tid = int(cur.fetchone()[0])
+                    conn.commit()
+                    return {"id": tid, "name": name}
+                except Exception as ex:
+                    # Unique violation handling (SQLSTATE 23505)
+                    msg = str(ex)
+                    conn.rollback()
+                    if "23505" in msg or "unique" in msg.lower():
+                        raise HTTPException(status_code=409, detail="Tournament name already exists")
+                    raise
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

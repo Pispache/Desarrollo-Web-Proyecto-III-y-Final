@@ -20,7 +20,38 @@
     </div>
   </header>
 
-  <form class="group-form" *ngIf="isAdmin()" (submit)="$event.preventDefault(); addGroup()">
+  <!-- Crear Torneo (solo admins) -->
+  <form class="group-form" *ngIf="isAdmin()" (submit)="$event.preventDefault(); createTournament()" style="margin-top:12px;">
+    <div class="field">
+      <label for="tournamentName">Nombre del torneo</label>
+      <input id="tournamentName" type="text" class="form-control" placeholder="Ej. Liga Apertura 2025" [(ngModel)]="newTournamentName" name="tournamentName" />
+    </div>
+    <button type="submit" class="btn btn-success" [disabled]="!newTournamentName.trim() || creatingTournament">
+      <i class="bi" [ngClass]="creatingTournament ? 'bi-hourglass-split' : 'bi-trophy' "></i>
+      {{ creatingTournament ? 'Creando...' : 'Crear torneo' }}
+    </button>
+  </form>
+
+  <!-- Seleccionar torneo existente -->
+  <div class="group-form" style="margin-top:12px;">
+    <div class="field">
+      <label for="selTournament">Torneo activo</label>
+      <div class="row">
+        <select id="selTournament" class="form-select" [(ngModel)]="selectedTournamentId" name="selTournament" (ngModelChange)="onSelectTournament($event)">
+          <option [ngValue]="null">Selecciona un torneo...</option>
+          <option *ngFor="let t of tournaments" [ngValue]="t.id">{{ t.name }}</option>
+        </select>
+        <div class="mt-2" *ngIf="isAdmin() && selectedTournamentId">
+          <button class="btn btn-outline-danger" (click)="deleteSelectedTournament()">
+            <i class="bi bi-trash"></i> Eliminar torneo
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Crear grupo solo si hay torneo seleccionado -->
+  <form class="group-form" *ngIf="isAdmin() && selectedTournamentId" (submit)="$event.preventDefault(); addGroup()">
     <div class="field">
       <label for="groupName">Nombre del grupo</label>
       <input id="groupName" type="text" class="form-control" placeholder="Ej. Grupo A" [(ngModel)]="newGroupName" name="groupName" />
@@ -30,7 +61,12 @@
     </button>
   </form>
 
-  <div class="cards">
+  <div *ngIf="!selectedTournamentId" class="empty" style="margin-top:8px;">
+    <i class="bi bi-inboxes"></i>
+    <p>Selecciona o crea un torneo para comenzar a agregar grupos.</p>
+  </div>
+
+  <div class="cards" *ngIf="selectedTournamentId">
     <div class="card" *ngFor="let g of groups">
       <div class="card-header">
         <div class="card-title">
@@ -130,7 +166,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="r16-h-{{i}}">
               <option [ngValue]="null">Seleccionar equipo local</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptionsPhase(knockout.roundOf16, m.homeTeamId, m.awayTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
           <div class="vs">vs</div>
@@ -144,7 +180,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="r16-a-{{i}}">
               <option [ngValue]="null">Seleccionar equipo visita</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptionsPhase(knockout.roundOf16, m.awayTeamId, m.homeTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
             <div class="mt-1 d-flex gap-2">
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('roundOf16', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
@@ -170,7 +206,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="qf-h-{{i}}">
               <option [ngValue]="null">Seleccionar equipo local</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptionsPhase(knockout.quarterfinals, m.homeTeamId, m.awayTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
           <div class="vs">vs</div>
@@ -184,7 +220,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="qf-a-{{i}}">
               <option [ngValue]="null">Seleccionar equipo visita</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptionsPhase(knockout.quarterfinals, m.awayTeamId, m.homeTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
             <div class="mt-1 d-flex gap-2">
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('quarterfinals', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
@@ -210,7 +246,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="sf-h-{{i}}">
               <option [ngValue]="null">Seleccionar equipo local</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptionsPhase(knockout.semifinals, m.homeTeamId, m.awayTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
           <div class="vs">vs</div>
@@ -224,7 +260,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="sf-a-{{i}}">
               <option [ngValue]="null">Seleccionar equipo visita</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptionsPhase(knockout.semifinals, m.awayTeamId, m.homeTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
             <div class="mt-1 d-flex gap-2">
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('semifinals', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
@@ -250,7 +286,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="f-h-{{i}}">
               <option [ngValue]="null">Seleccionar equipo local</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptionsPhase(knockout.final, m.homeTeamId, m.awayTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
           <div class="vs">vs</div>
@@ -264,7 +300,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="f-a-{{i}}">
               <option [ngValue]="null">Seleccionar equipo visita</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptionsPhase(knockout.final, m.awayTeamId, m.homeTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
         </div>
