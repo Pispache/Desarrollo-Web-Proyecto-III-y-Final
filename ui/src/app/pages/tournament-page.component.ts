@@ -9,8 +9,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
-import { ApiService, TeamDto, Game } from '../services/api.service';
+import { ApiService, TeamDto } from '../services/api.service';
 import { NotificationService } from '../services/notification.service';
 import { TournamentService, TournamentGroupDto } from '../services/tournament.service';
 import { AuthService } from '../services/auth.service';
@@ -32,7 +31,7 @@ interface GroupTeam {
 @Component({
   selector: 'app-tournament-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './tournament-page.component.html',
   styleUrls: ['./tournament-page.component.scss']
 })
@@ -40,7 +39,6 @@ export class TournamentPageComponent implements OnInit {
   groups: Group[] = [];
   newGroupName = '';
   allTeams: TeamDto[] = [];
-  recentGames: Game[] = [];
   // seleccion por grupo: groupId -> teamId seleccionado
   selectedByGroup: Record<string, number | ''> = {};
   creatingGroup = false;
@@ -65,8 +63,6 @@ export class TournamentPageComponent implements OnInit {
     // Inicializar placeholders de llaves (knockout) + cargar de localStorage
     this.ensureKnockoutInitialized();
     this.loadKnockoutFromLocal();
-    // cargar últimos 2 partidos finalizados
-    this.loadRecentGames();
   }
 
   // === Knockout persistence in localStorage ===
@@ -379,13 +375,12 @@ export class TournamentPageComponent implements OnInit {
     });
   }
 
-  // Últimos 2 partidos finalizados para cabecera
-  private loadRecentGames() {
-    this.api.listGames().subscribe((games: Game[]) => {
-      const finished = (games || []).filter(g => g.status === 'FINISHED');
-      finished.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-      this.recentGames = finished.slice(0, 2);
-    });
+  private mapDto(dto: TournamentGroupDto): Group {
+    return {
+      groupId: dto.groupId,
+      name: dto.name,
+      teams: (dto.teams || []).map(t => ({ teamId: t.teamId, name: t.name, g: 0, p: 0, e: 0 }))
+    };
   }
 
   // === Local storage helpers (modo pruebas) ===
@@ -406,13 +401,5 @@ export class TournamentPageComponent implements OnInit {
     } catch {
       this.groups = [];
     }
-  }
-
-  private mapDto(dto: TournamentGroupDto): Group {
-    return {
-      groupId: dto.groupId,
-      name: dto.name,
-      teams: (dto.teams || []).map(t => ({ teamId: t.teamId, name: t.name, g: 0, p: 0, e: 0 }))
-    };
   }
 }

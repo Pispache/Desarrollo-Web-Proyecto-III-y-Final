@@ -9,7 +9,6 @@ import { TeamManagePageComponent } from './pages/team-manage-page.component';
 
 import { PlayersTeamSelectPageComponent } from './pages/players-team-select-page.component';
 import { TournamentPageComponent } from './pages/tournament-page.component';
-import { TournamentViewPageComponent } from './pages/tournament-view-page.component';
 import { adminGuard } from './guards/admin.guard';
 import { ScoreboardsPageComponent } from './pages/scoreboards-page.component';
 import { ReportsPageComponent } from './pages/reports-page.component';
@@ -40,7 +39,6 @@ export const routes: Routes = [
   { path: 'administracion/usuarios', component: ProfilePageComponent, canActivate: [adminGuard] }, // admin: gestión de usuarios
   { path: 'perfil', component: UserProfilePageComponent, canActivate: [authGuard] },    // perfil personal
   { path: 'torneo', component: TournamentPageComponent, canActivate: [authGuard] },
-  { path: 'torneo/registro', component: TournamentViewPageComponent, canActivate: [authGuard] },
 
   // Redirects legacy
   { path: 'teams/register', redirectTo: 'equipos', pathMatch: 'full' },

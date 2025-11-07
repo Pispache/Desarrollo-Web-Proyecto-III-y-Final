@@ -17,37 +17,7 @@
         <i class="bi bi-arrow-clockwise"></i> Actualizar posiciones
       </button>
     </div>
-    <div class="mt-2" *ngIf="recentGames?.length">
-      <div class="alert alert-light border p-3" role="region" aria-label="Últimos partidos" style="line-height: 1.6;">
-        <strong class="d-block mb-3" style="text-transform: uppercase; font-size: 100%;">ÚLTIMOS PARTIDOS</strong>
-        <div class="d-flex flex-column gap-3">
-          <div class="d-flex align-items-center justify-content-between" *ngFor="let g of recentGames" style="line-height: 1.6;">
-            <div style="font-size: 200%;">
-              <span class="fw-semibold">{{ teamNameById(g.homeTeamId) }}</span>
-              <span class="text-muted">vs</span>
-              <span class="fw-semibold">{{ teamNameById(g.awayTeamId) }}</span>
-            </div>
-            <div>
-              <span class="badge bg-secondary me-2" style="font-size: 200%;">{{ g.homeScore }} - {{ g.awayScore }}</span>
-              <span class="badge bg-success" style="font-size: 120%;" *ngIf="(g.homeScore ?? 0) > (g.awayScore ?? 0)">Ganó Local</span>
-              <span class="badge bg-success" style="font-size: 120%;" *ngIf="(g.awayScore ?? 0) > (g.homeScore ?? 0)">Ganó Visita</span>
-              <span class="badge bg-info text-dark" style="font-size: 120%;" *ngIf="g.homeScore === g.awayScore">Empate</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   </header>
-
-  <!-- Vista de acceso para VIEWER -->
-  <div class="alert alert-warning" *ngIf="!isAdmin()">
-    <div>Solo los usuarios administradores pueden crear torneos.</div>
-    <div>Si desea ver los registros de un torneo, haga clic en <strong>REGISTRO</strong>.</div>
-    <div class="mt-4" style="margin-top: 2cm;">
-    <div class="mt-2" style="margin-top: 2cm;">
-      <a class="btn btn-primary btn-lg" style="padding: 1rem 2rem; font-size: 1.25rem;" routerLink="/torneo/registro">REGISTRO</a>
-    </div>
-  </div>
 
   <form class="group-form" *ngIf="isAdmin()" (submit)="$event.preventDefault(); addGroup()">
     <div class="field">
@@ -59,7 +29,7 @@
     </button>
   </form>
 
-  <div class="cards" *ngIf="isAdmin()">
+  <div class="cards">
     <div class="card" *ngFor="let g of groups">
       <div class="card-header">
         <div class="card-title">
@@ -140,7 +110,7 @@
   </div>
 
   <!-- Knockout stages -->
-  <section class="knockout bracket mt-4" *ngIf="isAdmin()">
+  <section class="knockout bracket mt-4">
     <h2 class="page-subtitle"><i class="bi bi-diagram-3"></i> Eliminación directa</h2>
     <div class="bracket-grid">
 
