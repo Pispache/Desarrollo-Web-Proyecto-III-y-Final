@@ -18,3 +18,7 @@ services:
     dns:
       - 8.8.8.8
       - 1.1.1.1
+
+  api:
+    environment:
+      - CORS_ALLOWED_ORIGINS=http://localhost:4200,https://tobarumg.lat,https://www.tobarumg.lat
