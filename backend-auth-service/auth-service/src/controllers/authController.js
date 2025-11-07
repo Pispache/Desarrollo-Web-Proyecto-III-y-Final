@@ -362,11 +362,14 @@ exports.validateToken = async (req, res) => {
 // OAuth callback
 /**
  * @summary Callback de OAuth tras el intercambio de código por token.
+ * @param {import('express').Request} req Petición de Express con el usuario autenticado por Passport.
+ * @param {import('express').Response} res Respuesta HTTP para redirección al frontend.
+ * @returns {void} Redirige a la UI con fragmento o con error.
  * @remarks
- * - Si hay usuario, genera un JWT y redirige a `FRONTEND_URL/login?token=...`.
- * - Si falta usuario o hay error, redirige con mensaje de error.
- * - Verifica en base de datos si el usuario está activo; si está inactivo,
- *   NO emite token y redirige a `FRONTEND_URL/login?error=account_inactive`.
+ * - Si hay usuario, genera un JWT y redirige a `FRONTEND_URL/login#token=...` (fragmento).
+ * - El uso del fragmento evita fugas del token en cabecera Referer, historial del navegador y logs en servidores intermedios.
+ * - Si falta usuario o hay error, redirige con `?error=...`.
+ * - Verifica en base de datos si el usuario está activo; si está inactivo, NO emite token y redirige con `?error=account_inactive`.
  */
 exports.oauthCallback = async (req, res) => {
   try {
@@ -398,9 +401,9 @@ exports.oauthCallback = async (req, res) => {
     const token = generateToken(req.user);
     console.log('OAuth callback - Token generated:', token.substring(0, 20) + '...');
     
-    // Redirect to frontend with token
+    // Redirect to frontend with token via URL fragment to avoid leaking in Referer/history
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:4200';
-    const redirectUrl = `${frontendUrl}/login?token=${token}`;
+    const redirectUrl = `${frontendUrl}/login#token=${token}`;
     console.log('OAuth callback - Redirecting to:', redirectUrl);
     res.redirect(redirectUrl);
   } catch (error) {
