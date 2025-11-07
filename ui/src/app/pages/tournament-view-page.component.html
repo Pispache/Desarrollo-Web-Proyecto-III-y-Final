@@ -1,22 +1,10 @@
 <div class="container py-4">
   <header class="mb-3">
-    <!-- Row 1: Back button only -->
-    <div class="d-flex align-items-center mb-2">
-      <a routerLink="/torneo" class="btn btn-secondary" style="transform: scale(1.5);">
-        <i class="bi bi-arrow-left"></i> Atrás
-      </a>
-    </div>
-    <!-- Row 2: Title + champion on the right -->
-    <div class="d-flex align-items-center justify-content-between">
-      <div>
-        <h1 class="h3 mb-1"><i class="bi bi-trophy"></i> Registro de Torneo</h1>
-        <p class="text-muted mb-0">Vista de solo lectura. No se permiten ediciones.</p>
-      </div>
-      <div class="text-end" *ngIf="firstGroupChampionName() as champ">
-        <span class="badge bg-warning text-dark" style="font-size: 200%;">Campeón del grupo:</span>
-        <strong class="ms-2" style="font-size: 200%;">{{ champ }}</strong>
-      </div>
-    </div>
+    <a routerLink="/torneo" class="btn btn-sm btn-secondary me-2">
+      <i class="bi bi-arrow-left"></i> Atrás
+    </a>
+    <h1 class="h3"><i class="bi bi-trophy"></i> Registro de Torneo</h1>
+    <p class="text-muted mb-0">Vista de solo lectura. No se permiten ediciones.</p>
   </header>
 
   <div *ngIf="!groups.length" class="alert alert-info">No hay grupos registrados.</div>
@@ -24,6 +12,10 @@
   <div class="group-card mb-4" *ngFor="let g of groups">
     <div class="group-header d-flex align-items-center justify-content-between">
       <h2 class="h5 mb-0">{{ g.name }}</h2>
+      <div class="champion" *ngIf="g.teams.length">
+        <span class="badge bg-warning text-dark">Campeón del grupo:</span>
+        <strong class="ms-2">{{ g.teams[0]?.name }}</strong>
+      </div>
     </div>
 
     <div class="row mt-3">
@@ -65,7 +57,6 @@
                 <strong>{{ teamNameById(game.homeTeamId) }}</strong>
                 <span class="text-muted">vs</span>
                 <strong>{{ teamNameById(game.awayTeamId) }}</strong>
-                <span class="badge bg-secondary ms-2">{{ stageForGame(game) }}</span>
               </div>
               <div class="score">
                 <span class="badge bg-secondary">{{ game.homeScore }} - {{ game.awayScore }}</span>

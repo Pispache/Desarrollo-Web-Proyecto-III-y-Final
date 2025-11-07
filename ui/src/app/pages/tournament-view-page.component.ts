@@ -38,8 +38,6 @@ interface ViewGroup {
 export class TournamentViewPageComponent implements OnInit {
   groups: ViewGroup[] = [];
   allTeams: TeamDto[] = [];
-  private storageKey = 'tournament.knockout';
-  private knockoutPairs: Record<string, string> = {};
 
   constructor(
     private api: ApiService,
@@ -56,7 +54,6 @@ export class TournamentViewPageComponent implements OnInit {
       this.tournament.listGroups().subscribe(grps => {
         const mapped = (grps || []).map(g => this.mapDto(g));
         this.groups = mapped;
-        this.loadKnockoutPairs();
         this.loadGamesAndCompute(mapped);
       });
     });
@@ -107,44 +104,4 @@ export class TournamentViewPageComponent implements OnInit {
 
   isHomeWinner(g: Game): boolean { return (g.homeScore ?? 0) > (g.awayScore ?? 0); }
   isAwayWinner(g: Game): boolean { return (g.awayScore ?? 0) > (g.homeScore ?? 0); }
-
-  // ===== Knockout stage helpers for display =====
-  private loadKnockoutPairs() {
-    this.knockoutPairs = {};
-    try {
-      const raw = localStorage.getItem(this.storageKey);
-      if (!raw) return;
-      const data = JSON.parse(raw) || {};
-      const addPairs = (arr: Array<{homeTeamId?: number|null; awayTeamId?: number|null}>, label: string) => {
-        if (!Array.isArray(arr)) return;
-        for (const m of arr) {
-          const a = m?.homeTeamId ?? null;
-          const b = m?.awayTeamId ?? null;
-          if (!a || !b) continue;
-          const key = this.pairKey(a, b);
-          this.knockoutPairs[key] = label;
-        }
-      };
-      addPairs(data.roundOf16 || [], 'Octavos');
-      addPairs(data.quarterfinals || [], 'Cuartos');
-      addPairs(data.semifinals || [], 'Semifinal');
-      addPairs(data.final || [], 'Final');
-    } catch {}
-  }
-
-  private pairKey(a: number, b: number) { return a < b ? `${a}-${b}` : `${b}-${a}`; }
-
-  stageForGame(g: Game): string {
-    const a = g.homeTeamId ?? null;
-    const b = g.awayTeamId ?? null;
-    if (!a || !b) return 'Grupos';
-    const key = this.pairKey(a, b);
-    return this.knockoutPairs[key] || 'Grupos';
-  }
-
-  firstGroupChampionName(): string | null {
-    const g = this.groups?.[0];
-    if (!g || !g.teams?.length) return null;
-    return g.teams[0].name || null;
-  }
 }
