@@ -5,11 +5,10 @@
 - [Proyecto - README principal](../README.md)
 
 ## Manuales y Guías
-- **Manuales de Usuario**
+- **Manuales**
   - [Manual de Usuario (PDF)](./manual-usuario.pdf)
-  - [Manual de Usuario (Markdown)](./manual_usuario.md)
-- **Documentación Técnica**
   - [Manual Técnico (PDF)](./manual-tecnico.pdf)
+- **Documentación Técnica**
   - [Guía del Proyecto](./guia-proyecto.md)
 
 ## Documentación Técnica
