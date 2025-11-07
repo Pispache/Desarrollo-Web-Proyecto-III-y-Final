@@ -77,9 +77,11 @@ app.get('/api/health', (req, res) => {
 
 // Routes
 // Rate limiting para rutas de autenticación
+const AUTH_RATE_WINDOW = parseInt(process.env.AUTH_RATE_WINDOW_MS || String(15 * 60 * 1000), 10);
+const AUTH_RATE_MAX = parseInt(process.env.AUTH_RATE_MAX || '60', 10);
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // 300 req por IP por ventana
+  windowMs: AUTH_RATE_WINDOW,
+  max: AUTH_RATE_MAX,
   standardHeaders: true,
   legacyHeaders: false
 });
