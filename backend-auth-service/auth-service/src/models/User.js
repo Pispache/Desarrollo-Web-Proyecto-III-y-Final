@@ -96,7 +96,7 @@ userSchema.methods.toPublicJSON = function() {
     username: this.username,
     name: this.name,
     avatar: this.avatar,
-    role: this.role,
+    role: this.active,
     emailVerified: this.emailVerified,
     oauthProvider: this.oauthProvider,
     lastLoginAt: this.lastLoginAt,
