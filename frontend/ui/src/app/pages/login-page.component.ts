@@ -46,16 +46,39 @@ export class LoginPageComponent implements OnInit, OnDestroy {
   regError = '';
   regSuccess = '';
 
+  /**
+   * @summary Maneja el callback de OAuth leyendo el token desde el fragmento `#token` (con fallback a query).
+   * @param {AuthService} auth Servicio de autenticación para persistir el JWT y cargar al usuario.
+   * @param {Router} router Enrutador de Angular para limpiar y redirigir la URL.
+   * @param {ActivatedRoute} route Ruta activada para leer parámetros de consulta si aplica.
+   * @returns {void} Persiste el token, enciende overlay de boot y navega a `/` reemplazando la URL.
+   */
   constructor(private auth: AuthService, private router: Router, private route: ActivatedRoute) {
     // Manejar callback de OAuth primero (tiene prioridad)
-    const token = this.route.snapshot.queryParamMap.get('token');
+    // 1) Preferir token en fragmento (#token=...)
+    let tokenFromHash: string | null = null;
+    try {
+      const hash = (typeof window !== 'undefined') ? (window.location.hash || '') : '';
+      if (hash && hash.includes('token=')) {
+        const params = new URLSearchParams(hash.substring(1));
+        tokenFromHash = params.get('token');
+      }
+    } catch {}
+    const tokenFromQuery = this.route.snapshot.queryParamMap.get('token');
+    const token = tokenFromHash || tokenFromQuery;
     if (token) {
       try {
         this.auth.handleOAuthCallback(token);
       } finally {
         try { window.dispatchEvent(new Event('uiBootOn')); } catch {}
         try { sessionStorage.setItem('ui.boot', '1'); } catch {}
-        // Navegar inmediatamente y reemplazar la URL para eliminar el token del historial
+        // Limpiar fragmento y/o query, navegar y reemplazar URL para evitar persistencia en historial
+        try {
+          if (typeof window !== 'undefined') {
+            const cleanUrl = window.location.origin + '/';
+            window.history.replaceState({}, document.title, cleanUrl);
+          }
+        } catch {}
         this.router.navigateByUrl('/', { replaceUrl: true });
       }
       return;

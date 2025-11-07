@@ -53,8 +53,15 @@ const sessionCookieOptions = {
 };
 if (cookieDomain) { sessionCookieOptions.domain = cookieDomain; }
 
+// Validate SESSION_SECRET in production (fail-fast)
+const sessionSecret = process.env.SESSION_SECRET || '';
+if (isProd && (!sessionSecret || sessionSecret === 'default-secret-change-this')) {
+  console.error('SESSION_SECRET must be configured with a strong value in production.');
+  process.exit(1);
+}
+
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'default-secret-change-this',
+  secret: sessionSecret || 'default-secret-change-this',
   resave: false,
   saveUninitialized: false,
   cookie: sessionCookieOptions

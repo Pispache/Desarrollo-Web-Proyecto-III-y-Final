@@ -28,7 +28,19 @@ var b = WebApplication.CreateBuilder(args);
 /// </remarks>
 b.Services.AddEndpointsApiExplorer();
 b.Services.AddSwaggerGen();
-b.Services.AddCors(o => o.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
+// CORS: permisivo en Desarrollo; restringido por lista en Producción (CORS_ALLOWED_ORIGINS separadas por coma)
+var envName = b.Environment.EnvironmentName;
+var allowedOrigins = (b.Configuration["CORS_ALLOWED_ORIGINS"] ?? string.Empty)
+    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+b.Services.AddCors(o => o.AddDefaultPolicy(p =>
+{
+    if (string.Equals(envName, "Development", StringComparison.OrdinalIgnoreCase))
+        p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+    else if (allowedOrigins.Length > 0)
+        p.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+    else
+        p.WithOrigins("https://tobarumg.lat", "https://www.tobarumg.lat").AllowAnyHeader().AllowAnyMethod();
+}));
 
 // FluentValidation: registrar validadores del ensamblado
 b.Services.AddValidatorsFromAssemblyContaining<TeamUpsertDtoValidator>();
@@ -70,7 +82,7 @@ if (app.Environment.IsDevelopment()) { app.UseSwagger(); app.UseSwaggerUI(); }
 /// <summary>
 /// Endpoint de salud para monitoreo y readiness del contenedor.
 /// </summary>
-app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
+app.MapGet("/health", () => Results.Ok(new { status = "ok" })).AllowAnonymous();
 
 // ============================
 // Conexión a base de datos

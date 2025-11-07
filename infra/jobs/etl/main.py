@@ -369,7 +369,7 @@ def sync_game_events(mssql_conn, pg_conn, game_ids: Optional[List[int]] = None):
 # ============ HTTP Endpoints ============
 def _auth_ok(request: Request) -> bool:
     if not HTTP_TOKEN:
-        return True  # si no se configuró, no exigir (dev)
+        return False  # siempre exigir token
     auth = request.headers.get("authorization") or request.headers.get("Authorization")
     if not auth or not auth.lower().startswith("bearer "):
         return False
@@ -504,6 +504,9 @@ def run_once():
 
 def start_http_server():
     try:
+        if not HTTP_TOKEN:
+            logger.error("ETL_HTTP_TOKEN debe estar configurado para habilitar el servidor HTTP on-demand")
+            return
         uvicorn.run(app, host="0.0.0.0", port=HTTP_PORT, log_level="warning")
     except Exception as e:
         logger.error(f"Fallo servidor HTTP on-demand: {e}")
