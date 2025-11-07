@@ -12,6 +12,7 @@ services:
     ports:
       - "127.0.0.1:1435:1435"
     volumes:
+      - mssql_data:/var/opt/mssql
       - ./infra/db:/db
     healthcheck:
       test: ["CMD-SHELL", "bash -lc 'echo > /dev/tcp/127.0.0.1/1435'"]
@@ -245,3 +246,4 @@ volumes:
   mongodb_data:
   mongodb_config:
   pg_data:
+  mssql_data:
