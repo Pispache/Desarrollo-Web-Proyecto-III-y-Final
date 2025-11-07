@@ -25,7 +25,7 @@ RUN echo "[ODBC Driver 18 for SQL Server]" > /etc/odbcinst.ini && \
     echo "Driver=/opt/microsoft/msodbcsql18/lib64/libmsodbcsql-18.5.so.1.1" >> /etc/odbcinst.ini
 
 # Instalar dependencias de Python
-RUN pip install --no-cache-dir psycopg[binary]==3.2.1 pyodbc==5.1.0
+RUN pip install --no-cache-dir psycopg[binary]==3.2.1 pyodbc==5.1.0 fastapi==0.115.5 uvicorn[standard]==0.32.0
 
 # Crear directorios para logs y backups
 RUN mkdir -p /var/log/etl /var/backups /app/scripts

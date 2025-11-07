@@ -13,6 +13,7 @@ from datetime import datetime
 from fastapi import FastAPI, APIRouter, Depends, HTTPException, Query, Request, Body, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+import httpx
 from .security.auth import require_admin
 from .db import get_connection
 from .pdf.base import render_html_to_pdf
@@ -34,6 +35,24 @@ app = FastAPI(title="Report Service", version="0.1.0")
 API_BASE_URL = os.getenv("API_BASE_URL", "http://api:8080")
 UI_BASE_URL = os.getenv("UI_BASE_URL", "http://ui:4200")
 LOCALHOST_API = "http://localhost:8080"
+ETL_SYNC_URL = os.getenv("ETL_SYNC_URL", "http://etl:5010")
+ETL_HTTP_TOKEN = os.getenv("ETL_HTTP_TOKEN", "")
+
+async def etl_presync(scopes: str = "games,game_events", game_id: int | None = None, timeout: float = 5.0) -> bool:
+    if not ETL_SYNC_URL:
+        return False
+    try:
+        params = {"scope": scopes}
+        if game_id is not None:
+            params["game_id"] = game_id
+        headers = {}
+        if ETL_HTTP_TOKEN:
+            headers["Authorization"] = f"Bearer {ETL_HTTP_TOKEN}"
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            resp = await client.post(f"{ETL_SYNC_URL}/sync", params=params, headers=headers)
+            return resp.status_code == 200
+    except Exception as _:
+        return False
 
 @app.get("/health")
 def health():
@@ -240,6 +259,11 @@ async def roster_pdf(
 ):
     print(f"[INFO] Generating roster PDF for game {gameId}")
     try:
+        # Pre-sync on-demand sólo para este partido
+        try:
+            await etl_presync("games,game_events", game_id=gameId, timeout=5.0)
+        except Exception:
+            pass
         with get_connection() as conn:
             with conn.cursor() as cur:
                 # Obtener datos del partido
@@ -994,6 +1018,12 @@ async def games_pdf(
     _=Depends(require_admin)
 ):
     try:
+        # Si el filtro pide juegos en curso, realizar sync rápido global
+        if status and str(status).upper() == "IN_PROGRESS":
+            try:
+                await etl_presync("games,game_events", game_id=None, timeout=5.0)
+            except Exception:
+                pass
         where = []
         params = []
         if status:

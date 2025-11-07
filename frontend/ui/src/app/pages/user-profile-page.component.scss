@@ -46,7 +46,7 @@
     column-gap: 16px; row-gap: 10px;
   }
   .label { color: #9aa0bd; }
-  .value { color: #e7e9ff; }
+  .value { color: #e7e9ff; word-break: break-word; overflow-wrap: anywhere; white-space: normal; }
 
   .badge.role {
     background: rgba(255,255,255,0.12);
@@ -54,6 +54,14 @@
     padding: .25rem .5rem;
     border-radius: 999px;
     font-size: .8rem;
+  }
+}
+
+/* Responsive: en pantallas pequeñas apilar la grilla y evitar overflow */
+@media (max-width: 575.98px) {
+  .user-profile-page {
+    .grid { grid-template-columns: 1fr; }
+    .label { opacity: .85; }
   }
 }
 

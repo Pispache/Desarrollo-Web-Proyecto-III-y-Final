@@ -192,6 +192,8 @@ services:
       - PDF_RENDERER_URL=http://pdf-renderer:3000
       - API_BASE_URL=${API_BASE_URL:-http://api:8080}
       - UI_BASE_URL=${UI_BASE_URL:-http://ui:4200}
+      - ETL_SYNC_URL=${ETL_SYNC_URL:-http://etl:5010}
+      - ETL_HTTP_TOKEN=${ETL_HTTP_TOKEN:-change-this-token}
     ports:
       - "127.0.0.1:8081:8081"
     healthcheck:
@@ -235,6 +237,8 @@ services:
       - ETL_INTERVAL_SECONDS=${ETL_INTERVAL_SECONDS:-120}
       - MSSQL_CS=DRIVER={ODBC Driver 18 for SQL Server};Server=db,1435;Database=${DB_NAME};UID=sa;PWD=${SA_PASSWORD};TrustServerCertificate=yes;
       - POSTGRES_CS=host=postgres port=5432 dbname=${POSTGRES_DB:-reportsdb} user=${POSTGRES_USER:-reports_admin} password=${POSTGRES_PASSWORD:-reports_admin_pwd}
+      - ETL_HTTP_PORT=${ETL_HTTP_PORT:-5010}
+      - ETL_HTTP_TOKEN=${ETL_HTTP_TOKEN:-change-this-token}
     profiles: ["reports", "all"]
 
 volumes:

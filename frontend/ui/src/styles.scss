@@ -100,6 +100,25 @@ body.auth-page .navbar-spacer { display: none !important; }
   display: flow-root;
 }
 
+/* =========================
+   Wrapper de página unificado
+   - Alinea el ancho del contenido con el navbar
+   - Evita mezclar .container / .container-fluid
+   ========================= */
+.page-wrap {
+  width: 100%;
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: clamp(12px, 3vw, 16px);
+  padding-right: clamp(12px, 3vw, 16px);
+}
+@media (min-width: 576px) { .page-wrap { max-width: 540px; } }
+@media (min-width: 768px) { .page-wrap { max-width: 720px; } }
+@media (min-width: 992px) { .page-wrap { max-width: 960px; } }
+@media (min-width: 1200px) { .page-wrap { max-width: 1140px; } }
+@media (min-width: 1400px) { .page-wrap { max-width: 1320px; } }
+
 :root[data-theme="light"] .main-content {
   background:
     radial-gradient(1200px 700px at 18% -220px, rgba(37,99,235,.12), transparent 60%),
