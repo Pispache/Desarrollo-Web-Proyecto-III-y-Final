@@ -69,9 +69,19 @@ def health():
 # /// - Habilita orígenes `http://localhost:4200` y `http://127.0.0.1:4200`.
 # /// - Necesario para que Angular consuma el microservicio durante desarrollo.
 # /// </remarks>
+# CORS por entorno: usar lista blanca de CORS_ALLOWED_ORIGINS (separados por coma).
+# En desarrollo, permitir localhost; en producción, si no hay lista, usar UI_BASE_URL como fallback.
+ENV = (os.getenv("ENV") or os.getenv("NODE_ENV") or "development").lower()
+allowed = [o.strip() for o in (os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")) if o.strip()]
+if not allowed:
+    if ENV == "production":
+        allowed = [UI_BASE_URL]
+    else:
+        allowed = ["http://localhost:4200", "http://127.0.0.1:4200"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://127.0.0.1:4200"],
+    allow_origins=allowed,
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"]

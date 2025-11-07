@@ -54,7 +54,7 @@ export class AuthService {
   constructor(private http: HttpClient, private router: Router, private notify: NotificationService) {
     // Verificar expiración al iniciar (pero no en página de login con token OAuth)
     const token = this.getToken();
-    const isOAuthCallback = typeof window !== 'undefined' && window.location.href.includes('token=');
+    const isOAuthCallback = typeof window !== 'undefined' && ((window.location.hash || '').includes('token='));
     
     if (token && this.isExpired() && !isOAuthCallback) {
       this.logout(true, 'expired');
@@ -239,9 +239,12 @@ export class AuthService {
 
   // Manejar callback de OAuth
   /**
-   * @summary Maneja el callback de OAuth recibiendo el JWT del backend.
+   * @summary Maneja el JWT recibido tras OAuth (fragmento `#token` en la URL).
+   * @param {string} token Token JWT emitido por el Auth Service.
+   * @returns {void} Persiste el token, programa auto-logout y carga los datos del usuario.
    * @remarks
-   * - Persiste el token, programa auto-logout y consulta los datos del usuario con `/me`.
+   * - Se invoca tras extraer `token` del fragmento (`#token=...`) o como compatibilidad desde query.
+   * - Después, realiza una llamada a `/me` para poblar la caché de usuario.
    */
   handleOAuthCallback(token: string): void {
     this.safeSetItem(TOKEN_KEY, token);
