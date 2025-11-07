@@ -161,7 +161,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="r16-h-{{i}}">
               <option [ngValue]="null">Seleccionar equipo local</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptions(m.homeTeamId, m.awayTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
           <div class="vs">vs</div>
@@ -175,7 +175,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="r16-a-{{i}}">
               <option [ngValue]="null">Seleccionar equipo visita</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptions(m.awayTeamId, m.homeTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
             <div class="mt-1 d-flex gap-2">
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('roundOf16', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
@@ -201,7 +201,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="qf-h-{{i}}">
               <option [ngValue]="null">Seleccionar equipo local</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptions(m.homeTeamId, m.awayTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
           <div class="vs">vs</div>
@@ -215,7 +215,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="qf-a-{{i}}">
               <option [ngValue]="null">Seleccionar equipo visita</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptions(m.awayTeamId, m.homeTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
             <div class="mt-1 d-flex gap-2">
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('quarterfinals', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
@@ -241,7 +241,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="sf-h-{{i}}">
               <option [ngValue]="null">Seleccionar equipo local</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptions(m.homeTeamId, m.awayTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
           <div class="vs">vs</div>
@@ -255,7 +255,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="sf-a-{{i}}">
               <option [ngValue]="null">Seleccionar equipo visita</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptions(m.awayTeamId, m.homeTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
             <div class="mt-1 d-flex gap-2">
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('semifinals', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
@@ -281,7 +281,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.homeTeamId" (ngModelChange)="onMatchChange()" name="f-h-{{i}}">
               <option [ngValue]="null">Seleccionar equipo local</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptions(m.homeTeamId, m.awayTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
           <div class="vs">vs</div>
@@ -295,7 +295,7 @@
           <div class="controls" *ngIf="isAdmin()">
             <select class="form-select form-select-sm" [(ngModel)]="m.awayTeamId" (ngModelChange)="onMatchChange()" name="f-a-{{i}}">
               <option [ngValue]="null">Seleccionar equipo visita</option>
-              <option *ngFor="let t of allTeamsForSelect()" [ngValue]="t.teamId">{{ t.name }}</option>
+              <option *ngFor="let t of bracketTeamsOptions(m.awayTeamId, m.homeTeamId)" [ngValue]="t.teamId">{{ t.name }}</option>
             </select>
           </div>
         </div>

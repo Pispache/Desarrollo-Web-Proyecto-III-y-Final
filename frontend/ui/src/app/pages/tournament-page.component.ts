@@ -424,6 +424,31 @@ export class TournamentPageComponent implements OnInit {
   // For UI selects
   allTeamsForSelect(): TeamDto[] { return this.allTeams || []; }
 
+  // Equipos ya usados en el bracket (todas las fases)
+  private usedTeamIdsInBracket(): Set<number> {
+    const used = new Set<number>();
+    const push = (id?: number | null) => { if (typeof id === 'number' && !isNaN(id)) used.add(id); };
+    const scan = (arr: Array<{ homeTeamId?: number | null; awayTeamId?: number | null }> | undefined) => {
+      if (!Array.isArray(arr)) return;
+      for (const m of arr) { push(m?.homeTeamId ?? null); push(m?.awayTeamId ?? null); }
+    };
+    scan(this.knockout.roundOf16);
+    scan(this.knockout.quarterfinals);
+    scan(this.knockout.semifinals);
+    scan(this.knockout.final);
+    return used;
+  }
+
+  // Opciones para selects del bracket: excluye ya usados salvo el seleccionado actualmente; y opcionalmente excluye disallowId (lado contrario del mismo partido)
+  bracketTeamsOptions(currentId?: number | null, disallowId?: number | null): TeamDto[] {
+    const used = this.usedTeamIdsInBracket();
+    // Permitir mantener el valor actual
+    if (typeof currentId === 'number') used.delete(currentId);
+    // Deshabilitar elegir el mismo del lado opuesto del match
+    if (typeof disallowId === 'number') used.add(disallowId);
+    return (this.allTeams || []).filter(t => !used.has(t.teamId));
+  }
+
   // ====== Role helpers ======
   isAdmin(): boolean { return this.auth.isAdmin(); }
 

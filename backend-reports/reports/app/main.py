@@ -148,6 +148,31 @@ def put_bracket(tid: int, body: dict = Body(...), _=Depends(require_admin)):
     try:
         if not isinstance(body, dict):
             raise HTTPException(status_code=400, detail="Invalid bracket payload")
+        # Validación: un equipo no puede repetirse en ninguna fase
+        def collect_ids(arr):
+            ids = []
+            if isinstance(arr, list):
+                for m in arr:
+                    if isinstance(m, dict):
+                        h = m.get("homeTeamId")
+                        a = m.get("awayTeamId")
+                        # mismatch dentro del partido
+                        if h is not None and a is not None and h == a and h is not None:
+                            raise HTTPException(status_code=400, detail="A team cannot play against itself in the same match")
+                        if isinstance(h, int):
+                            ids.append(h)
+                        if isinstance(a, int):
+                            ids.append(a)
+            return ids
+        used = []
+        used += collect_ids(body.get("roundOf16"))
+        used += collect_ids(body.get("quarterfinals"))
+        used += collect_ids(body.get("semifinals"))
+        used += collect_ids(body.get("final"))
+        # Eliminar None y validar duplicados
+        norm = [x for x in used if isinstance(x, int)]
+        if len(set(norm)) != len(norm):
+            raise HTTPException(status_code=400, detail="A team cannot appear in more than one slot across the bracket")
         with get_connection() as conn:
             with conn.cursor() as cur:
                 _ensure_brackets_table(cur)
