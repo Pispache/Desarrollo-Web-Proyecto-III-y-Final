@@ -9,8 +9,8 @@ Aplicación web para gestionar un marcador de baloncesto en tiempo real con cont
 
 ---
 ### Documentación Principal
-- [Manual de Usuario (PDF)](docs/manual-usuario.pdf)
-- [Manual Técnico (PDF)](docs/manual-tecnico.pdf)
+- [Manual de Usuario (PDF)](docs/Fase%20final,%20Manual%20de%20Usuario.pdf)
+- [Manual Técnico (PDF)](docs/Fase%20Final,%20Manual%20Técnico.pdf)
 - [Manual de Usuario (Web)](docs/manual_usuario.md)
 - [Guía del Proyecto](docs/guia-proyecto.md)
 
@@ -281,12 +281,13 @@ Servicios:
 - UI Angular + Nginx  
 
 ### Variables `.env`
-
+  
 SA_PASSWORD=Proyect0Web2025!
 ASPNETCORE_URLS=http://0.0.0.0:8080
-
+  
 DB_NAME=MarcadorDB
-
+  
+> Nota: En Docker usa `ASPNETCORE_URLS=http://0.0.0.0:8080` para que el contenedor escuche en todas las interfaces. Para ejecución local directa (sin Docker), puedes usar `ASPNETCORE_URLS=http://localhost:8080`.
 
 ### Comandos Docker principales
 
