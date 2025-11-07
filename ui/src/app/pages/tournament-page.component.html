@@ -150,10 +150,6 @@
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('roundOf16', i, 'away')" [disabled]="!m.awayTeamId">Avanza visita</button>
             </div>
           </div>
-          <div class="mt-1">
-            <span class="badge bg-success" *ngIf="m.winnerSide === 'home'">Ganó Local</span>
-            <span class="badge bg-success" *ngIf="m.winnerSide === 'away'">Ganó Visita</span>
-          </div>
         </div>
       </div>
     </div>
@@ -194,10 +190,6 @@
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('quarterfinals', i, 'away')" [disabled]="!m.awayTeamId">Avanza visita</button>
             </div>
           </div>
-          <div class="mt-1">
-            <span class="badge bg-success" *ngIf="m.winnerSide === 'home'">Ganó Local</span>
-            <span class="badge bg-success" *ngIf="m.winnerSide === 'away'">Ganó Visita</span>
-          </div>
         </div>
       </div>
     </div>
@@ -237,10 +229,6 @@
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('semifinals', i, 'home')" [disabled]="!m.homeTeamId">Avanza local</button>
               <button class="btn btn-sm btn-success" (click)="advanceFromRound('semifinals', i, 'away')" [disabled]="!m.awayTeamId">Avanza visita</button>
             </div>
-          </div>
-          <div class="mt-1">
-            <span class="badge bg-success" *ngIf="m.winnerSide === 'home'">Ganó Local</span>
-            <span class="badge bg-success" *ngIf="m.winnerSide === 'away'">Ganó Visita</span>
           </div>
         </div>
       </div>
