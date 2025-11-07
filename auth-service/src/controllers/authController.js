@@ -417,7 +417,7 @@ exports.oauthCallback = async (req, res) => {
 exports.listUsers = async (req, res) => {
   try {
     const users = await User.find()
-      .select('email username name role active avatar lastLoginAt password oauthProvider')
+      .select('email username name role active avatar lastLoginAt password')
       .sort({ createdAt: -1, _id: -1 })
       .lean();
     
@@ -431,8 +431,7 @@ exports.listUsers = async (req, res) => {
       active: u.active,
       avatar: u.avatar,
       last_login_at: u.lastLoginAt,
-      has_password: !!u.password,
-      oauthProvider: u.oauthProvider
+      has_password: !!u.password
     }));
     
     res.json({ success: true, users: usersWithPasswordFlag });
