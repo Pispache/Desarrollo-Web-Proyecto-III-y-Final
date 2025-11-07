@@ -70,14 +70,25 @@ ETL_INTERVAL_SECONDS=120
 ### Verificacion
 ```bash
 # Levantar servicios
+
 docker compose --profile reports up -d
 
-# Ver logs
+# Comandos adicionales de gestión
+
+docker-compose --profile all up --build        # Levanta todo y construye imágenes
+docker-compose up                              # Inicia sin reconstruir imágenes  
+docker-compose up -d                           # Modo segundo plano
+docker-compose down                            # Elimina contenedores y redes
+docker-compose build                           # Construye imágenes sin ejecutar
+docker-compose ps                              # Lista contenedores
+docker-compose logs -f                         # Logs en tiempo real
+docker-compose restart                         # Reinicia todo
+
+# Ver logs específicos
 docker logs -f marcador_etl
 
 # Verificar datos
 ./scripts/verify-etl.sh
-```
 
 ## Riesgos y Mitigaciones
 - Coste de Chromium: aislar en `pdf-renderer` para evitar impactar al report-service.

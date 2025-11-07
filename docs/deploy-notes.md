@@ -8,6 +8,7 @@ Estas notas contienen información específica de despliegue. Evita publicarlas 
 - IP pública del servidor: 167.172.214.237
 
 Recomendaciones:
+
 - Gestionar estas credenciales mediante variables de entorno/secrets.
 - Rotar claves y contraseñas periódicamente.
 - No commitear archivos privados ni claves en el repositorio.
