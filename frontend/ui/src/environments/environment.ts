@@ -4,6 +4,6 @@ const isLocal = typeof window !== 'undefined' &&
 export const environment = {
   production: !isLocal,
   apiBaseUrl: isLocal ? 'http://localhost:8080/api' : '/api',
-  reportsBaseUrl: isLocal ? 'http://localhost:8081/v1/reports' : '/reports',
+  reportsBaseUrl: isLocal ? 'http://localhost:8081/v1/reports' : '/reports/v1/reports',
   authBaseUrl: isLocal ? 'http://localhost:5001/api/auth' : '/api/auth'
 };

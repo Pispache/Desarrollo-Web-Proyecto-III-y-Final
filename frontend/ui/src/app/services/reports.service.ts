@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
+import { environment } from '../../environments/environment';
 
 export interface Tournament {
   id: number;
@@ -14,7 +15,7 @@ export interface Tournament {
 @Injectable({ providedIn: 'root' })
 export class ReportsService {
   // Nota: durante desarrollo, el Report Service expone 8081
-  private readonly base = 'http://localhost:8081/v1/reports';
+  private readonly base = environment.reportsBaseUrl;
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
